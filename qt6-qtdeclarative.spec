@@ -48,6 +48,7 @@ BuildRequires:	%{_lib}Qt%{major}OpenGL-devel
 BuildRequires:	%{_lib}Qt%{major}Sql-devel
 BuildRequires:	%{_lib}Qt%{major}Test-devel
 BuildRequires:	qt6-qtbase-tools
+BuildRequires:	qmake-qt6
 BuildRequires:	pkgconfig(xkbcommon)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(vulkan)
