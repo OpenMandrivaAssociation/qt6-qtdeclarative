@@ -45,6 +45,7 @@ BuildRequires:	%{_lib}Qt%{major}Gui-devel
 BuildRequires:	%{_lib}Qt%{major}Widgets-devel
 BuildRequires:	%{_lib}Qt%{major}Network-devel
 BuildRequires:	%{_lib}Qt%{major}OpenGL-devel
+BuildRequires:	%{_lib}Qt%{major}OpenGLWidgets-devel
 BuildRequires:	%{_lib}Qt%{major}Sql-devel
 BuildRequires:	%{_lib}Qt%{major}Test-devel
 BuildRequires:	qt6-qtbase-tools
