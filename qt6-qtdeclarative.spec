@@ -1,4 +1,4 @@
-%define beta beta3
+%define beta beta4
 #define snapshot 20200627
 %define major 6
 
@@ -120,10 +120,10 @@ Development files for the Qt %{major} Qml library
 %{_qtdir}/mkspecs/modules/qt_lib_quick_private.pri
 %{_qtdir}/mkspecs/modules/qt_lib_quickparticles_private.pri
 %{_qtdir}/mkspecs/modules/qt_lib_quickshapes_private.pri
-%{_qtdir}/mkspecs/modules/qt_lib_quicktest.pri
-%{_qtdir}/mkspecs/modules/qt_lib_quicktest_private.pri
 %{_qtdir}/mkspecs/modules/qt_lib_quickwidgets.pri
 %{_qtdir}/mkspecs/modules/qt_lib_quickwidgets_private.pri
+%{_qtdir}/mkspecs/modules/qt_lib_qmltest.pri
+%{_qtdir}/mkspecs/modules/qt_lib_qmltest_private.pri
 %{_qtdir}/mkspecs/modules/qt_plugin_labsanimationplugin.pri
 %{_qtdir}/mkspecs/modules/qt_plugin_labsmodelsplugin.pri
 %{_qtdir}/mkspecs/modules/qt_plugin_modelsplugin.pri
