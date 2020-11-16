@@ -1,4 +1,4 @@
-%define beta beta4
+%define beta beta5
 #define snapshot 20200627
 %define major 6
 
@@ -285,6 +285,10 @@ Development files for the Qt %{major} Qt Quick library
 %{_qtdir}/lib/libQt%{major}Quick.so
 %{_qtdir}/include/QtQuick
 %{_qtdir}/lib/cmake/Qt%{major}Quick
+%{_qtdir}/lib/metatypes/qt6quicktooling_relwithdebinfo_metatypes.json
+%{_qtdir}/lib/metatypes/qt6quickwindow_relwithdebinfo_metatypes.json
+%{_qtdir}/mkspecs/modules/qt_plugin_quicktooling.pri
+%{_qtdir}/mkspecs/modules/qt_plugin_quickwindow.pri
 
 %package -n %{libquickparticles}
 Summary:	Qt %{major} Qt Quick Particles library
