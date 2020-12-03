@@ -1,4 +1,4 @@
-%define beta beta5
+%define beta rc2
 #define snapshot 20200627
 %define major 6
 
@@ -93,8 +93,6 @@ Development files for the Qt %{major} Qml library
 %{_libdir}/cmake/Qt%{major}QmlTools
 
 %{_qtdir}/lib/cmake/Qt%{major}QmlTools
-%{_qtdir}/lib/metatypes/qt%{major}labsanimationplugin_relwithdebinfo_metatypes.json
-%{_qtdir}/lib/metatypes/qt%{major}labsmodelsplugin_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}qml_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}qmlfolderlistmodelplugin_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}qmllocalstorageplugin_relwithdebinfo_metatypes.json
@@ -109,6 +107,8 @@ Development files for the Qt %{major} Qml library
 %{_qtdir}/lib/metatypes/qt%{major}quickshapes_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}quicktest_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}sharedimageplugin_relwithdebinfo_metatypes.json
+%{_qtdir}/lib/metatypes/qt%{major}labsanimationplugin_relwithdebinfo_metatypes.json
+%{_qtdir}/lib/metatypes/qt%{major}labsmodelsplugin_relwithdebinfo_metatypes.json
 %{_qtdir}/mkspecs/modules/qt_lib_qml.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qml_private.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qmldebug_private.pri
@@ -124,32 +124,6 @@ Development files for the Qt %{major} Qml library
 %{_qtdir}/mkspecs/modules/qt_lib_quickwidgets_private.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qmltest.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qmltest_private.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_labsanimationplugin.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_labsmodelsplugin.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_modelsplugin.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_particlesplugin.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmldbg_debugger.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmldbg_inspector.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmldbg_local.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmldbg_messages.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmldbg_native.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmldbg_nativedebugger.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmldbg_preview.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmldbg_profiler.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmldbg_quickprofiler.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmldbg_server.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmldbg_tcp.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmlfolderlistmodelplugin.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmllocalstorageplugin.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmlplugin.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmlsettingsplugin.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmlshapesplugin.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmltestplugin.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qmlwavefrontmeshplugin.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qquicklayoutsplugin.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_qtquick2plugin.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_sharedimageplugin.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_workerscriptplugin.pri
 %{_qtdir}/plugins/qmltooling/libqmldbg_debugger.so
 %{_qtdir}/plugins/qmltooling/libqmldbg_inspector.so
 %{_qtdir}/plugins/qmltooling/libqmldbg_local.so
@@ -287,8 +261,6 @@ Development files for the Qt %{major} Qt Quick library
 %{_qtdir}/lib/cmake/Qt%{major}Quick
 %{_qtdir}/lib/metatypes/qt6quicktooling_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt6quickwindow_relwithdebinfo_metatypes.json
-%{_qtdir}/mkspecs/modules/qt_plugin_quicktooling.pri
-%{_qtdir}/mkspecs/modules/qt_plugin_quickwindow.pri
 
 %package -n %{libquickparticles}
 Summary:	Qt %{major} Qt Quick Particles library
@@ -454,18 +426,11 @@ Example applications for Qt Declarative %{major}
 %cmake -G Ninja \
 	-DQT_SYNCQT=%{_qtdir}/bin/syncqt.pl \
 	-DCMAKE_INSTALL_PREFIX=%{_qtdir} \
-	-DBUILD_EXAMPLES:BOOL=ON \
+	-DQT_BUILD_EXAMPLES:BOOL=ON \
 	-DBUILD_SHARED_LIBS:BOOL=ON \
-	-DFEATURE_cxx2a:BOOL=ON \
-	-DFEATURE_dynamicgl:BOOL=ON \
-	-DFEATURE_ftp:BOOL=ON \
-	-DFEATURE_opengl_dynamic:BOOL=ON \
-	-DFEATURE_use_lld_linker:BOOL=ON \
-	-DFEATURE_xcb_native_painting:BOOL=ON \
-	-DFEATURE_openssl:BOOL=ON \
-	-DFEATURE_openssl_linked:BOOL=ON \
-	-DFEATURE_system_sqlite:BOOL=ON \
-	-DINPUT_sqlite=system \
+	-DQT_FEATURE_dynamicgl:BOOL=ON \
+	-DQT_FEATURE_use_lld_linker:BOOL=ON \
+	-DQT_FEATURE_xcb_native_painting:BOOL=ON \
 	-DQT_WILL_INSTALL:BOOL=ON
 
 %build
