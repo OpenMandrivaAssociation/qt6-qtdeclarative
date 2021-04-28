@@ -1,4 +1,4 @@
-#define beta rc2
+%define beta rc
 #define snapshot 20200627
 %define major 6
 
@@ -22,11 +22,28 @@
 %define devpacketprotocol %mklibname -d Qt%{major}PacketProtocol
 %define devqmldebug %mklibname -d Qt%{major}QmlDebug
 %define devqmldevtools %mklibname -d Qt%{major}QmlDevTools
+%define liblabsanimation %mklibname Qt%{major}LabsAnimation %{major}
+%define devlabsanimation %mklibname -d Qt%{major}LabsAnimation
+%define liblabsfolderlistmodel %mklibname Qt%{major}LabsFolderListModel %{major}
+%define devlabsfolderlistmodel %mklibname -d Qt%{major}LabsFolderListModel
+%define liblabsqmlmodels %mklibname Qt%{major}LabsQmlModels %{major}
+%define devlabsqmlmodels %mklibname -d Qt%{major}LabsQmlModels
+%define liblabssettings %mklibname Qt%{major}LabsSettings %{major}
+%define devlabssettings %mklibname -d Qt%{major}LabsSettings
+%define liblabssharedimage %mklibname Qt%{major}LabsSharedImage %{major}
+%define devlabssharedimage %mklibname -d Qt%{major}LabsSharedImage
+%define liblabswavefrontmesh %mklibname Qt%{major}LabsWaveFrontMesh %{major}
+%define devlabswavefrontmesh %mklibname -d Qt%{major}LabsWaveFrontMesh
+%define devqmldom %mklibname -d Qt%{major}QmlDom
+%define libqmllocalstorage %mklibname Qt%{major}QmlLocalStorage %{major}
+%define devqmllocalstorage %mklibname -d Qt%{major}QmlLocalStorage
+%define libquicklayouts %mklibname Qt%{major}QuickLayouts %{major}
+%define devquicklayouts %mklibname -d Qt%{major}QuickLayouts
 
 %define _qtdir %{_libdir}/qt%{major}
 
 Name:		qt6-qtdeclarative
-Version:	6.0.1
+Version:	6.1.0
 Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
@@ -94,21 +111,12 @@ Development files for the Qt %{major} Qml library
 
 %{_qtdir}/lib/cmake/Qt%{major}QmlTools
 %{_qtdir}/lib/metatypes/qt%{major}qml_relwithdebinfo_metatypes.json
-%{_qtdir}/lib/metatypes/qt%{major}qmlfolderlistmodelplugin_relwithdebinfo_metatypes.json
-%{_qtdir}/lib/metatypes/qt%{major}qmllocalstorageplugin_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}qmlmodels_relwithdebinfo_metatypes.json
-%{_qtdir}/lib/metatypes/qt%{major}qmlsettingsplugin_relwithdebinfo_metatypes.json
-%{_qtdir}/lib/metatypes/qt%{major}qmltestplugin_relwithdebinfo_metatypes.json
-%{_qtdir}/lib/metatypes/qt%{major}qmlwavefrontmeshplugin_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}qmlworkerscript_relwithdebinfo_metatypes.json
-%{_qtdir}/lib/metatypes/qt%{major}qquicklayoutsplugin_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}quick_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}quickparticles_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}quickshapes_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}quicktest_relwithdebinfo_metatypes.json
-%{_qtdir}/lib/metatypes/qt%{major}sharedimageplugin_relwithdebinfo_metatypes.json
-%{_qtdir}/lib/metatypes/qt%{major}labsanimationplugin_relwithdebinfo_metatypes.json
-%{_qtdir}/lib/metatypes/qt%{major}labsmodelsplugin_relwithdebinfo_metatypes.json
 %{_qtdir}/mkspecs/modules/qt_lib_qml.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qml_private.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qmldebug_private.pri
@@ -141,7 +149,6 @@ Development files for the Qt %{major} Qml library
 %{_qtdir}/qml/Qt/labs/settings
 %{_qtdir}/qml/Qt/labs/sharedimage
 %{_qtdir}/qml/Qt/labs/wavefrontmesh
-%{_qtdir}/qml/Qt/test/qtestroot
 %{_qtdir}/qml/QtTest
 %{_qtdir}/qml/builtins.qmltypes
 
@@ -467,3 +474,267 @@ done
 %{_qtdir}/bin/qmltime
 %{_qtdir}/bin/qmltyperegistrar
 
+%package -n %{liblabsanimation}
+Summary:	Qt %{major} animation library
+Group:		System/Libraries
+
+%description -n %{liblabsanimation}
+Qt %{major} animation library
+
+%files -n %{liblabsanimation}
+%{_libdir}/libQt6LabsAnimation.so.%{major}*
+%{_libdir}/qt6/lib/libQt6LabsAnimation.so.%{major}*
+
+%package -n %{devlabsanimation}
+Summary:	Development files for the Qt %{major} animation library
+Group:		Development/KDE and Qt
+Requires:	%{liblabsanimation} = %{EVRD}
+
+%description -n %{devlabsanimation}
+Development files for the Qt %{major} animation library
+
+%files -n %{devlabsanimation}
+%{_libdir}/cmake/Qt6LabsAnimation
+%{_libdir}/libQt6LabsAnimation.so
+%{_libdir}/qt6/include/QtLabsAnimation
+%{_libdir}/qt6/lib/cmake/Qt6LabsAnimation
+%{_libdir}/qt6/lib/libQt6LabsAnimation.prl
+%{_libdir}/qt6/lib/libQt6LabsAnimation.so
+%{_libdir}/qt6/lib/metatypes/qt6labsanimation_relwithdebinfo_metatypes.json
+%{_libdir}/qt6/mkspecs/modules/qt_lib_labsanimation.pri
+%{_libdir}/qt6/mkspecs/modules/qt_lib_labsanimation_private.pri
+%{_libdir}/qt6/modules/LabsAnimation.json
+
+%package -n %{liblabsfolderlistmodel}
+Summary:	Qt %{major} folder list model library
+Group:		System/Libraries
+
+%description -n %{liblabsfolderlistmodel}
+Qt %{major} folder list model library
+
+%files -n %{liblabsfolderlistmodel}
+%{_libdir}/libQt6LabsFolderListModel.so.%{major}*
+%{_libdir}/qt6/lib/libQt6LabsFolderListModel.so.%{major}*
+
+%package -n %{devlabsfolderlistmodel}
+Summary:	Development files for the Qt %{major} folder list model library
+Group:		Development/KDE and Qt
+Requires:	%{liblabsfolderlistmodel} = %{EVRD}
+
+%description -n %{devlabsfolderlistmodel}
+Development files for the Qt %{major} folder list model library
+
+%files -n %{devlabsfolderlistmodel}
+%{_libdir}/cmake/Qt6LabsFolderListModel
+%{_libdir}/libQt6LabsFolderListModel.so
+%{_libdir}/qt6/include/QtLabsFolderListModel
+%{_libdir}/qt6/lib/cmake/Qt6LabsFolderListModel
+%{_libdir}/qt6/lib/libQt6LabsFolderListModel.prl
+%{_libdir}/qt6/lib/libQt6LabsFolderListModel.so
+%{_libdir}/qt6/lib/metatypes/qt6labsfolderlistmodel_relwithdebinfo_metatypes.json
+%{_libdir}/qt6/mkspecs/modules/qt_lib_labsfolderlistmodel.pri
+%{_libdir}/qt6/mkspecs/modules/qt_lib_labsfolderlistmodel_private.pri
+%{_libdir}/qt6/modules/LabsFolderListModel.json
+
+%package -n %{liblabsqmlmodels}
+Summary:	Qt %{major} QML models library
+Group:		System/Libraries
+
+%description -n %{liblabsqmlmodels}
+Qt %{major} QML models library
+
+%files -n %{liblabsqmlmodels}
+%{_libdir}/libQt6LabsQmlModels.so.%{major}*
+%{_libdir}/qt6/lib/libQt6LabsQmlModels.so.%{major}*
+
+%package -n %{devlabsqmlmodels}
+Summary:	Development files for the Qt %{major} QML Models library
+Group:		Development/KDE and Qt
+Requires:	%{liblabsqmlmodels} = %{EVRD}
+
+%description -n %{devlabsqmlmodels}
+Development files for the Qt %{major} QML Models library
+
+%files -n %{devlabsqmlmodels}
+%{_libdir}/cmake/Qt6LabsQmlModels
+%{_libdir}/libQt6LabsQmlModels.so
+%{_libdir}/qt6/include/QtLabsQmlModels
+%{_libdir}/qt6/lib/cmake/Qt6LabsQmlModels
+%{_libdir}/qt6/lib/libQt6LabsQmlModels.prl
+%{_libdir}/qt6/lib/libQt6LabsQmlModels.so
+%{_libdir}/qt6/lib/metatypes/qt6labsqmlmodels_relwithdebinfo_metatypes.json
+%{_libdir}/qt6/mkspecs/modules/qt_lib_labsqmlmodels.pri
+%{_libdir}/qt6/mkspecs/modules/qt_lib_labsqmlmodels_private.pri
+%{_libdir}/qt6/modules/LabsQmlModels.json
+
+%package -n %{liblabssettings}
+Summary:	Qt %{major} Settings library
+Group:		System/Libraries
+
+%description -n %{liblabssettings}
+Qt %{major} Settings library
+
+%files -n %{liblabssettings}
+%{_libdir}/libQt6LabsSettings.so.%{major}*
+%{_libdir}/qt6/lib/libQt6LabsSettings.so.%{major}*
+
+%package -n %{devlabssettings}
+Summary:	Development files for the Qt %{major} settings library
+Group:		Development/KDE and Qt
+Requires:	%{liblabssettings} = %{EVRD}
+
+%description -n %{devlabssettings}
+Development files for the Qt %{major} settings library
+
+%files -n %{devlabssettings}
+%{_libdir}/libQt6LabsSettings.so
+%{_libdir}/cmake/Qt6LabsSettings
+%{_libdir}/qt6/include/QtLabsSettings
+%{_libdir}/qt6/lib/cmake/Qt6LabsSettings
+%{_libdir}/qt6/lib/libQt6LabsSettings.prl
+%{_libdir}/qt6/lib/libQt6LabsSettings.so
+%{_libdir}/qt6/lib/metatypes/qt6labssettings_relwithdebinfo_metatypes.json
+%{_libdir}/qt6/mkspecs/modules/qt_lib_labssettings.pri
+%{_libdir}/qt6/mkspecs/modules/qt_lib_labssettings_private.pri
+%{_libdir}/qt6/modules/LabsSettings.json
+
+%package -n %{liblabssharedimage}
+Summary:	Qt %{major} Shared Image library
+Group:		System/Libraries
+
+%description -n %{liblabssharedimage}
+Qt %{major} Shared Image library
+
+%files -n %{liblabssharedimage}
+%{_libdir}/libQt6LabsSharedImage.so.%{major}*
+%{_libdir}/qt6/lib/libQt6LabsSharedImage.so.%{major}*
+
+%package -n %{devlabssharedimage}
+Summary:	Development files for the Qt %{major} shared image library
+Group:		Development/KDE and Qt
+Requires:	%{liblabssharedimage} = %{EVRD}
+
+%description -n %{devlabssharedimage}
+Development files for the Qt %{major} shared image library
+
+%files -n %{devlabssharedimage}
+%{_libdir}/cmake/Qt6LabsSharedImage
+%{_libdir}/libQt6LabsSharedImage.so
+%{_libdir}/qt6/include/QtLabsSharedImage
+%{_libdir}/qt6/lib/cmake/Qt6LabsSharedImage
+%{_libdir}/qt6/lib/libQt6LabsSharedImage.prl
+%{_libdir}/qt6/lib/libQt6LabsSharedImage.so
+%{_libdir}/qt6/lib/metatypes/qt6labssharedimage_relwithdebinfo_metatypes.json
+%{_libdir}/qt6/mkspecs/modules/qt_lib_labssharedimage.pri
+%{_libdir}/qt6/mkspecs/modules/qt_lib_labssharedimage_private.pri
+%{_libdir}/qt6/modules/LabsSharedImage.json
+
+%package -n %{liblabswavefrontmesh}
+Summary:	Qt %{major} Wavefront Mesh library
+Group:		System/Libraries
+
+%description -n %{liblabswavefrontmesh}
+Qt %{major} Wavefront Mesh library
+
+%files -n %{liblabswavefrontmesh}
+%{_libdir}/libQt6LabsWavefrontMesh.so.%{major}*
+%{_libdir}/qt6/lib/libQt6LabsWavefrontMesh.so.%{major}*
+
+%package -n %{devlabswavefrontmesh}
+Summary:	Development files for the Qt %{major} wave front mesh library
+Group:		Development/KDE and Qt
+Requires:	%{liblabswavefrontmesh} = %{EVRD}
+
+%description -n %{devlabswavefrontmesh}
+Development files for the Qt %{major} wave front mesh library
+
+%files -n %{devlabswavefrontmesh}
+%{_libdir}/cmake/Qt6LabsWavefrontMesh
+%{_libdir}/libQt6LabsWavefrontMesh.so
+%{_libdir}/qt6/include/QtLabsWavefrontMesh
+%{_libdir}/qt6/lib/cmake/Qt6LabsWavefrontMesh
+%{_libdir}/qt6/lib/libQt6LabsWavefrontMesh.prl
+%{_libdir}/qt6/lib/libQt6LabsWavefrontMesh.so
+%{_libdir}/qt6/lib/metatypes/qt6labswavefrontmesh_relwithdebinfo_metatypes.json
+%{_libdir}/qt6/mkspecs/modules/qt_lib_labswavefrontmesh.pri
+%{_libdir}/qt6/mkspecs/modules/qt_lib_labswavefrontmesh_private.pri
+%{_libdir}/qt6/modules/LabsWavefrontMesh.json
+
+%package -n %{devqmldom}
+Summary:	Development files for the Qt %{major} QML DOM library
+Group:		Development/KDE and Qt
+
+%description -n %{devqmldom}
+Development files for the Qt %{major} QML DOM library
+
+%files -n %{devqmldom}
+%{_libdir}/libQt6QmlDom.a
+%{_libdir}/cmake/Qt6QmlDom
+%{_libdir}/qt6/include/QtQmlDom
+%{_libdir}/qt6/lib/cmake/Qt6QmlDom
+%{_libdir}/qt6/lib/libQt6QmlDom.a
+%{_libdir}/qt6/lib/libQt6QmlDom.prl
+%{_libdir}/qt6/mkspecs/modules/qt_lib_qmldom_private.pri
+%{_libdir}/qt6/modules/QmlDom.json
+
+%package -n %{libqmllocalstorage}
+Summary:	Qt %{major} Qml Local Storage library
+Group:		System/Libraries
+
+%description -n %{libqmllocalstorage}
+Qt %{major} Qml Local Storage library
+
+%files -n %{libqmllocalstorage}
+%{_libdir}/libQt6QmlLocalStorage.so.%{major}*
+%{_libdir}/qt6/lib/libQt6QmlLocalStorage.so.%{major}*
+
+%package -n %{devqmllocalstorage}
+Summary:	Development files for the Qt %{major} QML local storage library
+Group:		Development/KDE and Qt
+Requires:	%{libqmllocalstorage} = %{EVRD}
+
+%description -n %{devqmllocalstorage}
+Development files for the Qt %{major} QML local storage library
+
+%files -n %{devqmllocalstorage}
+%{_libdir}/cmake/Qt6QmlLocalStorage
+%{_libdir}/libQt6QmlLocalStorage.so
+%{_libdir}/qt6/include/QtQmlLocalStorage
+%{_libdir}/qt6/lib/cmake/Qt6QmlLocalStorage
+%{_libdir}/qt6/lib/libQt6QmlLocalStorage.prl
+%{_libdir}/qt6/lib/libQt6QmlLocalStorage.so
+%{_libdir}/qt6/lib/metatypes/qt6qmllocalstorage_relwithdebinfo_metatypes.json
+%{_libdir}/qt6/mkspecs/modules/qt_lib_qmllocalstorage.pri
+%{_libdir}/qt6/mkspecs/modules/qt_lib_qmllocalstorage_private.pri
+%{_libdir}/qt6/modules/QmlLocalStorage.json
+
+%package -n %{libquicklayouts}
+Summary:	Qt %{major} Qt Quick Layouts library
+Group:		System/Libraries
+
+%description -n %{libquicklayouts}
+Qt %{major} Qt Quick Layouts library
+
+%files -n %{libquicklayouts}
+%{_libdir}/libQt6QuickLayouts.so.%{major}*
+%{_libdir}/qt6/lib/libQt6QuickLayouts.so.%{major}*
+
+%package -n %{devquicklayouts}
+Summary:	Development files for the Qt %{major} Quick Layouts library
+Group:		Development/KDE and Qt
+Requires:	%{libquicklayouts} = %{EVRD}
+
+%description -n %{devquicklayouts}
+Development files for the Qt %{major} Quick Layouts library
+
+%files -n %{devquicklayouts}
+%{_libdir}/cmake/Qt6QuickLayouts
+%{_libdir}/libQt6QuickLayouts.so
+%{_libdir}/qt6/include/QtQuickLayouts
+%{_libdir}/qt6/lib/cmake/Qt6QuickLayouts
+%{_libdir}/qt6/lib/libQt6QuickLayouts.prl
+%{_libdir}/qt6/lib/libQt6QuickLayouts.so
+%{_libdir}/qt6/lib/metatypes/qt6quicklayouts_relwithdebinfo_metatypes.json
+%{_libdir}/qt6/mkspecs/modules/qt_lib_quicklayouts.pri
+%{_libdir}/qt6/mkspecs/modules/qt_lib_quicklayouts_private.pri
+%{_libdir}/qt6/modules/QuickLayouts.json
