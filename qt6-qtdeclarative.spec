@@ -118,8 +118,6 @@ Development files for the Qt %{major} Qml library
 %{_qtdir}/lib/metatypes/qt%{major}quickshapes_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}quicktest_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}chartsplugin_relwithdebinfo_metatypes.json
-%{_qtdir}/lib/metatypes/qt%{major}qtimeexampleplugin_relwithdebinfo_metatypes.json
-%{_qtdir}/lib/metatypes/qt%{major}textballoonplugin_relwithdebinfo_metatypes.json
 %{_qtdir}/mkspecs/modules/qt_lib_qml.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qml_private.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qmldebug_private.pri
