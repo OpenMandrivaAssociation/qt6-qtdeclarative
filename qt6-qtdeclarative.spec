@@ -44,7 +44,7 @@
 
 Name:		qt6-qtdeclarative
 Version:	6.1.0
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}2
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -70,6 +70,7 @@ BuildRequires:	qmake-qt6
 BuildRequires:	pkgconfig(xkbcommon)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(vulkan)
+BuildRequires:	rpm-provreq-qml
 License:	LGPLv3/GPLv3/GPLv2
 
 %description
@@ -90,6 +91,8 @@ Qt %{major} Qml library
 Summary:	Development files for the Qt %{major} Qml library
 Group:		Development/KDE and Qt
 Requires:	%{libqml} = %{EVRD}
+# Make sure dependencies are generated correctly
+Requires:	rpm-provreq-qml
 
 %description -n %{devqml}
 Development files for the Qt %{major} Qml library
@@ -102,14 +105,11 @@ Development files for the Qt %{major} Qml library
 %{_qtdir}/lib/libQt%{major}Qml.prl
 %{_qtdir}/lib/libQt%{major}Qml.so
 %{_qtdir}/include/QtQml
-%{_qtdir}/lib/cmake/Qt%{major}Qml
 
 %{_libdir}/cmake/Qt%{major}BuildInternals
-%{_qtdir}/lib/cmake/Qt%{major}BuildInternals
 
 %{_libdir}/cmake/Qt%{major}QmlTools
 
-%{_qtdir}/lib/cmake/Qt%{major}QmlTools
 %{_qtdir}/lib/metatypes/qt%{major}qml_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}qmlmodels_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}qmlworkerscript_relwithdebinfo_metatypes.json
@@ -159,8 +159,6 @@ Development files for the Qt %{major} Qml library
 %{_libdir}/cmake/Qt6QmlImportScanner
 %{_libdir}/libQt6QmlCompiler.a
 %{_qtdir}/include/QtQmlCompiler
-%{_qtdir}/lib/cmake/Qt6QmlCompiler
-%{_qtdir}/lib/cmake/Qt6QmlImportScanner
 %{_qtdir}/lib/libQt6QmlCompiler.a
 %{_qtdir}/lib/libQt6QmlCompiler.prl
 %{_qtdir}/mkspecs/features/qmlcache.prf
@@ -183,7 +181,6 @@ Development files for the Qt %{major} Qml Debug library
 %{_qtdir}/lib/libQt%{major}QmlDebug.prl
 %{_qtdir}/lib/libQt%{major}QmlDebug.a
 %{_qtdir}/include/QtQmlDebug
-%{_qtdir}/lib/cmake/Qt%{major}QmlDebug
 
 %package -n %{libqmlmodels}
 Summary:	Qt %{major} Qml Models library
@@ -211,7 +208,6 @@ Development files for the Qt %{major} Qml Models library
 %{_qtdir}/lib/libQt%{major}QmlModels.prl
 %{_qtdir}/lib/libQt%{major}QmlModels.so
 %{_qtdir}/include/QtQmlModels
-%{_qtdir}/lib/cmake/Qt%{major}QmlModels
 
 %package -n %{libqmlworkerscript}
 Summary:	Qt %{major} Qml Worker Script library
@@ -239,7 +235,6 @@ Development files for the Qt %{major} Qml Worker Script library
 %{_qtdir}/lib/libQt%{major}QmlWorkerScript.prl
 %{_qtdir}/lib/libQt%{major}QmlWorkerScript.so
 %{_qtdir}/include/QtQmlWorkerScript
-%{_qtdir}/lib/cmake/Qt%{major}QmlWorkerScript
 
 %package -n %{libquick}
 Summary:	Qt %{major} Qt Quick library
@@ -268,7 +263,6 @@ Development files for the Qt %{major} Qt Quick library
 %{_qtdir}/lib/libQt%{major}Quick.prl
 %{_qtdir}/lib/libQt%{major}Quick.so
 %{_qtdir}/include/QtQuick
-%{_qtdir}/lib/cmake/Qt%{major}Quick
 %{_qtdir}/lib/metatypes/qt6quicktooling_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt6quickwindow_relwithdebinfo_metatypes.json
 
@@ -298,7 +292,6 @@ Development files for the Qt %{major} Qt Quick Particles library
 %{_qtdir}/lib/libQt%{major}QuickParticles.prl
 %{_qtdir}/lib/libQt%{major}QuickParticles.so
 %{_qtdir}/include/QtQuickParticles
-%{_qtdir}/lib/cmake/Qt%{major}QuickParticles
 
 %package -n %{libquickshapes}
 Summary:	Qt %{major} Qt Quick Shapes library
@@ -326,7 +319,6 @@ Development files for the Qt %{major} Qt Quick Shapes library
 %{_qtdir}/lib/libQt%{major}QuickShapes.prl
 %{_qtdir}/lib/libQt%{major}QuickShapes.so
 %{_qtdir}/include/QtQuickShapes
-%{_qtdir}/lib/cmake/Qt%{major}QuickShapes
 
 %package -n %{libquicktest}
 Summary:	Qt %{major} Qt Quick Test library
@@ -354,7 +346,6 @@ Development files for the Qt %{major} Qt Quick Test library
 %{_qtdir}/lib/libQt%{major}QuickTest.prl
 %{_qtdir}/lib/libQt%{major}QuickTest.so
 %{_qtdir}/include/QtQuickTest
-%{_qtdir}/lib/cmake/Qt%{major}QuickTest
 
 %package -n %{libquickwidgets}
 Summary:	Qt %{major} Qt Quick Widgets library
@@ -382,7 +373,6 @@ Development files for the Qt %{major} Quick Widgets library
 %{_qtdir}/lib/libQt%{major}QuickWidgets.prl
 %{_qtdir}/lib/libQt%{major}QuickWidgets.so
 %{_qtdir}/include/QtQuickWidgets
-%{_qtdir}/lib/cmake/Qt%{major}QuickWidgets
 
 
 %package -n %{devpacketprotocol}
@@ -393,7 +383,6 @@ Group:		Development/KDE and Qt
 Development files for the Qt %{major} Packet Protocol library
 
 %files -n %{devpacketprotocol}
-%{_qtdir}/lib/cmake/Qt%{major}PacketProtocol
 %{_libdir}/libQt%{major}PacketProtocol.a
 %{_qtdir}/include/QtPacketProtocol
 %{_libdir}/cmake/Qt%{major}PacketProtocol
@@ -413,7 +402,6 @@ Development files for the Qt %{major} Qml DevTools library
 %files -n %{devqmldevtools}
 %{_libdir}/cmake/Qt%{major}QmlDevTools
 %{_libdir}/libQt%{major}QmlDevTools.a
-%{_qtdir}/lib/cmake/Qt%{major}QmlDevTools
 %{_qtdir}/lib/libQt%{major}QmlDevTools.a
 %{_qtdir}/lib/libQt%{major}QmlDevTools.prl
 %{_qtdir}/modules/QmlDevTools.json
@@ -458,9 +446,7 @@ mkdir -p %{buildroot}%{_bindir} %{buildroot}%{_libdir}/cmake
 for i in %{buildroot}%{_qtdir}/lib/*.so* %{buildroot}%{_qtdir}/lib/*.a; do
 	ln -s qt%{major}/lib/$(basename ${i}) %{buildroot}%{_libdir}/
 done
-for i in %{buildroot}%{_qtdir}/lib/cmake/*; do
-	ln -s ../qt%{major}/lib/cmake/$(basename ${i}) %{buildroot}%{_libdir}/cmake/
-done
+mv %{buildroot}%{_qtdir}/lib/cmake %{buildroot}%{_libdir}/
 
 %files
 %{_qtdir}/bin/qml
@@ -500,7 +486,6 @@ Development files for the Qt %{major} animation library
 %{_libdir}/cmake/Qt6LabsAnimation
 %{_libdir}/libQt6LabsAnimation.so
 %{_libdir}/qt6/include/QtLabsAnimation
-%{_libdir}/qt6/lib/cmake/Qt6LabsAnimation
 %{_libdir}/qt6/lib/libQt6LabsAnimation.prl
 %{_libdir}/qt6/lib/libQt6LabsAnimation.so
 %{_libdir}/qt6/lib/metatypes/qt6labsanimation_relwithdebinfo_metatypes.json
@@ -531,7 +516,6 @@ Development files for the Qt %{major} folder list model library
 %{_libdir}/cmake/Qt6LabsFolderListModel
 %{_libdir}/libQt6LabsFolderListModel.so
 %{_libdir}/qt6/include/QtLabsFolderListModel
-%{_libdir}/qt6/lib/cmake/Qt6LabsFolderListModel
 %{_libdir}/qt6/lib/libQt6LabsFolderListModel.prl
 %{_libdir}/qt6/lib/libQt6LabsFolderListModel.so
 %{_libdir}/qt6/lib/metatypes/qt6labsfolderlistmodel_relwithdebinfo_metatypes.json
@@ -562,7 +546,6 @@ Development files for the Qt %{major} QML Models library
 %{_libdir}/cmake/Qt6LabsQmlModels
 %{_libdir}/libQt6LabsQmlModels.so
 %{_libdir}/qt6/include/QtLabsQmlModels
-%{_libdir}/qt6/lib/cmake/Qt6LabsQmlModels
 %{_libdir}/qt6/lib/libQt6LabsQmlModels.prl
 %{_libdir}/qt6/lib/libQt6LabsQmlModels.so
 %{_libdir}/qt6/lib/metatypes/qt6labsqmlmodels_relwithdebinfo_metatypes.json
@@ -593,7 +576,6 @@ Development files for the Qt %{major} settings library
 %{_libdir}/libQt6LabsSettings.so
 %{_libdir}/cmake/Qt6LabsSettings
 %{_libdir}/qt6/include/QtLabsSettings
-%{_libdir}/qt6/lib/cmake/Qt6LabsSettings
 %{_libdir}/qt6/lib/libQt6LabsSettings.prl
 %{_libdir}/qt6/lib/libQt6LabsSettings.so
 %{_libdir}/qt6/lib/metatypes/qt6labssettings_relwithdebinfo_metatypes.json
@@ -624,7 +606,6 @@ Development files for the Qt %{major} shared image library
 %{_libdir}/cmake/Qt6LabsSharedImage
 %{_libdir}/libQt6LabsSharedImage.so
 %{_libdir}/qt6/include/QtLabsSharedImage
-%{_libdir}/qt6/lib/cmake/Qt6LabsSharedImage
 %{_libdir}/qt6/lib/libQt6LabsSharedImage.prl
 %{_libdir}/qt6/lib/libQt6LabsSharedImage.so
 %{_libdir}/qt6/lib/metatypes/qt6labssharedimage_relwithdebinfo_metatypes.json
@@ -655,7 +636,6 @@ Development files for the Qt %{major} wave front mesh library
 %{_libdir}/cmake/Qt6LabsWavefrontMesh
 %{_libdir}/libQt6LabsWavefrontMesh.so
 %{_libdir}/qt6/include/QtLabsWavefrontMesh
-%{_libdir}/qt6/lib/cmake/Qt6LabsWavefrontMesh
 %{_libdir}/qt6/lib/libQt6LabsWavefrontMesh.prl
 %{_libdir}/qt6/lib/libQt6LabsWavefrontMesh.so
 %{_libdir}/qt6/lib/metatypes/qt6labswavefrontmesh_relwithdebinfo_metatypes.json
@@ -674,7 +654,6 @@ Development files for the Qt %{major} QML DOM library
 %{_libdir}/libQt6QmlDom.a
 %{_libdir}/cmake/Qt6QmlDom
 %{_libdir}/qt6/include/QtQmlDom
-%{_libdir}/qt6/lib/cmake/Qt6QmlDom
 %{_libdir}/qt6/lib/libQt6QmlDom.a
 %{_libdir}/qt6/lib/libQt6QmlDom.prl
 %{_libdir}/qt6/mkspecs/modules/qt_lib_qmldom_private.pri
@@ -703,7 +682,6 @@ Development files for the Qt %{major} QML local storage library
 %{_libdir}/cmake/Qt6QmlLocalStorage
 %{_libdir}/libQt6QmlLocalStorage.so
 %{_libdir}/qt6/include/QtQmlLocalStorage
-%{_libdir}/qt6/lib/cmake/Qt6QmlLocalStorage
 %{_libdir}/qt6/lib/libQt6QmlLocalStorage.prl
 %{_libdir}/qt6/lib/libQt6QmlLocalStorage.so
 %{_libdir}/qt6/lib/metatypes/qt6qmllocalstorage_relwithdebinfo_metatypes.json
@@ -734,7 +712,6 @@ Development files for the Qt %{major} Quick Layouts library
 %{_libdir}/cmake/Qt6QuickLayouts
 %{_libdir}/libQt6QuickLayouts.so
 %{_libdir}/qt6/include/QtQuickLayouts
-%{_libdir}/qt6/lib/cmake/Qt6QuickLayouts
 %{_libdir}/qt6/lib/libQt6QuickLayouts.prl
 %{_libdir}/qt6/lib/libQt6QuickLayouts.so
 %{_libdir}/qt6/lib/metatypes/qt6quicklayouts_relwithdebinfo_metatypes.json
