@@ -1,4 +1,4 @@
-%define beta beta3
+#define beta rc2
 #define snapshot 20200627
 %define major 6
 
@@ -61,6 +61,46 @@ License:	LGPLv3/GPLv3/GPLv2
 %description
 Version %{major} of the Qt Quick framework
 
+%define libs LabsAnimation LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets
+%{expand:%(for lib in %{libs}; do
+	cat <<EOF
+%%global lib${lib} %%mklibname Qt%{major}${lib} %{major}
+%%global dev${lib} %%mklibname -d Qt%{major}${lib}
+%%package -n %%{lib${lib}}
+Summary: Qt %{major} ${lib} library
+Group: System/Libraries
+
+%%description -n %%{lib${lib}}
+Qt %{major} ${lib} library
+
+%%files -n %%{lib${lib}}
+%{_qtdir}/lib/libQt%{major}${lib}.so.*
+%{_libdir}/libQt%{major}${lib}.so.*
+
+%%package -n %%{dev${lib}}
+Summary: Development files for the Qt %{major} ${lib} library
+Requires: %%{lib${lib}} = %{EVRD}
+Group: Development/KDE and Qt
+
+%%description -n %%{dev${lib}}
+Development files for the Qt %{major} ${lib} library
+
+%%files -n %%{dev${lib}}
+%{_qtdir}/lib/libQt%{major}${lib}.so
+%{_libdir}/libQt%{major}${lib}.so
+%{_qtdir}/lib/libQt%{major}${lib}.prl
+%{_qtdir}/include/Qt${lib}
+%optional %{_qtdir}/modules/${lib}.json
+%optional %{_qtdir}/modules/${lib}Private.json
+%optional %{_libdir}/cmake/Qt%{major}${lib}
+%optional %{_libdir}/cmake/Qt%{major}${lib}Private
+%optional %{_qtdir}/lib/metatypes/qt%{major}$(echo ${lib}|tr A-Z a-z)_relwithdebinfo_metatypes.json
+%optional %{_qtdir}/lib/metatypes/qt%{major}$(echo ${lib}|tr A-Z a-z)private_relwithdebinfo_metatypes.json
+%optional %{_qtdir}/mkspecs/modules/qt_lib_$(echo ${lib}|tr A-Z a-z).pri
+%optional %{_qtdir}/mkspecs/modules/qt_lib_$(echo ${lib}|tr A-Z a-z)_private.pri
+EOF
+done)}
+
 %package -n %{libqml}
 Summary:	Qt %{major} Qml library
 Group:		System/Libraries
@@ -71,6 +111,14 @@ Qt %{major} Qml library
 %files -n %{libqml}
 %{_libdir}/libQt%{major}Qml.so.%{major}*
 %{_qtdir}/lib/libQt%{major}Qml.so.%{major}*
+%{_qtdir}/plugins/qmltooling
+%dir %{_qtdir}/qml/Qt
+%dir %{_qtdir}/qml/Qt/labs
+%{_qtdir}/qml/Qt/labs/animation
+%{_qtdir}/qml/Qt/labs/platform
+%{_qtdir}/qml/Qt/labs/sharedimage
+%{_qtdir}/qml/Qt/labs/wavefrontmesh
+%{_qtdir}/qml/QtTest
 
 %package -n %{devqml}
 Summary:	Development files for the Qt %{major} Qml library
@@ -91,6 +139,9 @@ Development files for the Qt %{major} Qml library
 %{_qtdir}/lib/libQt%{major}Qml.so
 %{_qtdir}/include/QtQml
 
+%{_qtdir}/include/QtQuick
+%{_qtdir}/include/QtQuickTemplates2
+
 %{_libdir}/cmake/Qt%{major}BuildInternals
 
 %{_libdir}/cmake/Qt%{major}QmlTools
@@ -100,9 +151,10 @@ Development files for the Qt %{major} Qml library
 %{_qtdir}/lib/metatypes/qt%{major}qmlmodels_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}qmlworkerscript_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}qmldebugprivate_relwithdebinfo_metatypes.json
-%{_qtdir}/lib/metatypes/qt%{major}quicktooling_relwithdebinfo_metatypes.json
 %{_qtdir}/mkspecs/modules/qt_lib_qml.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qml_private.pri
+%{_qtdir}/mkspecs/modules/qt_lib_qmltest.pri
+%{_qtdir}/mkspecs/modules/qt_lib_qmltest_private.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qmldebug_private.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qmlmodels.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qmlmodels_private.pri
@@ -211,6 +263,9 @@ Example applications for Qt Declarative %{major}
 
 %files examples
 %{_qtdir}/examples/qml
+%{_qtdir}/examples/quick
+%{_qtdir}/examples/quickcontrols2
+%{_qtdir}/examples/tst_qmltestexample
 
 %prep
 %autosetup -p1 -n qtdeclarative%{!?snapshot:-everywhere-src-%{version}%{?beta:-%{beta}}}
@@ -248,9 +303,15 @@ mv %{buildroot}%{_qtdir}/lib/cmake %{buildroot}%{_libdir}/
 %{_qtdir}/bin/qmllint
 %{_qtdir}/bin/qmlpreview
 %{_qtdir}/bin/qmlprofiler
+%{_qtdir}/bin/qmleasing
+%{_qtdir}/bin/qmlplugindump
+%{_qtdir}/bin/qmlscene
+%{_qtdir}/bin/qmltestrunner
+%{_qtdir}/bin/qmltime
 %{_qtdir}/libexec/qmlcachegen
 %{_qtdir}/libexec/qmlimportscanner
 %{_qtdir}/libexec/qmltyperegistrar
+
 
 %package -n %{liblabsfolderlistmodel}
 Summary:	Qt %{major} folder list model library
