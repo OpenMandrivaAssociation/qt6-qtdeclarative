@@ -61,7 +61,7 @@ License:	LGPLv3/GPLv3/GPLv2
 %description
 Version %{major} of the Qt Quick framework
 
-%define libs LabsAnimation LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets
+%define libs LabsAnimation LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript QmlModels
 %{expand:%(for lib in %{libs}; do
 	cat <<EOF
 %%global lib${lib} %%mklibname Qt%{major}${lib} %{major}
@@ -200,60 +200,6 @@ Development files for the Qt %{major} Qml Debug library
 %{_qtdir}/lib/libQt%{major}QmlDebug.a
 %{_qtdir}/include/QtQmlDebug
 
-%package -n %{libqmlmodels}
-Summary:	Qt %{major} Qml Models library
-Group:		System/Libraries
-
-%description -n %{libqmlmodels}
-Qt %{major} Qml library
-
-%files -n %{libqmlmodels}
-%{_libdir}/libQt%{major}QmlModels.so.%{major}*
-%{_qtdir}/lib/libQt%{major}QmlModels.so.%{major}*
-
-%package -n %{devqmlmodels}
-Summary:	Development files for the Qt %{major} Qml Models library
-Group:		Development/KDE and Qt
-Requires:	%{libqmlmodels} = %{EVRD}
-
-%description -n %{devqmlmodels}
-Development files for the Qt %{major} Qml Models library
-
-%files -n %{devqmlmodels}
-%{_libdir}/libQt%{major}QmlModels.so
-%{_libdir}/cmake/Qt%{major}QmlModels
-%{_qtdir}/modules/QmlModels.json
-%{_qtdir}/lib/libQt%{major}QmlModels.prl
-%{_qtdir}/lib/libQt%{major}QmlModels.so
-%{_qtdir}/include/QtQmlModels
-
-%package -n %{libqmlworkerscript}
-Summary:	Qt %{major} Qml Worker Script library
-Group:		System/Libraries
-
-%description -n %{libqmlworkerscript}
-Qt %{major} Qml Worker Script library
-
-%files -n %{libqmlworkerscript}
-%{_libdir}/libQt%{major}QmlWorkerScript.so.%{major}*
-%{_qtdir}/lib/libQt%{major}QmlWorkerScript.so.%{major}*
-
-%package -n %{devqmlworkerscript}
-Summary:	Development files for the Qt %{major} Qml Worker Script library
-Group:		Development/KDE and Qt
-Requires:	%{libqmlworkerscript} = %{EVRD}
-
-%description -n %{devqmlworkerscript}
-Development files for the Qt %{major} Qml Worker Script library
-
-%files -n %{devqmlworkerscript}
-%{_libdir}/libQt%{major}QmlWorkerScript.so
-%{_libdir}/cmake/Qt%{major}QmlWorkerScript
-%{_qtdir}/modules/QmlWorkerScript.json
-%{_qtdir}/lib/libQt%{major}QmlWorkerScript.prl
-%{_qtdir}/lib/libQt%{major}QmlWorkerScript.so
-%{_qtdir}/include/QtQmlWorkerScript
-
 %package examples
 Summary: Example applications for Qt Declarative %{major}
 Group: Development/KDE and Qt
@@ -266,6 +212,18 @@ Example applications for Qt Declarative %{major}
 %{_qtdir}/examples/quick
 %{_qtdir}/examples/quickcontrols2
 %{_qtdir}/examples/tst_qmltestexample
+
+%package devel
+Summary: Metapackage pulling in the development files for %{name} and all subcomponents
+Group: Development/KDE and Qt
+Requires: %{expand:%(for lib in %{libs}; do echo -n "%%{dev${lib}} = %{EVRD} "; done)}
+Requires: %{devqml} = %{EVRD}
+Requires: %{devqmldebug} = %{EVRD}
+
+%description devel
+Metapackage pulling in the development files for %{name} and all subcomponents
+
+%files devel
 
 %prep
 %autosetup -p1 -n qtdeclarative%{!?snapshot:-everywhere-src-%{version}%{?beta:-%{beta}}}
