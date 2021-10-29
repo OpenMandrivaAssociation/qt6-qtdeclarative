@@ -52,6 +52,7 @@ BuildRequires:	qmake-qt%{major}
 BuildRequires:	pkgconfig(xkbcommon)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(vulkan)
+BuildRequires:	pkgconfig(openssl)
 BuildRequires:	rpm-provreq-qml
 License:	LGPLv3/GPLv3/GPLv2
 
