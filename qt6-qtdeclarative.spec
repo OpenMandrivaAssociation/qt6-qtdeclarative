@@ -4,7 +4,6 @@
 
 %define libqml %mklibname Qt%{major}Qml %{major}
 %define devqml %mklibname -d Qt%{major}Qml
-%define devqmldebug %mklibname -d Qt%{major}QmlDebug
 %define libqmlmodels %mklibname Qt%{major}QmlModels %{major}
 %define devqmlmodels %mklibname -d Qt%{major}QmlModels
 %define libqmlworkerscript %mklibname Qt%{major}QmlWorkerScript %{major}
@@ -15,11 +14,8 @@
 %define devlabsqmlmodels %mklibname -d Qt%{major}LabsQmlModels
 %define liblabssettings %mklibname Qt%{major}LabsSettings %{major}
 %define devlabssettings %mklibname -d Qt%{major}LabsSettings
-%define devpacketprotocol %mklibname -d Qt%{major}PacketProtocol
 %define libqmlcore %mklibname Qt%{major}QmlCore %{major}
 %define devqmlcore %mklibname -d Qt%{major}QmlCore
-%define devqmldevtools %mklibname -d Qt%{major}QmlDevTools
-%define devqmldom %mklibname -d Qt%{major}QmlDom
 %define libqmllocalstorage %mklibname Qt%{major}QmlLocalStorage %{major}
 %define devqmllocalstorage %mklibname -d Qt%{major}QmlLocalStorage
 %define libqmlxmllistmodel %mklibname Qt%{major}QmlXmlListModel %{major}
@@ -28,7 +24,7 @@
 %define _qtdir %{_libdir}/qt%{major}
 
 Name:		qt6-qtdeclarative
-Version:	6.2.0
+Version:	6.2.1
 Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
@@ -62,6 +58,7 @@ License:	LGPLv3/GPLv3/GPLv2
 Version %{major} of the Qt Quick framework
 
 %define libs LabsAnimation LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript QmlModels
+%define staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug PacketProtocol QmlDevTools QmlDom
 %{expand:%(for lib in %{libs}; do
 	cat <<EOF
 %%global lib${lib} %%mklibname Qt%{major}${lib} %{major}
@@ -98,6 +95,32 @@ Development files for the Qt %{major} ${lib} library
 %optional %{_qtdir}/lib/metatypes/qt%{major}$(echo ${lib}|tr A-Z a-z)private_relwithdebinfo_metatypes.json
 %optional %{_qtdir}/mkspecs/modules/qt_lib_$(echo ${lib}|tr A-Z a-z).pri
 %optional %{_qtdir}/mkspecs/modules/qt_lib_$(echo ${lib}|tr A-Z a-z)_private.pri
+EOF
+done)}
+%{expand:%(for lib in %{staticlibs}; do
+	cat <<EOF
+%%global dev${lib} %%mklibname -d Qt%{major}${lib}
+%%package -n %%{dev${lib}}
+Summary: Static libraries for the Qt %{major} ${lib} library
+Group: Development/KDE and Qt
+
+%%description -n %%{dev${lib}}
+Static libraries files for the Qt %{major} ${lib} library
+
+%%files -n %%{dev${lib}}
+%{_qtdir}/lib/libQt%{major}${lib}.a
+%{_libdir}/libQt%{major}${lib}.a
+%{_qtdir}/lib/libQt%{major}${lib}.prl
+%optional %{_qtdir}/include/Qt${lib}
+%optional %{_qtdir}/modules/${lib}.json
+%optional %{_qtdir}/modules/${lib}Private.json
+%optional %{_libdir}/cmake/Qt%{major}${lib}
+%optional %{_libdir}/cmake/Qt%{major}${lib}Private
+%optional %{_qtdir}/lib/metatypes/qt%{major}$(echo ${lib}|tr A-Z a-z)_relwithdebinfo_metatypes.json
+%optional %{_qtdir}/lib/metatypes/qt%{major}$(echo ${lib}|tr A-Z a-z)private_relwithdebinfo_metatypes.json
+%optional %{_qtdir}/mkspecs/modules/qt_lib_$(echo ${lib}|tr A-Z a-z).pri
+%optional %{_qtdir}/mkspecs/modules/qt_lib_$(echo ${lib}|tr A-Z a-z)_private.pri
+%optional %{_qtdir}/mkspecs/modules/qt_lib_$(echo ${lib}|tr A-Z a-z)private_private.pri
 EOF
 done)}
 
@@ -150,12 +173,10 @@ Development files for the Qt %{major} Qml library
 %{_qtdir}/lib/metatypes/qt%{major}qml_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}qmlmodels_relwithdebinfo_metatypes.json
 %{_qtdir}/lib/metatypes/qt%{major}qmlworkerscript_relwithdebinfo_metatypes.json
-%{_qtdir}/lib/metatypes/qt%{major}qmldebugprivate_relwithdebinfo_metatypes.json
 %{_qtdir}/mkspecs/modules/qt_lib_qml.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qml_private.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qmltest.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qmltest_private.pri
-%{_qtdir}/mkspecs/modules/qt_lib_qmldebug_private.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qmlmodels.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qmlmodels_private.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qmlworkerscript.pri
@@ -187,19 +208,6 @@ Development files for the Qt %{major} Qml library
 %{_qtdir}/mkspecs/modules/qt_lib_qmlcompiler_private.pri
 %{_qtdir}/lib/metatypes/qt%{major}qmlcompilerprivate_relwithdebinfo_metatypes.json
 
-%package -n %{devqmldebug}
-Summary:	Development files for the Qt %{major} Qml Debug library
-Group:		Development/KDE and Qt
-
-%description -n %{devqmldebug}
-Development files for the Qt %{major} Qml Debug library
-
-%files -n %{devqmldebug}
-%{_libdir}/libQt%{major}QmlDebug.a
-%{_qtdir}/lib/libQt%{major}QmlDebug.prl
-%{_qtdir}/lib/libQt%{major}QmlDebug.a
-%{_qtdir}/include/QtQmlDebug
-
 %package examples
 Summary: Example applications for Qt Declarative %{major}
 Group: Development/KDE and Qt
@@ -217,8 +225,8 @@ Example applications for Qt Declarative %{major}
 Summary: Metapackage pulling in the development files for %{name} and all subcomponents
 Group: Development/KDE and Qt
 Requires: %{expand:%(for lib in %{libs}; do echo -n "%%{dev${lib}} = %{EVRD} "; done)}
+Requires: %{expand:%(for lib in %{staticlibs}; do echo -n "%%{dev${lib}} = %{EVRD} "; done)}
 Requires: %{devqml} = %{EVRD}
-Requires: %{devqmldebug} = %{EVRD}
 
 %description devel
 Metapackage pulling in the development files for %{name} and all subcomponents
@@ -366,23 +374,6 @@ Development files for the Qt %{major} settings library
 %define libqmlxmllistmodel %mklibname Qt%{major}QmlXmlListModel %{major}
 %define devqmlxmllistmodel %mklibname -d Qt%{major}QmlXmlListModel
 
-%package -n %{devpacketprotocol}
-Summary:	Development files for the Qt %{major} Packet Protocol library
-Group:		Development/KDE and Qt
-
-%description -n %{devpacketprotocol}
-Development files for the Qt %{major} Packet Protocol Library
-
-%files -n %{devpacketprotocol}
-%{_libdir}/cmake/Qt%{major}PacketProtocolPrivate
-%{_libdir}/libQt%{major}PacketProtocol.a
-%{_qtdir}/include/QtPacketProtocol
-%{_qtdir}/lib/libQt%{major}PacketProtocol.a
-%{_qtdir}/lib/libQt%{major}PacketProtocol.prl
-%{_qtdir}/modules/PacketProtocolPrivate.json
-%{_qtdir}/lib/metatypes/qt%{major}packetprotocolprivate_relwithdebinfo_metatypes.json
-%{_qtdir}/mkspecs/modules/qt_lib_packetprotocol_private.pri
-
 %package -n %{libqmlcore}
 Summary:	Qt %{major} QML Core library
 Group:		System/Libraries
@@ -417,39 +408,6 @@ Development files for the Qt %{major} QML Core library
 %{_qtdir}/lib/metatypes/qt%{major}qmlcore_relwithdebinfo_metatypes.json
 %{_qtdir}/mkspecs/modules/qt_lib_qmlcore.pri
 %{_qtdir}/mkspecs/modules/qt_lib_qmlcore_private.pri
-
-%package -n %{devqmldevtools}
-Summary:	Development files for the Qt %{major} QML DevTools library
-Group:		Development/KDE and Qt
-
-%description -n %{devqmldevtools}
-Development files for the Qt %{major} QML DevTools library
-
-%files -n %{devqmldevtools}
-%{_libdir}/cmake/Qt%{major}QmlDevToolsPrivate
-%{_libdir}/libQt%{major}QmlDevTools.a
-%{_qtdir}/lib/libQt%{major}QmlDevTools.a
-%{_qtdir}/lib/libQt%{major}QmlDevTools.prl
-%{_qtdir}/lib/metatypes/qt%{major}qmldevtoolsprivate_relwithdebinfo_metatypes.json
-%{_qtdir}/mkspecs/modules/qt_lib_qmldevtools_private.pri
-%{_qtdir}/modules/QmlDevToolsPrivate.json
-
-%package -n %{devqmldom}
-Summary:	Development files for the Qt %{major} QML DOM library
-Group:		Development/KDE and Qt
-
-%description -n %{devqmldom}
-Development files for the Qt %{major} QML DOM library
-
-%files -n %{devqmldom}
-%{_libdir}/cmake/Qt%{major}QmlDomPrivate
-%{_libdir}/libQt%{major}QmlDom.a
-%{_qtdir}/include/QtQmlDom
-%{_qtdir}/lib/libQt%{major}QmlDom.a
-%{_qtdir}/lib/libQt%{major}QmlDom.prl
-%{_qtdir}/lib/metatypes/qt%{major}qmldomprivate_relwithdebinfo_metatypes.json
-%{_qtdir}/mkspecs/modules/qt_lib_qmldom_private.pri
-%{_qtdir}/modules/QmlDomPrivate.json
 
 %package -n %{libqmllocalstorage}
 Summary:	Qt %{major} QML Local Storage library
