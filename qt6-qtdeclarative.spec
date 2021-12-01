@@ -24,7 +24,7 @@
 %define _qtdir %{_libdir}/qt%{major}
 
 Name:		qt6-qtdeclarative
-Version:	6.2.1
+Version:	6.2.2
 Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
@@ -255,6 +255,8 @@ export LD_LIBRARY_PATH="$(pwd)/build/lib:${LD_LIBRARY_PATH}"
 %ninja_install -C build
 # Static helper lib without headers -- useless
 rm -f %{buildroot}%{_qtdir}/%{_lib}/libpnp_basictools.a
+# Looks like a *.o file accidentally being installed
+rm -rf %{buildroot}%{_qtdir}/lib/objects-RelWithDebInfo
 # Put stuff where tools will find it
 # We can't do the same for %{_includedir} right now because that would
 # clash with qt5 (both would want to have /usr/include/QtCore and friends)
