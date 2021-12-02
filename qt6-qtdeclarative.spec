@@ -39,6 +39,7 @@ BuildRequires:	ninja
 BuildRequires:	qt%{major}-cmake
 BuildRequires:	%{_lib}Qt%{major}Concurrent-devel
 BuildRequires:	%{_lib}Qt%{major}Core-devel
+BuildRequires:	%{_lib}Qt%{major}DBus-devel
 BuildRequires:	%{_lib}Qt%{major}Gui-devel
 BuildRequires:	%{_lib}Qt%{major}Widgets-devel
 BuildRequires:	%{_lib}Qt%{major}Network-devel
