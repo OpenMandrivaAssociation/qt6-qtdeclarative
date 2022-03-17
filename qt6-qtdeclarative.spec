@@ -1,4 +1,4 @@
-#define beta rc2
+%define beta beta3
 #define snapshot 20200627
 %define major 6
 
@@ -24,7 +24,7 @@
 %define _qtdir %{_libdir}/qt%{major}
 
 Name:		qt6-qtdeclarative
-Version:	6.2.3
+Version:	6.3.0
 Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
@@ -61,7 +61,7 @@ License:	LGPLv3/GPLv3/GPLv2
 Version %{major} of the Qt Quick framework
 
 %define libs LabsAnimation LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript QmlModels
-%define staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug PacketProtocol QmlDevTools QmlDom
+%define staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug PacketProtocol QmlDom QmlLint
 %{expand:%(for lib in %{libs}; do
 	cat <<EOF
 %%global lib${lib} %%mklibname Qt%{major}${lib} %{major}
@@ -211,6 +211,13 @@ Development files for the Qt %{major} Qml library
 %{_qtdir}/mkspecs/modules/qt_lib_qmlcompiler_private.pri
 %{_qtdir}/lib/metatypes/qt%{major}qmlcompilerprivate_relwithdebinfo_metatypes.json
 
+%{_libdir}/cmake/Qt6QmlIntegration
+%{_qtdir}/bin/qmltc
+%{_qtdir}/include/QtQmlIntegration
+%{_qtdir}/mkspecs/modules/qt_lib_qmlintegration.pri
+%{_qtdir}/mkspecs/modules/qt_lib_qmlintegration_private.pri
+%{_qtdir}/modules/QmlIntegration.json
+
 %package examples
 Summary: Example applications for Qt Declarative %{major}
 Group: Development/KDE and Qt
@@ -222,7 +229,7 @@ Example applications for Qt Declarative %{major}
 %{_qtdir}/examples/qml
 %{_qtdir}/examples/quick
 %{_qtdir}/examples/quickcontrols2
-%{_qtdir}/examples/tst_qmltestexample
+%{_qtdir}/examples/qmltest
 
 %package devel
 Summary: Metapackage pulling in the development files for %{name} and all subcomponents
@@ -240,6 +247,7 @@ Metapackage pulling in the development files for %{name} and all subcomponents
 %autosetup -p1 -n qtdeclarative%{!?snapshot:-everywhere-src-%{version}%{?beta:-%{beta}}}
 %cmake -G Ninja \
 	-DQT_SYNCQT=%{_qtdir}/bin/syncqt.pl \
+	-DQT_MKSPECS_DIR:FILEPATH=%{_qtdir}/mkspecs \
 	-DCMAKE_INSTALL_PREFIX=%{_qtdir} \
 	-DQT_BUILD_EXAMPLES:BOOL=ON \
 	-DBUILD_SHARED_LIBS:BOOL=ON \
