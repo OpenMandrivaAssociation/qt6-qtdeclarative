@@ -48,6 +48,7 @@ BuildRequires:	%{_lib}Qt%{major}OpenGLWidgets-devel
 BuildRequires:	%{_lib}Qt%{major}Sql-devel
 BuildRequires:	%{_lib}Qt%{major}Test-devel
 BuildRequires:	cmake(Qt%{major}ShaderTools) = %{version}
+BuildRequires:	cmake(Qt%{major}ShaderToolsTools) = %{version}
 BuildRequires:	qt%{major}-qtbase-tools
 BuildRequires:	qmake-qt%{major}
 BuildRequires:	pkgconfig(xkbcommon)
