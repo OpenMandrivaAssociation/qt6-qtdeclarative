@@ -86,7 +86,8 @@ Version %{qtmajor} of the Qt Quick framework
 %{_qtdir}/lib/pkgconfig/Qt6QmlIntegration.pc
 
 %define extra_reqprov_Qml \
-Requires:	rpm-provreq-qml
+Requires:	rpm-provreq-qml \
+Requires:	%mklibname Qt%{qtmajor}QmlCore
 
 %define extra_files_QmlCore \
 %dir %{_qtdir}/qml \
