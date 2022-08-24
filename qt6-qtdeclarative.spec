@@ -101,6 +101,7 @@ Requires:	%{name} = %{EVRD}
 
 %define extra_devel_reqprov_Quick \
 Requires:	cmake(Qt%{qtmajor}QmlModels)
+Requires:	cmake(Qt%{qtmajor}OpenGL)
 
 %define extra_devel_reqprov_QuickTest \
 Requires:	cmake(Qt%{qtmajor}Test)
