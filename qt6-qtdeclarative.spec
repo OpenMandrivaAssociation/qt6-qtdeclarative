@@ -2,7 +2,7 @@
 
 Name:		qt6-qtdeclarative
 Version:	6.4.0
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}3
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}4
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -105,6 +105,9 @@ Requires:	cmake(Qt%{qtmajor}OpenGL)
 
 %define extra_devel_reqprov_QuickTest \
 Requires:	cmake(Qt%{qtmajor}Test)
+
+%define extra_devel_reqprov_QuickControls2 \
+Requires:	cmake(Qt%{qtmajor}QuickTemplates2)
 
 # qmltyperegistrar and friends
 %define extra_devel_reqprov_QmlCore \
