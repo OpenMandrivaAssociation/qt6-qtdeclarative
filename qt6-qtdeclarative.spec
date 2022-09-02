@@ -1,8 +1,8 @@
-%define beta beta3
+%define beta beta4
 
 Name:		qt6-qtdeclarative
 Version:	6.4.0
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}4
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -139,7 +139,8 @@ Example applications for Qt Declarative %{qtmajor}
 	-DQT_FEATURE_dynamicgl:BOOL=ON \
 	-DQT_FEATURE_use_lld_linker:BOOL=ON \
 	-DQT_FEATURE_xcb_native_painting:BOOL=ON \
-	-DQT_WILL_INSTALL:BOOL=ON
+	-DQT_WILL_INSTALL:BOOL=ON \
+	-DBUILD_WITH_PCH:BOOL=OFF
 
 %build
 export LD_LIBRARY_PATH="$(pwd)/build/lib:${LD_LIBRARY_PATH}"
