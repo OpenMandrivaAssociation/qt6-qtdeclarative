@@ -1,8 +1,8 @@
-%define beta rc
+#define beta rc
 
 Name:		qt6-qtdeclarative
 Version:	6.4.0
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
+Release:	%{?beta:0.%{beta}.1}%{?snapshot:1.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -97,7 +97,8 @@ Requires:	%{name} = %{EVRD}
 %{_qtdir}/qml/QtCore \
 %{_qtdir}/qml/QtQuick \
 %{_qtdir}/qml/jsroot.qmltypes \
-%{_qtdir}/qml/QtQml
+%{_qtdir}/qml/QtQml \
+%{_qtdir}/bin/qmlls
 
 %define extra_devel_reqprov_Quick \
 Requires:	cmake(Qt%{qtmajor}QmlModels)
