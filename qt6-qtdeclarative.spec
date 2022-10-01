@@ -24,6 +24,7 @@ BuildRequires:	cmake(Qt6OpenGL)
 BuildRequires:	cmake(Qt6OpenGLWidgets)
 BuildRequires:	cmake(Qt6Sql)
 BuildRequires:	cmake(Qt6Test)
+BuildRequires:	cmake(Qt6LanguageServerPrivate)
 BuildRequires:	cmake(Qt6ShaderTools) = %{version}
 BuildRequires:	qt6-qtbase-tools
 BuildRequires:	qmake-qt6
