@@ -1,7 +1,7 @@
 #define beta rc
 
 Name:		qt6-qtdeclarative
-Version:	6.4.2
+Version:	6.5.0
 Release:	%{?beta:0.%{beta}.1}%{?snapshot:1.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
@@ -48,14 +48,14 @@ Version %{qtmajor} of the Qt Quick framework
 %{_qtdir}/qml/Qt/labs/platform \
 %{_qtdir}/qml/Qt/labs/sharedimage \
 %{_qtdir}/qml/Qt/labs/wavefrontmesh \
-%{_qtdir}/qml/QtTest
+%{_qtdir}/qml/QtTest \
+%{_qtdir}/qml/QmlTime
 
 %define extra_devel_files_Qml \
 %{_qtdir}/include/QtQuick \
 %{_qtdir}/include/QtQuickTemplates2 \
 %{_qtdir}/lib/cmake/Qt%{qtmajor}BuildInternals/* \
 %{_qtdir}/lib/cmake/Qt%{qtmajor}QmlDebugPrivate \
-%{_qtdir}/lib/metatypes/qt%{qtmajor}qmlworkerscript_relwithdebinfo_metatypes.json \
 %{_qtdir}/plugins/qmltooling/libqmldbg_debugger.so \
 %{_qtdir}/plugins/qmltooling/libqmldbg_local.so \
 %{_qtdir}/plugins/qmltooling/libqmldbg_messages.so \
@@ -73,7 +73,6 @@ Version %{qtmajor} of the Qt Quick framework
 %{_qtdir}/mkspecs/features/qtquickcompiler.prf \
 %{_qtdir}/mkspecs/features/qmlcache.prf \
 %{_qtdir}/mkspecs/features/qmltypes.prf \
-%{_qtdir}/lib/metatypes/qt%{qtmajor}qmlcompilerprivate_relwithdebinfo_metatypes.json \
 %{_qtdir}/lib/cmake/Qt6QmlIntegration \
 %{_qtdir}/bin/qmltc \
 %{_qtdir}/include/QtQmlIntegration \
@@ -120,8 +119,8 @@ Requires:	cmake(Qt%{qtmajor}QuickTemplates2)
 %define extra_devel_reqprov_QmlCore \
 Requires:	%{name} = %{EVRD}
 
-%qt6libs LabsAnimation LabsFolderListModel LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlXmlListModel QmlCompiler
-%qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol
+%qt6libs LabsAnimation LabsFolderListModel LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlXmlListModel QmlCompiler QuickEffects
+%qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar
 
 %package examples
 Summary: Example applications for Qt Declarative %{qtmajor}
@@ -133,8 +132,8 @@ Example applications for Qt Declarative %{qtmajor}
 %files examples
 %{_qtdir}/examples/qml
 %{_qtdir}/examples/quick
-%{_qtdir}/examples/quickcontrols2
 %{_qtdir}/examples/qmltest
+%{_qtdir}/examples/quickcontrols
 
 %prep
 %autosetup -p1 -n qtdeclarative%{!?snapshot:-everywhere-src-%{version}%{?beta:-%{beta}}}
