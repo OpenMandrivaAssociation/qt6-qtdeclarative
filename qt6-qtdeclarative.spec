@@ -2,7 +2,7 @@
 
 Name:		qt6-qtdeclarative
 Version:	6.5.0
-Release:	%{?beta:0.%{beta}.1}%{?snapshot:0.%{snapshot}.}1
+Release:	%{?beta:0.%{beta}.1}%{?snapshot:0.%{snapshot}.}2
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -92,7 +92,8 @@ Requires:	rpm-provreq-qml \
 Requires:	%mklibname Qt%{qtmajor}QmlCore
 
 %define extra_devel_reqprov_Qml \
-Requires:	%{name} = %{EVRD}
+Requires:	%{name} = %{EVRD} \
+Requires:	cmake(Qt6Network)
 
 %define extra_files_QmlCore \
 %dir %{_qtdir}/qml \
