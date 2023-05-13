@@ -2,7 +2,7 @@
 
 Name:		qt6-qtdeclarative
 Version:	6.5.0
-Release:	%{?beta:0.%{beta}.1}%{?snapshot:1.%{snapshot}.}1
+Release:	%{?beta:0.%{beta}.1}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -85,7 +85,7 @@ Version %{qtmajor} of the Qt Quick framework
 %{_qtdir}/mkspecs/modules/qt_lib_quickcontrolstestutilsprivate_private.pri \
 %{_qtdir}/mkspecs/modules/qt_lib_quicktestutilsprivate_private.pri \
 %{_qtdir}/modules/QmlIntegration.json \
-%{_qtdir}/lib/pkgconfig/Qt6QmlIntegration.pc
+%{_libdir}/pkgconfig/Qt6QmlIntegration.pc
 
 %define extra_reqprov_Qml \
 Requires:	rpm-provreq-qml \
@@ -154,6 +154,7 @@ export LD_LIBRARY_PATH="$(pwd)/build/lib:${LD_LIBRARY_PATH}"
 
 %install
 %ninja_install -C build
+%qt6_postinstall
 # Seems to be an accidentally installed object file
 rm -rf %{buildroot}%{_qtdir}/lib/objects-RelWithDebInfo
 
