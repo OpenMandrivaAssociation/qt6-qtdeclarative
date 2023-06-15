@@ -1,8 +1,8 @@
-#define beta rc
+%define beta beta1
 
 Name:		qt6-qtdeclarative
-Version:	6.5.1
-Release:	%{?beta:0.%{beta}.1}%{?snapshot:0.%{snapshot}.}1
+Version:	6.6.0
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -121,7 +121,7 @@ Requires:	cmake(Qt%{qtmajor}QuickTemplates2)
 Requires:	%{name} = %{EVRD}
 
 %qt6libs LabsAnimation LabsFolderListModel LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlXmlListModel QmlCompiler QuickEffects
-%qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar
+%qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar QmlLS QmlToolingSettings
 
 %package examples
 Summary: Example applications for Qt Declarative %{qtmajor}
