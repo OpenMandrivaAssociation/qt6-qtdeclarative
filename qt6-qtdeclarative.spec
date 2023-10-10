@@ -1,4 +1,4 @@
-%define beta rc
+#define beta rc
 
 Name:		qt6-qtdeclarative
 Version:	6.6.0
@@ -73,17 +73,13 @@ Version %{qtmajor} of the Qt Quick framework
 %{_qtdir}/mkspecs/features/qtquickcompiler.prf \
 %{_qtdir}/mkspecs/features/qmlcache.prf \
 %{_qtdir}/mkspecs/features/qmltypes.prf \
-%{_qtdir}/lib/cmake/Qt6QmlIntegration \
-%{_qtdir}/bin/qmltc \
-%{_qtdir}/include/QtQmlIntegration \
 %{_qtdir}/mkspecs/modules/qt_lib_qmlintegration.pri \
 %{_qtdir}/mkspecs/modules/qt_lib_qmlintegration_private.pri \
 %{_qtdir}/mkspecs/modules/qt_lib_qmltest.pri \
 %{_qtdir}/mkspecs/modules/qt_lib_qmltest_private.pri \
-%{_qtdir}/mkspecs/modules/qt_lib_qmlworkerscript.pri \
-%{_qtdir}/mkspecs/modules/qt_lib_qmlworkerscript_private.pri \
-%{_qtdir}/mkspecs/modules/qt_lib_quickcontrolstestutilsprivate_private.pri \
-%{_qtdir}/mkspecs/modules/qt_lib_quicktestutilsprivate_private.pri \
+%{_qtdir}/lib/cmake/Qt6QmlIntegration \
+%{_qtdir}/bin/qmltc \
+%{_qtdir}/include/QtQmlIntegration \
 %{_qtdir}/modules/QmlIntegration.json \
 %{_libdir}/pkgconfig/Qt6QmlIntegration.pc
 
@@ -110,8 +106,14 @@ Requires:	cmake(Qt6Network)
 Requires:	cmake(Qt%{qtmajor}QmlModels)
 Requires:	cmake(Qt%{qtmajor}OpenGL)
 
+%define extra_devel_files_QuickTest \
+%{_qtdir}/mkspecs/modules/qt_lib_quicktestutilsprivate_private.pri \
+
 %define extra_devel_reqprov_QuickTest \
 Requires:	cmake(Qt%{qtmajor}Test)
+
+%define extra_devel_files_QuickControls2 \
+%{_qtdir}/mkspecs/modules/qt_lib_quickcontrolstestutilsprivate_private.pri 
 
 %define extra_devel_reqprov_QuickControls2 \
 Requires:	cmake(Qt%{qtmajor}QuickTemplates2)
