@@ -2,7 +2,7 @@
 
 Name:		qt6-qtdeclarative
 Version:	6.6.0
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}2
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -41,11 +41,14 @@ License:	LGPLv3/GPLv3/GPLv2
 Version %{qtmajor} of the Qt Quick framework
 
 %define extra_files_Qml \
-%{_qtdir}/plugins/qmltooling \
+%dir %{_qtdir}/plugins/qmltooling \
 %dir %{_qtdir}/qml/Qt \
 %dir %{_qtdir}/qml/Qt/labs \
 %{_qtdir}/qml/Qt/labs/animation \
+%{_qtdir}/qml/Qt/labs/folderlistmodel \
 %{_qtdir}/qml/Qt/labs/platform \
+%{_qtdir}/qml/Qt/labs/qmlmodels \
+%{_qtdir}/qml/Qt/labs/settings \
 %{_qtdir}/qml/Qt/labs/sharedimage \
 %{_qtdir}/qml/Qt/labs/wavefrontmesh \
 %{_qtdir}/qml/QtTest \
@@ -57,17 +60,16 @@ Version %{qtmajor} of the Qt Quick framework
 %{_qtdir}/lib/cmake/Qt%{qtmajor}BuildInternals/* \
 %{_qtdir}/lib/cmake/Qt%{qtmajor}QmlDebugPrivate \
 %{_qtdir}/plugins/qmltooling/libqmldbg_debugger.so \
+%{_qtdir}/plugins/qmltooling/libqmldbg_inspector.so \
 %{_qtdir}/plugins/qmltooling/libqmldbg_local.so \
 %{_qtdir}/plugins/qmltooling/libqmldbg_messages.so \
 %{_qtdir}/plugins/qmltooling/libqmldbg_native.so \
 %{_qtdir}/plugins/qmltooling/libqmldbg_nativedebugger.so \
+%{_qtdir}/plugins/qmltooling/libqmldbg_preview.so \
 %{_qtdir}/plugins/qmltooling/libqmldbg_profiler.so \
+%{_qtdir}/plugins/qmltooling/libqmldbg_quickprofiler.so \
 %{_qtdir}/plugins/qmltooling/libqmldbg_server.so \
 %{_qtdir}/plugins/qmltooling/libqmldbg_tcp.so \
-%{_qtdir}/qml/Qt/labs/folderlistmodel \
-%{_qtdir}/qml/Qt/labs/qmlmodels \
-%{_qtdir}/qml/Qt/labs/settings \
-%{_qtdir}/qml/builtins.qmltypes \
 %{_qtdir}/modules/QmlDebugPrivate.json \
 %{_qtdir}/lib/cmake/Qt%{qtmajor}QmlImportScanner \
 %{_qtdir}/mkspecs/features/qtquickcompiler.prf \
@@ -93,6 +95,7 @@ Requires:	cmake(Qt6Network)
 
 %define extra_files_QmlCore \
 %dir %{_qtdir}/qml \
+%{_qtdir}/qml/builtins.qmltypes \
 %{_qtdir}/qml/QtCore \
 %{_qtdir}/qml/QtQuick \
 %{_qtdir}/qml/jsroot.qmltypes \
