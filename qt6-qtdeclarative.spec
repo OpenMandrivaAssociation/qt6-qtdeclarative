@@ -1,7 +1,7 @@
-#define beta rc
+%define beta beta1
 
 Name:		qt6-qtdeclarative
-Version:	6.6.1
+Version:	6.7.0
 Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
@@ -102,6 +102,9 @@ Requires:	cmake(Qt6Network)
 %{_qtdir}/qml/QtQml \
 %{_qtdir}/bin/qmlls
 
+%define extra_devel_files_QmlCore \
+%{_qtdir}/libexec/qmljsrootgen
+
 %define extra_files_QuickTest \
 %{_qtdir}/qml/Qt/test
 
@@ -121,12 +124,18 @@ Requires:	cmake(Qt%{qtmajor}Test)
 %define extra_devel_reqprov_QuickControls2 \
 Requires:	cmake(Qt%{qtmajor}QuickTemplates2)
 
+%define extra_devel_files_QmlBuiltins \
+%{_libdir}/pkgconfig/Qt%{qtmajor}QmlBuiltins.pc
+
+%define extra_files_QmlNetwork \
+%{_qtdir}/qml/QtNetwork
+
 # qmltyperegistrar and friends
 %define extra_devel_reqprov_QmlCore \
 Requires:	%{name} = %{EVRD}
 
-%qt6libs LabsAnimation LabsFolderListModel LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlXmlListModel QmlCompiler QuickEffects
-%qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar QmlLS QmlToolingSettings
+%qt6libs LabsAnimation LabsFolderListModel LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlXmlListModel QmlCompiler QuickEffects QmlNetwork
+%qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar QmlLS QmlToolingSettings QmlBuiltins
 
 %package examples
 Summary: Example applications for Qt Declarative %{qtmajor}
@@ -138,7 +147,6 @@ Example applications for Qt Declarative %{qtmajor}
 %files examples
 %{_qtdir}/examples/qml
 %{_qtdir}/examples/quick
-%{_qtdir}/examples/qmltest
 %{_qtdir}/examples/quickcontrols
 
 %prep
