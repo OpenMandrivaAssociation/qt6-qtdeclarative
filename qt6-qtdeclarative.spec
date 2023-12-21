@@ -2,7 +2,7 @@
 
 Name:		qt6-qtdeclarative
 Version:	6.7.0
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}2
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -91,7 +91,8 @@ Requires:	%mklibname Qt%{qtmajor}QmlCore
 
 %define extra_devel_reqprov_Qml \
 Requires:	%{name} = %{EVRD} \
-Requires:	cmake(Qt6Network)
+Requires:	cmake(Qt%{qtmajor}Network) \
+Requires:	cmake(Qt%{qtmajor}QmlBuiltins)
 
 %define extra_files_QmlCore \
 %dir %{_qtdir}/qml \
@@ -109,8 +110,9 @@ Requires:	cmake(Qt6Network)
 %{_qtdir}/qml/Qt/test
 
 %define extra_devel_reqprov_Quick \
-Requires:	cmake(Qt%{qtmajor}QmlModels)
-Requires:	cmake(Qt%{qtmajor}OpenGL)
+Requires:	cmake(Qt%{qtmajor}QmlModels) \
+Requires:	cmake(Qt%{qtmajor}OpenGL) \
+Requires:	cmake(Qt%{qtmajor}Qml)
 
 %define extra_devel_files_QuickTest \
 %{_qtdir}/mkspecs/modules/qt_lib_quicktestutilsprivate_private.pri \
