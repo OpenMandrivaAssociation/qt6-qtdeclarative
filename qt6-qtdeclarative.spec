@@ -2,13 +2,16 @@
 
 Name:		qt6-qtdeclarative
 Version:	6.7.0
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}3
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}4
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
 %else
 Source:		http://download.qt-project.org/%{?beta:development}%{!?beta:official}_releases/qt/%(echo %{version}|cut -d. -f1-2)/%{version}%{?beta:-%{beta}}/submodules/qtdeclarative-everywhere-src-%{version}%{?beta:-%{beta}}.tar.xz
 %endif
+# This is a workaround for the disk cache breaking Plasma badly.
+# See e.g. https://www.reddit.com/r/kde/comments/18n3bfb/comment/keja252/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
+Patch0:		qtdeclarative-disable-disk-cache.patch
 Group:		System/Libraries
 Summary:	Version %{qtmajor} of the Qt Quick framework
 BuildRequires:	cmake
@@ -187,6 +190,9 @@ rm -rf %{buildroot}%{_qtdir}/lib/objects-RelWithDebInfo
 %{_qtdir}/bin/qmlscene
 %{_qtdir}/bin/qmltestrunner
 %{_qtdir}/bin/qmltime
+# FIXME circular dependency here... QtSvg wants QtQml, but
+# QtQml needs QtSvg to build svgtoqml
+%optional %{_qtdir}/bin/svgtoqml
 %{_qtdir}/libexec/qmlcachegen
 %{_qtdir}/libexec/qmlimportscanner
 %{_qtdir}/libexec/qmltyperegistrar
