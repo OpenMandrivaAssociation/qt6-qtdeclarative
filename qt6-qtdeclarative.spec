@@ -1,8 +1,8 @@
-%define beta beta1
+%define beta beta2
 
 Name:		qt6-qtdeclarative
 Version:	6.7.0
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}4
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -154,6 +154,7 @@ Example applications for Qt Declarative %{qtmajor}
 %{_qtdir}/examples/qml
 %{_qtdir}/examples/quick
 %{_qtdir}/examples/quickcontrols
+%{_qtdir}/examples/quickshapes
 
 %prep
 %autosetup -p1 -n qtdeclarative%{!?snapshot:-everywhere-src-%{version}%{?beta:-%{beta}}}
