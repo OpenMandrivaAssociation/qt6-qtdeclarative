@@ -1,7 +1,7 @@
 #define beta rc2
 
 Name:		qt6-qtdeclarative
-Version:	6.7.3
+Version:	6.8.0
 Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
@@ -98,7 +98,6 @@ Requires:	%mklibname Qt%{qtmajor}QmlCore
 Requires:	%{name} = %{EVRD} \
 Requires:	cmake(Qt%{qtmajor}Core) \
 Requires:	cmake(Qt%{qtmajor}Network) \
-Requires:	cmake(Qt%{qtmajor}QmlBuiltins)
 
 %define extra_files_QmlCore \
 %dir %{_qtdir}/qml \
@@ -132,9 +131,6 @@ Requires:	cmake(Qt%{qtmajor}Test)
 %define extra_devel_reqprov_QuickControls2 \
 Requires:	cmake(Qt%{qtmajor}QuickTemplates2)
 
-%define extra_devel_files_QmlBuiltins \
-%{_libdir}/pkgconfig/Qt%{qtmajor}QmlBuiltins.pc
-
 %define extra_files_QmlNetwork \
 %{_qtdir}/qml/QtNetwork
 
@@ -142,8 +138,8 @@ Requires:	cmake(Qt%{qtmajor}QuickTemplates2)
 %define extra_devel_reqprov_QmlCore \
 Requires:	%{name} = %{EVRD}
 
-%qt6libs LabsAnimation LabsFolderListModel LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlXmlListModel QmlCompiler QuickEffects QmlNetwork QuickControls2BasicStyleImpl QuickControls2FusionStyleImpl QuickControls2ImagineStyleImpl QuickControls2MaterialStyleImpl QuickControls2UniversalStyleImpl QuickControls2Basic QuickControls2Fusion QuickControls2Imagine QuickControls2Material QuickControls2Universal
-%qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar QmlLS QmlToolingSettings QmlBuiltins
+%qt6libs LabsAnimation LabsFolderListModel LabsPlatform LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlMeta QmlXmlListModel QmlCompiler QuickEffects QmlNetwork QuickControls2BasicStyleImpl QuickControls2FluentWinUI3StyleImpl QuickControls2FusionStyleImpl QuickControls2ImagineStyleImpl QuickControls2MaterialStyleImpl QuickControls2UniversalStyleImpl QuickControls2Basic QuickControls2Fusion QuickControls2Imagine QuickControls2Material QuickControls2Universal
+%qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar QmlLS QmlToolingSettings
 
 %package examples
 Summary: Example applications for Qt Declarative %{qtmajor}
@@ -196,7 +192,10 @@ rm -rf %{buildroot}%{_qtdir}/lib/objects-RelWithDebInfo
 # FIXME circular dependency here... QtSvg wants QtQml, but
 # QtQml needs QtSvg to build svgtoqml
 %optional %{_qtdir}/bin/svgtoqml
+%{_qtdir}/libexec/qmlaotstats
 %{_qtdir}/libexec/qmlcachegen
 %{_qtdir}/libexec/qmlimportscanner
 %{_qtdir}/libexec/qmltyperegistrar
+%{_qtdir}/plugins/qmlls
 %{_qtdir}/plugins/qmllint
+%{_qtdir}/qml/QML
