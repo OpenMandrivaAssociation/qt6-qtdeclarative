@@ -32,7 +32,7 @@ BuildRequires:	cmake(Qt6Sql)
 BuildRequires:	cmake(Qt6Test)
 #BuildRequires:	cmake(Qt6LinguistTools)
 BuildRequires:	cmake(Qt6LanguageServerPrivate)
-BuildRequires:	cmake(Qt6Location)
+#BuildRequires:	cmake(Qt6Location)
 BuildRequires:	cmake(Qt6Positioning)
 BuildRequires:	cmake(Qt6JsonRpcPrivate)
 BuildRequires:	cmake(Qt6ShaderTools) = %{version}
