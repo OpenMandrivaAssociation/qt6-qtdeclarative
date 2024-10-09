@@ -12,6 +12,9 @@ Source:		http://download.qt-project.org/%{?beta:development}%{!?beta:official}_r
 # This is a workaround for the disk cache breaking Plasma badly.
 # See e.g. https://www.reddit.com/r/kde/comments/18n3bfb/comment/keja252/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
 Patch0:		qtdeclarative-disable-disk-cache.patch
+# https://bugs.kde.org/493116
+Patch1:		https://code.qt.io/cgit/qt/qtdeclarative.git/patch/?id=3330731d0cb221477ab3d856db032126403ae6a0#/333073.patch
+Patch2:		https://code.qt.io/cgit/qt/qtdeclarative.git/patch/?id=2aefbca84d2f3dca2c2697f13710b6907c0c7e59#/2aefbc.patch
 Group:		System/Libraries
 Summary:	Version %{qtmajor} of the Qt Quick framework
 BuildRequires:	cmake
