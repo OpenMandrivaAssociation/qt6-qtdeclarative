@@ -2,7 +2,7 @@
 
 Name:		qt6-qtdeclarative
 Version:	6.8.0
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}2
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}3
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -17,6 +17,9 @@ Patch1:		https://code.qt.io/cgit/qt/qtdeclarative.git/patch/?id=3330731d0cb22147
 Patch2:		https://code.qt.io/cgit/qt/qtdeclarative.git/patch/?id=2aefbca84d2f3dca2c2697f13710b6907c0c7e59#/2aefbc.patch
 # https://codereview.qt-project.org/c/qt/qtdeclarative/+/579714
 Patch3:         6b3e6a6.diff
+# https://bugs.kde.org/show_bug.cgi?id=494804
+Patch4:		https://code.qt.io/cgit/qt/qtdeclarative.git/patch/?id=104b0d6e88ce6781c9d31cf0dd14dfe99988b789#/104b0d.patch
+Patch5:		https://code.qt.io/cgit/qt/qtdeclarative.git/patch/?id=fbdbed919f59cc7b4520f5aab2149f4c99b63e24#/fbdbed.patch
 Group:		System/Libraries
 Summary:	Version %{qtmajor} of the Qt Quick framework
 BuildRequires:	cmake
@@ -31,6 +34,7 @@ BuildRequires:	cmake(Qt6Network)
 BuildRequires:	cmake(Qt6OpenGL)
 BuildRequires:	cmake(Qt6OpenGLWidgets)
 BuildRequires:	cmake(Qt6Sql)
+BuildRequires:	cmake(Qt6Svg)
 BuildRequires:	cmake(Qt6Test)
 #BuildRequires:	cmake(Qt6LinguistTools)
 BuildRequires:	cmake(Qt6LanguageServerPrivate)
@@ -143,7 +147,7 @@ Requires:	cmake(Qt%{qtmajor}QuickTemplates2)
 %define extra_devel_reqprov_QmlCore \
 Requires:	%{name} = %{EVRD}
 
-%qt6libs LabsAnimation LabsFolderListModel LabsPlatform LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlMeta QmlXmlListModel QmlCompiler QuickEffects QmlNetwork QuickControls2BasicStyleImpl QuickControls2FluentWinUI3StyleImpl QuickControls2FusionStyleImpl QuickControls2ImagineStyleImpl QuickControls2MaterialStyleImpl QuickControls2UniversalStyleImpl QuickControls2Basic QuickControls2Fusion QuickControls2Imagine QuickControls2Material QuickControls2Universal
+%qt6libs LabsAnimation LabsFolderListModel LabsPlatform LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlMeta QmlXmlListModel QmlCompiler QuickEffects QmlNetwork QuickControls2BasicStyleImpl QuickControls2FluentWinUI3StyleImpl QuickControls2FusionStyleImpl QuickControls2ImagineStyleImpl QuickControls2MaterialStyleImpl QuickControls2UniversalStyleImpl QuickControls2Basic QuickControls2Fusion QuickControls2Imagine QuickControls2Material QuickControls2Universal QuickVectorImage QuickVectorImageGenerator
 %qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar QmlLS QmlToolingSettings
 
 %package examples
