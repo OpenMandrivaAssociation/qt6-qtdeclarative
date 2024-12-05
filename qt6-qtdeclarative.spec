@@ -1,8 +1,8 @@
 #define beta rc2
 
 Name:		qt6-qtdeclarative
-Version:	6.8.0
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}3
+Version:	6.8.1
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -12,14 +12,6 @@ Source:		http://download.qt-project.org/%{?beta:development}%{!?beta:official}_r
 # This is a workaround for the disk cache breaking Plasma badly.
 # See e.g. https://www.reddit.com/r/kde/comments/18n3bfb/comment/keja252/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
 Patch0:		qtdeclarative-disable-disk-cache.patch
-# https://bugs.kde.org/493116
-Patch1:		https://code.qt.io/cgit/qt/qtdeclarative.git/patch/?id=3330731d0cb221477ab3d856db032126403ae6a0#/333073.patch
-Patch2:		https://code.qt.io/cgit/qt/qtdeclarative.git/patch/?id=2aefbca84d2f3dca2c2697f13710b6907c0c7e59#/2aefbc.patch
-# https://codereview.qt-project.org/c/qt/qtdeclarative/+/579714
-Patch3:         6b3e6a6.diff
-# https://bugs.kde.org/show_bug.cgi?id=494804
-Patch4:		https://code.qt.io/cgit/qt/qtdeclarative.git/patch/?id=104b0d6e88ce6781c9d31cf0dd14dfe99988b789#/104b0d.patch
-Patch5:		https://code.qt.io/cgit/qt/qtdeclarative.git/patch/?id=fbdbed919f59cc7b4520f5aab2149f4c99b63e24#/fbdbed.patch
 Group:		System/Libraries
 Summary:	Version %{qtmajor} of the Qt Quick framework
 BuildRequires:	cmake
@@ -97,7 +89,8 @@ Version %{qtmajor} of the Qt Quick framework
 %{_qtdir}/bin/qmltc \
 %{_qtdir}/include/QtQmlIntegration \
 %{_qtdir}/modules/QmlIntegration.json \
-%{_libdir}/pkgconfig/Qt6QmlIntegration.pc
+%{_libdir}/pkgconfig/Qt6QmlIntegration.pc \
+%{_qtdir}/sbom/*
 
 %define extra_reqprov_Qml \
 Requires:	rpm-provreq-qml \
