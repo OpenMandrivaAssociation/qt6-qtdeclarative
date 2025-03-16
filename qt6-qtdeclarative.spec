@@ -1,7 +1,7 @@
-#define beta rc2
+%define beta rc
 
 Name:		qt6-qtdeclarative
-Version:	6.8.2
+Version:	6.9.0
 Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
@@ -86,6 +86,7 @@ Version %{qtmajor} of the Qt Quick framework
 %{_qtdir}/mkspecs/modules/qt_lib_qmltest.pri \
 %{_qtdir}/mkspecs/modules/qt_lib_qmltest_private.pri \
 %{_qtdir}/lib/cmake/Qt6QmlIntegration \
+%{_qtdir}/lib/cmake/Qt6QmlIntegrationPrivate \
 %{_qtdir}/bin/qmltc \
 %{_qtdir}/include/QtQmlIntegration \
 %{_qtdir}/modules/QmlIntegration.json \
@@ -141,7 +142,7 @@ Requires:	cmake(Qt%{qtmajor}QuickTemplates2)
 Requires:	%{name} = %{EVRD}
 
 %qt6libs LabsAnimation LabsFolderListModel LabsPlatform LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlMeta QmlXmlListModel QmlCompiler QuickEffects QmlNetwork QuickControls2BasicStyleImpl QuickControls2FluentWinUI3StyleImpl QuickControls2FusionStyleImpl QuickControls2ImagineStyleImpl QuickControls2MaterialStyleImpl QuickControls2UniversalStyleImpl QuickControls2Basic QuickControls2Fusion QuickControls2Imagine QuickControls2Material QuickControls2Universal QuickVectorImage QuickVectorImageGenerator
-%qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar QmlLS QmlToolingSettings
+%qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar QmlLS QmlToolingSettings QmlFormat
 
 %package examples
 Summary: Example applications for Qt Declarative %{qtmajor}
