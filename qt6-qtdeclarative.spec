@@ -34,6 +34,8 @@ BuildRequires:	cmake(Qt6LanguageServerPrivate)
 BuildRequires:	cmake(Qt6Positioning)
 BuildRequires:	cmake(Qt6JsonRpcPrivate)
 BuildRequires:	cmake(Qt6ShaderTools) = %{version}
+# for AssetsDownloader
+BuildRequires:	cmake(Qt6ExamplesAssetDownloaderPrivate)
 BuildRequires:	qt6-qtbase-tools
 BuildRequires:	qmake-qt6
 BuildRequires:	pkgconfig(xkbcommon)
