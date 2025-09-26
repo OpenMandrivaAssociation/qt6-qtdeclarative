@@ -1,4 +1,4 @@
-%define beta beta3
+%define beta rc
 
 Name:		qt6-qtdeclarative
 Version:	6.10.0
@@ -7,7 +7,7 @@ Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
 %else
-Source:		http://download.qt-project.org/%{?beta:development}%{!?beta:official}_releases/qt/%(echo %{version}|cut -d. -f1-2)/%{version}%{?beta:-%{beta}}/submodules/qtdeclarative-everywhere-src-%{version}%{?beta:-%{beta}}.tar.xz
+Source:		https://download.qt.io/%{?beta:development}%{!?beta:official}_releases/qt/%(echo %{version}|cut -d. -f1-2)/%{version}%{?beta:-%{beta}}/submodules/qtdeclarative-everywhere-src-%{version}%{?beta:-%{beta}}.tar.xz
 %endif
 # This is a workaround for the disk cache breaking Plasma badly.
 # See e.g. https://www.reddit.com/r/kde/comments/18n3bfb/comment/keja252/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
@@ -143,7 +143,7 @@ Requires:	%{name} = %{EVRD}
 
 %define extra_devel_files_QmlAssetDownloader \
 %{_libdir}/pkgconfig/Qt6QmlAssetDownloader.pc \
-%{_qtdir}/qml/Assets
+%{_qtdir}/qml/Qt/labs/assetdownloader
 
 %define extra_files_LabsSynchronizer \
 %{_qtdir}/qml/Qt/labs/synchronizer/
