@@ -1,0 +1,62 @@
+From f3d25575767b3335e6d6e59ef0c7d7a05799ccac Mon Sep 17 00:00:00 2001
+From: Shawn Rutledge <shawn.rutledge@qt.io>
+Date: Wed, 24 Sep 2025 19:26:24 +0200
+Subject: [PATCH 094/239] Replace nokia.com logo URLs with something that works
+ for now
+
+If only the qt.io website could be relied upon to have a Qt logo in
+the same path for eternity...
+
+Pick-to: 6.8
+Change-Id: Ie221bd85152af42bdf36655083932ca8341c7d2a
+Reviewed-by: Paul Wicking <paul.wicking@qt.io>
+(cherry picked from commit 75c5dfb7e2841fb1c5f53daa891263e5a211f517)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qml/doc/snippets/qml/properties.qml                         | 2 +-
+ .../qml/qml-extending-types/properties/alias/application.qml    | 2 +-
+ .../snippets/qml/qml-extending-types/properties/application.qml | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/qml/doc/snippets/qml/properties.qml b/src/qml/doc/snippets/qml/properties.qml
+index 39f508e424..59c05f9e98 100644
+--- a/src/qml/doc/snippets/qml/properties.qml
++++ b/src/qml/doc/snippets/qml/properties.qml
+@@ -223,7 +223,7 @@ Button {
+ //! [image alias]
+ Button {
+     id: imagebutton
+-    buttonImage.source: "http://qt.nokia.com/logo.png"
++    buttonImage.source: "https://code.qt.io/cgit/qt/qtbase.git/plain/src/widgets/dialogs/images/qtlogo-64.png"
+     buttonLabel: buttonImage.source
+ }
+ //! [image alias]
+diff --git a/src/quick/doc/snippets/qml/qml-extending-types/properties/alias/application.qml b/src/quick/doc/snippets/qml/qml-extending-types/properties/alias/application.qml
+index 697a07062d..506b912cbb 100644
+--- a/src/quick/doc/snippets/qml/qml-extending-types/properties/alias/application.qml
++++ b/src/quick/doc/snippets/qml/qml-extending-types/properties/alias/application.qml
+@@ -7,7 +7,7 @@ import QtQuick
+ ImageViewer {
+     id: viewer
+ 
+-    currentImage.source: "http://qt.nokia.com/logo.png"
++    currentImage.source: "https://code.qt.io/cgit/qt/qtbase.git/plain/src/widgets/dialogs/images/qtlogo-64.png"
+     currentImage.width: width
+     currentImage.height: height
+     currentImage.fillMode: Image.Tile
+diff --git a/src/quick/doc/snippets/qml/qml-extending-types/properties/application.qml b/src/quick/doc/snippets/qml/qml-extending-types/properties/application.qml
+index 4cda04660e..0cfc4478b6 100644
+--- a/src/quick/doc/snippets/qml/qml-extending-types/properties/application.qml
++++ b/src/quick/doc/snippets/qml/qml-extending-types/properties/application.qml
+@@ -6,7 +6,7 @@ import QtQuick
+ ImageViewer {
+     id: viewer
+ 
+-    currentImage: "http://qt.nokia.com/logo.png"
++    currentImage: "https://code.qt.io/cgit/qt/qtbase.git/plain/src/widgets/dialogs/images/qtlogo-64.png"
+ 
+     Text { text: viewer.currentImage }
+ }
+-- 
+2.51.2
+

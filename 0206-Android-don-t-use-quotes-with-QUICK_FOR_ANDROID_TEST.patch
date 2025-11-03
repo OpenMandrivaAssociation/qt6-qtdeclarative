@@ -1,0 +1,65 @@
+From 8a86c684c6021f640c560f874b12aeb646064f29 Mon Sep 17 00:00:00 2001
+From: Assam Boudjelthia <assam.boudjelthia@qt.io>
+Date: Thu, 2 Oct 2025 19:12:33 +0300
+Subject: [PATCH 206/239] Android: don't use quotes with
+ QUICK_FOR_ANDROID_TEST_MAIN()
+
+Otherwise the quote will end up being part of the test name.
+
+Change-Id: Id5a08f00cfc00929af94f991fc4bd375699deb81
+Reviewed-by: Olli Vuolteenaho <olli.vuolteenaho@qt.io>
+Reviewed-by: Soheil Armin <soheil.armin@qt.io>
+(cherry picked from commit 48abcd8b2f5cdd43d4cc4d7655d0ef435cf0fdd9)
+---
+ src/qmltest/android/quickforandroidtest.cpp                     | 2 +-
+ tests/auto/qtquickview/basic/android/qml/tst_qtquickview.cpp    | 2 +-
+ .../qtquickview/signallistener/android/qml/tst_qtquickview.cpp  | 2 +-
+ .../qtquickview/statuslistener/android/qml/tst_qtquickview.cpp  | 2 +-
+ 4 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/qmltest/android/quickforandroidtest.cpp b/src/qmltest/android/quickforandroidtest.cpp
+index ec561872eb..db695fe574 100644
+--- a/src/qmltest/android/quickforandroidtest.cpp
++++ b/src/qmltest/android/quickforandroidtest.cpp
+@@ -15,7 +15,7 @@ QT_BEGIN_NAMESPACE
+ /*
+  * For testing Qt Quick for Android (QQ4A) applications with QuickTest
+  * Usage:
+- *  QUICK_FOR_ANDROID_TEST_MAIN("test_name")
++ *  QUICK_FOR_ANDROID_TEST_MAIN(test_name)
+  *
+  * This function does the same steps as the regular QtQuickTest macro, with one
+  * exception: it does not parse tests from QML files. This is because in the
+diff --git a/tests/auto/qtquickview/basic/android/qml/tst_qtquickview.cpp b/tests/auto/qtquickview/basic/android/qml/tst_qtquickview.cpp
+index 3821d3cb6f..385cef0e8a 100644
+--- a/tests/auto/qtquickview/basic/android/qml/tst_qtquickview.cpp
++++ b/tests/auto/qtquickview/basic/android/qml/tst_qtquickview.cpp
+@@ -3,4 +3,4 @@
+ 
+ #include <QtQuickTest/private/quickforandroidtest_p.h>
+ 
+-QUICK_FOR_ANDROID_TEST_MAIN("tst_qtquickview")
++QUICK_FOR_ANDROID_TEST_MAIN(tst_qtquickview)
+diff --git a/tests/auto/qtquickview/signallistener/android/qml/tst_qtquickview.cpp b/tests/auto/qtquickview/signallistener/android/qml/tst_qtquickview.cpp
+index 40aed4f628..973a2eba84 100644
+--- a/tests/auto/qtquickview/signallistener/android/qml/tst_qtquickview.cpp
++++ b/tests/auto/qtquickview/signallistener/android/qml/tst_qtquickview.cpp
+@@ -3,4 +3,4 @@
+ 
+ #include <QtQuickTest/private/quickforandroidtest_p.h>
+ 
+-QUICK_FOR_ANDROID_TEST_MAIN("tst_qtquickview_signallistener")
++QUICK_FOR_ANDROID_TEST_MAIN(tst_qtquickview_signallistener)
+diff --git a/tests/auto/qtquickview/statuslistener/android/qml/tst_qtquickview.cpp b/tests/auto/qtquickview/statuslistener/android/qml/tst_qtquickview.cpp
+index 061fb9589c..67e0e48c51 100644
+--- a/tests/auto/qtquickview/statuslistener/android/qml/tst_qtquickview.cpp
++++ b/tests/auto/qtquickview/statuslistener/android/qml/tst_qtquickview.cpp
+@@ -3,4 +3,4 @@
+ 
+ #include <QtQuickTest/private/quickforandroidtest_p.h>
+ 
+-QUICK_FOR_ANDROID_TEST_MAIN("tst_qtquickview_statuslistener")
++QUICK_FOR_ANDROID_TEST_MAIN(tst_qtquickview_statuslistener)
+-- 
+2.51.2
+

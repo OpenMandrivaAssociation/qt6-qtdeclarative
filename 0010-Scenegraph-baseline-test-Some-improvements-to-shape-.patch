@@ -1,0 +1,118 @@
+From 301cbb3c5801c38e137448f3bc6946b00f01f65c Mon Sep 17 00:00:00 2001
+From: Eirik Aavitsland <eirik.aavitsland@qt.io>
+Date: Wed, 3 Sep 2025 09:58:56 +0200
+Subject: [PATCH 010/239] Scenegraph baseline test: Some improvements to shape
+ testing
+
+shape_update.qml: Improve stability. The scene animates a repetitive
+string which could confuse the grabber. If two consecutive screenshots
+were taken when in fact different parts of the string were displayed,
+but it would look identical since the string content repeated, the
+grabber would conclude that the scene had stabilized when it actually
+had not. Fix by making the string non-repetitive.
+
+shape_fillrule.qml: Add a test scene that exercises different cases of
+shape-with-hole, under the two different fill rules.
+
+Change-Id: I5e0f214ce58f640de6890d0c49a438ed4e9901f7
+Reviewed-by: Eskil Abrahamsen Blomfeldt <eskil.abrahamsen-blomfeldt@qt.io>
+(cherry picked from commit 47d331a831b0902c4957225581e72a02c3f954a4)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ .../scenegraph/data/shape/shape_fillrule.qml  | 58 +++++++++++++++++++
+ .../scenegraph/data/shape/shape_update.qml    |  4 +-
+ 2 files changed, 61 insertions(+), 1 deletion(-)
+ create mode 100644 tests/baseline/scenegraph/data/shape/shape_fillrule.qml
+
+diff --git a/tests/baseline/scenegraph/data/shape/shape_fillrule.qml b/tests/baseline/scenegraph/data/shape/shape_fillrule.qml
+new file mode 100644
+index 0000000000..665960403a
+--- /dev/null
++++ b/tests/baseline/scenegraph/data/shape/shape_fillrule.qml
+@@ -0,0 +1,58 @@
++import QtQuick
++import QtQuick.Shapes
++
++Item {
++    width: 600
++    height: 600
++
++    ListModel {
++        id: renderers
++        ListElement { renderer: Shape.CurveRenderer; fillrule: ShapePath.OddEvenFill }
++        ListElement { renderer: Shape.CurveRenderer; fillrule: ShapePath.WindingFill }
++        ListElement { renderer: Shape.GeometryRenderer; fillrule: ShapePath.OddEvenFill }
++        ListElement { renderer: Shape.GeometryRenderer; fillrule: ShapePath.WindingFill }
++    }
++
++    Column {
++        anchors.centerIn: parent
++        spacing: 25
++
++        Repeater {
++            model: renderers
++
++            Shape {
++                preferredRendererType: renderer
++
++                ShapePath {
++                    fillColor: "teal"
++                    strokeColor: "purple"
++                    joinStyle: ShapePath.RoundJoin
++                    capStyle: ShapePath.RoundCap
++
++                    strokeWidth: 4
++                    fillRule: fillrule
++
++                    PathSvg {
++                        // Single path, self-intersecting, same direction hole
++                        path: "M 10,5 l 100,10 -80,80 0,-60 80,80 -100,10 z"
++                    }
++
++                    PathSvg {
++                        // Single path, opposite direction hole
++                        path: "M 150,5 l 100,10 -50,50 -30,-30 0,60 30,-30 50,50 -100,10 z"
++                    }
++
++                    PathSvg {
++                        // Two subpaths, same direction hole
++                        path: "M 290,5 l 100,10 -50,50 50,50 -100,10 z m 50,60 l -30,30 0,-60 z"
++                    }
++
++                    PathSvg {
++                        // Two subpaths, opposite direction hole
++                        path: "M 430,5 l 100,10 -50,50 50,50 -100,10 z m 50,60 l -30,-30 0,60 z"
++                    }
++                }
++            }
++        }
++    }
++}
+diff --git a/tests/baseline/scenegraph/data/shape/shape_update.qml b/tests/baseline/scenegraph/data/shape/shape_update.qml
+index 3ecdc8ea1a..e9d73e762e 100644
+--- a/tests/baseline/scenegraph/data/shape/shape_update.qml
++++ b/tests/baseline/scenegraph/data/shape/shape_update.qml
+@@ -32,7 +32,7 @@ Item {
+                     running: true
+                     repeat: true
+                     onTriggered: {
+-                        const str = 'Qt Rocks! 012345678901234567890123456789'
++                        const str = 'Qt Rocks! ABCDEFGHIJKLMNOPQRSTUVWXYZ0123'
+                         if (offset > 0) {
+                             offset = offset - 1;
+                             label = str.substring(offset);
+@@ -46,9 +46,11 @@ Item {
+                     fillColor: "orange"
+                     strokeColor: topItem.outlineColor
+                     strokeWidth: 1.5
++                    fillRule: ShapePath.WindingFill
+ 
+                     PathText {
+                         y: 15
++                        font.family: "Arial"
+                         font.pixelSize: 64
+                         text: shape.label
+                     }
+-- 
+2.51.2
+

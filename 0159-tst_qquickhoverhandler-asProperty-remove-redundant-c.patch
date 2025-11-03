@@ -1,0 +1,33 @@
+From 019e1ae5897579ff31ebc43545d983e8b2d4addb Mon Sep 17 00:00:00 2001
+From: Oliver Eftevaag <oliver.eftevaag@qt.io>
+Date: Wed, 15 Oct 2025 12:59:06 +0200
+Subject: [PATCH 159/239] tst_qquickhoverhandler::asProperty(): remove
+ redundant code
+
+QQuickTest::showView() already ensures that a window becomes visible.
+We don't need to repeat that manually in the test after calling it.
+
+Change-Id: Id8cadeb619544ee7b871fdff98f4b93a8a0c52ed
+Reviewed-by: Shawn Rutledge <shawn.rutledge@qt.io>
+(cherry picked from commit 02e70b274d252fa2107f4b33c0d6db7fee47ad2e)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ .../qquickhoverhandler/tst_qquickhoverhandler.cpp               | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/tests/auto/quick/pointerhandlers/qquickhoverhandler/tst_qquickhoverhandler.cpp b/tests/auto/quick/pointerhandlers/qquickhoverhandler/tst_qquickhoverhandler.cpp
+index 332311fe18..413fa2fbac 100644
+--- a/tests/auto/quick/pointerhandlers/qquickhoverhandler/tst_qquickhoverhandler.cpp
++++ b/tests/auto/quick/pointerhandlers/qquickhoverhandler/tst_qquickhoverhandler.cpp
+@@ -775,8 +775,6 @@ void tst_HoverHandler::asProperty()
+     QQuickView window;
+     window.setFlag(Qt::FramelessWindowHint, true);
+     QVERIFY(QQuickTest::showView(window, testFileUrl("asProperty.qml")));
+-    window.show();
+-    QVERIFY(QTest::qWaitForWindowExposed(&window));
+     const QQuickItem *root = window.rootObject();
+     QQuickHoverHandler *handler = root->property("handler").value<QQuickHoverHandler *>();
+     QVERIFY(handler);
+-- 
+2.51.2
+

@@ -1,0 +1,77 @@
+From 772cc31b1c849daba0648b685b6b6f6d8761e51f Mon Sep 17 00:00:00 2001
+From: Assam Boudjelthia <assam.boudjelthia@qt.io>
+Date: Thu, 4 Sep 2025 04:08:40 +0300
+Subject: [PATCH 103/239] Avoid showing content beneath status bars in wearable
+ example
+
+Instead of only moving the demo indicator and header slightly
+to the top when no page is selected or demo mode is inactive,
+hide them altogether so thay they don't end up showing under
+the system bars on Android.
+
+Also, for flickable pages clip their content so they don't
+end up scrolling to the top underneath the header and showing
+partially below the system bars.
+
+Task-number: QTBUG-138022
+Change-Id: I31da83ce5978dc1cab63cfe39d53f2d2c72088a9
+Reviewed-by: Rami Potinkara <rami.potinkara@qt.io>
+Reviewed-by: Mitch Curtis <mitch.curtis@qt.io>
+(cherry picked from commit c4e98e618e4fca4f850a859d5ef4f04384d575bc)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ examples/quickcontrols/wearable/Wearable/AlarmsPage.qml   | 2 ++
+ examples/quickcontrols/wearable/Wearable/Main.qml         | 4 +++-
+ examples/quickcontrols/wearable/Wearable/SettingsPage.qml | 1 +
+ 3 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/examples/quickcontrols/wearable/Wearable/AlarmsPage.qml b/examples/quickcontrols/wearable/Wearable/AlarmsPage.qml
+index 79377a6c25..88171a5950 100644
+--- a/examples/quickcontrols/wearable/Wearable/AlarmsPage.qml
++++ b/examples/quickcontrols/wearable/Wearable/AlarmsPage.qml
+@@ -6,6 +6,8 @@ import QtQuick.Controls as QQC2
+ import WearableStyle
+ 
+ Item {
++    clip: true
++
+     function addAlarm() {
+         alarms.append(
+             {
+diff --git a/examples/quickcontrols/wearable/Wearable/Main.qml b/examples/quickcontrols/wearable/Wearable/Main.qml
+index 4bd2d268ac..ae13ba81d1 100644
+--- a/examples/quickcontrols/wearable/Wearable/Main.qml
++++ b/examples/quickcontrols/wearable/Wearable/Main.qml
+@@ -89,6 +89,7 @@ QQC2.ApplicationWindow {
+ 
+         title: ""
+ 
++        visible: stackView.depth > 1
+         enabled: stackView.depth > 1
+ 
+         onBackClicked: stackView.pop()
+@@ -103,7 +104,8 @@ QQC2.ApplicationWindow {
+ //! [DemoModeIndicator]
+     DemoModeIndicator {
+         id: demoModeIndicator
+-        y: WearableSettings.demoMode ? header.height + 3 : -height - 5
++        visible: WearableSettings.demoMode
++        y: WearableSettings.demoMode ? header.height + 3 : -height - header.height - 3
+         anchors.horizontalCenter: parent.horizontalCenter
+         z: header.z + 1
+     }
+diff --git a/examples/quickcontrols/wearable/Wearable/SettingsPage.qml b/examples/quickcontrols/wearable/Wearable/SettingsPage.qml
+index 082893cef3..6954497ae2 100644
+--- a/examples/quickcontrols/wearable/Wearable/SettingsPage.qml
++++ b/examples/quickcontrols/wearable/Wearable/SettingsPage.qml
+@@ -7,6 +7,7 @@ import WearableSettings
+ 
+ Item {
+     id: settingspage
++    clip: true
+ 
+     property alias listView: listViewItem
+ 
+-- 
+2.51.2
+

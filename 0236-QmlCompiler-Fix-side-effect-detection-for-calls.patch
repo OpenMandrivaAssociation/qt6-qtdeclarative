@@ -1,0 +1,354 @@
+From 1b4e568ff08ba7c96f6f53916fd7eed16eeb528f Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Thu, 30 Oct 2025 10:15:15 +0100
+Subject: [PATCH 236/239] QmlCompiler: Fix side effect detection for calls
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+We cannot pass registers that are potentially affected by side effect
+as arguments to calls. For this to work, we need to sharpen the side
+effect detection some more.
+
+1. A conversion is always "var" which can be affected by side effects.
+   However, the actual question is whether one of the conversion
+   origins can be affected by side effects. A conversion of "int" and
+   "undefined", for example, can certainly not be affected.
+2. When determining side effects we need to look at the original types,
+   not the adjusted ones. Adjusted types are often "var" because we need
+   to pass a value as "var" to some function. That doesn't mean the
+   value can be affected by side effects, though.
+3. When generating the write-back, we should first check if it's
+   necessary at all before looking for side effects.
+
+Furthermore, we need to slightly adjust the deltablue benchmark since
+two values were potentially affected by side effects. The walkStrength
+may be shadowed by a type with internal structure. Only at the call site
+of the weaker() and stronger() functions it would then be collapsed into
+int. However, those function calls might change the original
+walkStrength, thereby producing a side effect for further calls. We can
+exclude this effect by collapsing to Number right away using the '+'
+operator.
+
+Finally, we need to make the initialization of the Categorizer benchmark
+non-Strict. The loop that writes into an array of type unknown until the
+return statement while calling a function on every iteration is
+obviously affected by side effects. However, the meat of the benchmark
+is actually not the initialization. So that should be fine.
+
+Pick-to: 6.8
+Fixes: QTBUG-141420
+Change-Id: Iad47eddcf0afaa4e502f1d151cf383a6fd23f5ba
+Reviewed-by: Olivier De Cannière <olivier.decanniere@qt.io>
+Reviewed-by: Sami Shalayel <sami.shalayel@qt.io>
+(cherry picked from commit c7d5375714f5dc706416ea62375092f5c1214422)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qmlcompiler/qqmljscodegenerator.cpp       | 46 ++++++++++++++-----
+ .../qml/qmlcppcodegen/data/CMakeLists.txt     |  2 +
+ .../qml/qmlcppcodegen/data/Categorizer.qml    | 36 +++------------
+ .../qmlcppcodegen/data/CategorizerBase.qml    | 25 ++++++++++
+ .../data/sideEffectOnArgument.qml             | 20 ++++++++
+ .../qml/qmlcppcodegen/tst_qmlcppcodegen.cpp   | 13 ++++++
+ tests/benchmarks/qml/deltablue/Constraint.qml |  4 +-
+ 7 files changed, 103 insertions(+), 43 deletions(-)
+ create mode 100644 tests/auto/qml/qmlcppcodegen/data/CategorizerBase.qml
+ create mode 100644 tests/auto/qml/qmlcppcodegen/data/sideEffectOnArgument.qml
+
+diff --git a/src/qmlcompiler/qqmljscodegenerator.cpp b/src/qmlcompiler/qqmljscodegenerator.cpp
+index b8ad569276..0a22da1543 100644
+--- a/src/qmlcompiler/qqmljscodegenerator.cpp
++++ b/src/qmlcompiler/qqmljscodegenerator.cpp
+@@ -1192,11 +1192,6 @@ void QQmlJSCodeGenerator::generateWriteBack(int registerIndex)
+ 
+     for (QQmlJSRegisterContent writeBack = registerType(registerIndex);
+          !writeBack.storedType()->isReferenceType();) {
+-        if (writeBackAffectedBySideEffects)
+-            REJECT(u"write-back of value affected by side effects"_s);
+-
+-        if (writeBack.isConversion())
+-            REJECT(u"write-back of converted value"_s);
+ 
+         switch (writeBack.variant()) {
+         case QQmlJSRegisterContent::Literal:
+@@ -1208,6 +1203,12 @@ void QQmlJSCodeGenerator::generateWriteBack(int registerIndex)
+             break;
+         }
+ 
++        if (writeBackAffectedBySideEffects)
++            REJECT(u"write-back of value affected by side effects"_s);
++
++        if (writeBack.isConversion())
++            REJECT(u"write-back of converted value"_s);
++
+         const int lookupIndex = writeBack.resultLookupIndex();
+ 
+         // This is essential for the soundness of the type system.
+@@ -1410,12 +1411,9 @@ QString QQmlJSCodeGenerator::generateCallConstructor(
+     return result + u"}()"_s;
+ }
+ 
+-bool QQmlJSCodeGenerator::isRegisterAffectedBySideEffects(int registerIndex)
++static bool canTypeBeAffectedBySideEffects(
++        const QQmlJSTypeResolver *typeResolver, const QQmlJSRegisterContent &baseType)
+ {
+-    if (!m_state.isRegisterAffectedBySideEffects(registerIndex))
+-        return false;
+-
+-    QQmlJSRegisterContent baseType = registerType(registerIndex);
+     const QQmlJSScope::ConstPtr contained = baseType.containedType();
+     switch (contained->accessSemantics()) {
+     case QQmlSA::AccessSemantics::Reference:
+@@ -1426,7 +1424,7 @@ bool QQmlJSCodeGenerator::isRegisterAffectedBySideEffects(int registerIndex)
+         // Value types can have inner objects, and we may have pre-created them where the
+         // interpreter keeps them in JavaScript object form for longer.
+         // TODO: We can probably improve here.
+-        return !m_typeResolver->isPrimitive(contained);
++        return !typeResolver->isPrimitive(contained);
+     case QQmlSA::AccessSemantics::Sequence: {
+         // List properties are never affected by side effects
+         if (contained->isListProperty())
+@@ -1438,7 +1436,7 @@ bool QQmlJSCodeGenerator::isRegisterAffectedBySideEffects(int registerIndex)
+             // Stack-created lists of primitives and pointers can't be affected by side effects
+             const QQmlJSScope::ConstPtr elementContained = contained->valueType();
+             return !elementContained->isReferenceType()
+-                    && !m_typeResolver->isPrimitive(elementContained);
++                    && !typeResolver->isPrimitive(elementContained);
+         }
+         default:
+             return true;
+@@ -1448,6 +1446,28 @@ bool QQmlJSCodeGenerator::isRegisterAffectedBySideEffects(int registerIndex)
+     return true;
+ }
+ 
++bool QQmlJSCodeGenerator::isRegisterAffectedBySideEffects(int registerIndex)
++{
++    if (!m_state.isRegisterAffectedBySideEffects(registerIndex))
++        return false;
++
++    QQmlJSRegisterContent baseType = registerType(registerIndex);
++    if (baseType.isConversion()) {
++        // A conversion can be affected by side effects if any of its origins can.
++        // Conversions are unrolled on creation, so we don't have to recurse.
++
++        const auto origins = baseType.conversionOrigins();
++        for (QQmlJSRegisterContent origin : origins) {
++            if (canTypeBeAffectedBySideEffects(m_typeResolver, m_typeResolver->original(origin)))
++                return true;
++        }
++
++        return false;
++    }
++
++    return canTypeBeAffectedBySideEffects(m_typeResolver, m_typeResolver->original(baseType));
++}
++
+ QString QQmlJSCodeGenerator::resolveValueTypeContentPointer(
+         const QQmlJSScope::ConstPtr &required, QQmlJSRegisterContent actual,
+         const QString &variable, const QString &errorMessage)
+@@ -1885,6 +1905,8 @@ QString QQmlJSCodeGenerator::initAndCall(
+     // are created, but if they are read as different types in multiple places, we can't.
+     QString argumentPreparation;
+     for (int i = 0; i < argc; ++i) {
++        if (isRegisterAffectedBySideEffects(argv + i))
++            reject(u"calling method with argument affected by side effects"_s);
+         const QQmlJSRegisterContent content = registerType(argv + i);
+         const QQmlJSRegisterContent read = m_state.readRegister(argv + i);
+         if (read.contains(content.containedType())) {
+diff --git a/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt b/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
+index b59472c9c5..39b5651c33 100644
+--- a/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
++++ b/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
+@@ -56,6 +56,7 @@ set(qml_files
+     BindingExpression.qml
+     BindingToScriptStringProperty.qml
+     Categorizer.qml
++    CategorizerBase.qml
+     CxxTypeFromDir.qml
+     CxxTypeFromImplicit.qml
+     Cycle1.qml
+@@ -303,6 +304,7 @@ set(qml_files
+     shadowingSingleton.qml
+     shared/Slider.qml
+     shifts.qml
++    sideEffectOnArgument.qml
+     signal.qml
+     signalHandler.qml
+     signalIndexMismatch.qml
+diff --git a/tests/auto/qml/qmlcppcodegen/data/Categorizer.qml b/tests/auto/qml/qmlcppcodegen/data/Categorizer.qml
+index 6650ce349c..d9d8d32633 100644
+--- a/tests/auto/qml/qmlcppcodegen/data/Categorizer.qml
++++ b/tests/auto/qml/qmlcppcodegen/data/Categorizer.qml
+@@ -1,37 +1,15 @@
+ pragma Strict
+ import QtQml
+ 
+-QtObject {
++CategorizerBase {
+     id: root
+ 
+-    enum Parameters {
+-        Length = 32,
+-        Iterations = 2,
+-
+-        Category0 = 0xf0f,
+-        Category1 = 0xf0f0,
+-        Category2 = 0xf0f0f,
+-        Maximum   = 0xf0f0f0,
+-        Mask      = 0xabcdef
+-    }
+-
+     property list<double> nnn: {
+         var result = [];
+         result[0] = 10;
+         return result;
+     }
+ 
+-    function randomNumber() : int {
+-        return (Math.random() * Categorizer.Maximum);
+-    }
+-
+-    property list<double> numbers: {
+-        var result = [];
+-        for (var i = 0; i < Categorizer.Length; ++i)
+-            result[i] = randomNumber();
+-        return result;
+-    }
+-
+     function sum() : list<double> {
+         var numbers = root.numbers;
+ 
+@@ -39,14 +17,14 @@ QtObject {
+         var cat2Sum = 0;
+         var cat3Sum = 0;
+         var huge = 0;
+-        for (var i = 0; i < Categorizer.Iterations; ++i) {
+-            for (var j = 0; j < Categorizer.Length; ++j) {
+-                var num = numbers[j] & Categorizer.Mask;
+-                if (num < Categorizer.Category0)
++        for (var i = 0; i < CategorizerBase.Iterations; ++i) {
++            for (var j = 0; j < CategorizerBase.Length; ++j) {
++                var num = numbers[j] & CategorizerBase.Mask;
++                if (num < CategorizerBase.Category0)
+                     cat1Sum += num;
+-                else if (num < Categorizer.Category1)
++                else if (num < CategorizerBase.Category1)
+                     cat2Sum += num;
+-                else if (num < Categorizer.Category2)
++                else if (num < CategorizerBase.Category2)
+                     cat3Sum += num;
+                 else
+                     huge += num;
+diff --git a/tests/auto/qml/qmlcppcodegen/data/CategorizerBase.qml b/tests/auto/qml/qmlcppcodegen/data/CategorizerBase.qml
+new file mode 100644
+index 0000000000..e4eb1356c8
+--- /dev/null
++++ b/tests/auto/qml/qmlcppcodegen/data/CategorizerBase.qml
+@@ -0,0 +1,25 @@
++import QtQml
++
++QtObject {
++    enum Parameters {
++        Length = 32,
++        Iterations = 2,
++
++        Category0 = 0xf0f,
++        Category1 = 0xf0f0,
++        Category2 = 0xf0f0f,
++        Maximum   = 0xf0f0f0,
++        Mask      = 0xabcdef
++    }
++
++    function randomNumber() : int {
++        return (Math.random() * CategorizerBase.Maximum);
++    }
++
++    property list<double> numbers: {
++        var result = [];
++        for (var i = 0; i < CategorizerBase.Length; ++i)
++            result[i] = randomNumber();
++        return result;
++    }
++}
+diff --git a/tests/auto/qml/qmlcppcodegen/data/sideEffectOnArgument.qml b/tests/auto/qml/qmlcppcodegen/data/sideEffectOnArgument.qml
+new file mode 100644
+index 0000000000..226bf12f58
+--- /dev/null
++++ b/tests/auto/qml/qmlcppcodegen/data/sideEffectOnArgument.qml
+@@ -0,0 +1,20 @@
++import QtQml
++
++QtObject {
++    function foo(data: var) : void {
++        data.count = 1
++    }
++
++    function check(data : var) : void {
++        console.info("check", data.count === 1 ? "ok" : "fail")
++    }
++
++    function bugTest() : void {
++        const data = ({})
++        foo(data)
++        check(data)
++    }
++
++    Component.onCompleted: bugTest()
++}
++
+diff --git a/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp b/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
+index cfca8206f6..3cd7a415fd 100644
+--- a/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
++++ b/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
+@@ -261,6 +261,7 @@ private slots:
+     void shadowedMethod();
+     void shadowedPrimitiveCmpEqNull();
+     void shadowingSingleton();
++    void sideEffectOnArgument();
+     void shifts();
+     void signalHandler();
+     void signalIndexMismatch();
+@@ -5465,6 +5466,18 @@ void tst_QmlCppCodegen::shadowingSingleton()
+     QCOMPARE(o->objectName(), u"Hej"_s);
+ }
+ 
++void tst_QmlCppCodegen::sideEffectOnArgument()
++{
++    QQmlEngine e;
++    QQmlComponent c(&e, QUrl(u"qrc:/qt/qml/TestTypes/sideEffectOnArgument.qml"_s));
++    QVERIFY2(c.isReady(), qPrintable(c.errorString()));
++
++    QTest::ignoreMessage(QtInfoMsg, "check ok");
++
++    QScopedPointer<QObject> o(c.create());
++    QVERIFY(!o.isNull());
++}
++
+ void tst_QmlCppCodegen::shifts()
+ {
+     QQmlEngine engine;
+diff --git a/tests/benchmarks/qml/deltablue/Constraint.qml b/tests/benchmarks/qml/deltablue/Constraint.qml
+index bf84870fa9..b3639091ad 100644
+--- a/tests/benchmarks/qml/deltablue/Constraint.qml
++++ b/tests/benchmarks/qml/deltablue/Constraint.qml
+@@ -82,7 +82,7 @@ BaseConstraint {
+     function chooseMethod(mark: int) {
+         let ihn = myInput;
+         let out = myOutput;
+-        let outStrength = out.walkStrength;
++        let outStrength = +out.walkStrength;
+ 
+         if (!ihn) {
+             satisfaction = (out.mark !== mark && Strength.stronger(strength, outStrength))
+@@ -91,7 +91,7 @@ BaseConstraint {
+             return;
+         }
+ 
+-        let ihnStrength = ihn.walkStrength;
++        let ihnStrength = +ihn.walkStrength;
+ 
+         if (Strength.weaker(ihnStrength, outStrength)) {
+             satisfaction = Strength.stronger(strength, ihnStrength)
+-- 
+2.51.2
+

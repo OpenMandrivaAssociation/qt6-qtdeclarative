@@ -1,0 +1,54 @@
+From ee274890120cbb617f10b091e5697a3c288bb523 Mon Sep 17 00:00:00 2001
+From: Oliver Eftevaag <oliver.eftevaag@qt.io>
+Date: Tue, 7 Oct 2025 14:27:48 +0200
+Subject: [PATCH 132/239] Fusion Button & RoundButton: bind icon.color to a
+ palette color
+
+The icon's color would adapt poorly to theme changes.
+A good example is the QML media player in qtmultimedia, with has a few
+buttons with icons and no text. When changing between a light and dark
+theme, the icon would still have the same color, and there would barely
+be any contrast between the icon and the button's background when using
+a dark theme.
+
+The binding created in this patch is taken from the Basic style.
+
+Pick-to: 6.8
+Change-Id: I922823a9109fd252c5a4ed84aba1c0a36adec263
+Reviewed-by: Mitch Curtis <mitch.curtis@qt.io>
+(cherry picked from commit 68f2092b13f8956e77c830da4c3fa5e800b15624)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quickcontrols/fusion/Button.qml      | 2 ++
+ src/quickcontrols/fusion/RoundButton.qml | 2 ++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/src/quickcontrols/fusion/Button.qml b/src/quickcontrols/fusion/Button.qml
+index 109f186ffe..41bbcca3b3 100644
+--- a/src/quickcontrols/fusion/Button.qml
++++ b/src/quickcontrols/fusion/Button.qml
+@@ -21,6 +21,8 @@ T.Button {
+ 
+     icon.width: 16
+     icon.height: 16
++    icon.color: control.checked || control.highlighted ? control.palette.brightText :
++                control.flat && !control.down ? (control.visualFocus ? control.palette.highlight : control.palette.windowText) : control.palette.buttonText
+ 
+     contentItem: IconLabel {
+         spacing: control.spacing
+diff --git a/src/quickcontrols/fusion/RoundButton.qml b/src/quickcontrols/fusion/RoundButton.qml
+index d5884b257a..d2d5feb4bf 100644
+--- a/src/quickcontrols/fusion/RoundButton.qml
++++ b/src/quickcontrols/fusion/RoundButton.qml
+@@ -21,6 +21,8 @@ T.RoundButton {
+ 
+     icon.width: 16
+     icon.height: 16
++    icon.color: control.checked || control.highlighted ? control.palette.brightText :
++                control.flat && !control.down ? (control.visualFocus ? control.palette.highlight : control.palette.windowText) : control.palette.buttonText
+ 
+     contentItem: IconLabel {
+         spacing: control.spacing
+-- 
+2.51.2
+

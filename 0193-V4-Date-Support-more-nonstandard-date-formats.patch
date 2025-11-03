@@ -1,0 +1,64 @@
+From 58688033ae1b9e27d58d20bcc3eda57f9c307860 Mon Sep 17 00:00:00 2001
+From: Sami Shalayel <sami.shalayel@qt.io>
+Date: Wed, 1 Oct 2025 13:54:28 +0200
+Subject: [PATCH 193/239] V4 Date: Support more nonstandard date formats
+
+Introduce support for obsolete RFC2822 dates that has 2 digitted years,
+or 1-digited hours (2 instead of 02), which now should be rejected by
+qdatetime and instead parsed via a custom string format in ParseString().
+
+Amends 43eaa77e8ed03153335c0002dcc8b660c39a0beb and
+41a5c7b223d958bd40240aee81bb8fb96540735d.
+
+Pick-to: 6.8
+Task-number: QTBUG-100377
+Change-Id: I802af9edc7f755b7dba345bf60548714a7335545
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
+(cherry picked from commit 741f4b1262f867a8c3d935eac6b5532058093ddd)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qml/jsruntime/qv4dateobject.cpp                  | 5 ++++-
+ tests/auto/qml/qqmlecmascript/tst_qqmlecmascript.cpp | 8 ++++++++
+ 2 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/src/qml/jsruntime/qv4dateobject.cpp b/src/qml/jsruntime/qv4dateobject.cpp
+index 316f8707ee..fff2bba97b 100644
+--- a/src/qml/jsruntime/qv4dateobject.cpp
++++ b/src/qml/jsruntime/qv4dateobject.cpp
+@@ -528,10 +528,13 @@ static inline double ParseString(const QString &s, double localTZA)
+             // ISO 8601 and RFC 2822 with a GMT as prefix on its offset, or GMT as zone.
+             QStringLiteral("yyyy-MM-dd hh:mm:ss t"),
+             QStringLiteral("ddd, d MMM yyyy hh:mm:ss t"),
++            QStringLiteral("ddd, d MMM yy hh:mm:ss t"),
++            QStringLiteral("ddd, d MMM yyyy h:mm:ss t"),
++            QStringLiteral("ddd, d MMM yy h:mm:ss t"),
+         };
+ 
+         for (const QString &format : formats) {
+-            dt = format.indexOf(QLatin1String("hh:mm")) < 0
++            dt = format.indexOf(QLatin1String("h:mm")) < 0
+                     ? QDate::fromString(s, format).startOfDay(QTimeZone::UTC)
+                     : QDateTime::fromString(s, format); // as local time
+             if (dt.isValid())
+diff --git a/tests/auto/qml/qqmlecmascript/tst_qqmlecmascript.cpp b/tests/auto/qml/qqmlecmascript/tst_qqmlecmascript.cpp
+index cd3dd4cdd9..807b040f79 100644
+--- a/tests/auto/qml/qqmlecmascript/tst_qqmlecmascript.cpp
++++ b/tests/auto/qml/qqmlecmascript/tst_qqmlecmascript.cpp
+@@ -767,6 +767,14 @@ void tst_qqmlecmascript::checkDateTimeParsing_data()
+     QTest::newRow("rfc2822-with-timezone-name")
+             << u"Sun, 25 Mar 2018 11:10:49 GMT"_s
+             << QDateTime(QDate(2018, 3, 25), QTime(11, 10, 49), QTimeZone::utc());
++    QTest::newRow("rfc2822-with-2-digit-year")
++            << u"Mon, 07 Feb 22 11:48:12 -0500"_s
++            << QDateTime(QDate(2022, 2, 7), QTime(11, 48, 12),
++                         QTimeZone::fromSecondsAheadOfUtc(-5 * 60 * 60));
++    QTest::newRow("rfc2822-with-1-digit-hour")
++            << u"Mon, 07 Feb 22 1:48:12 -0500"_s
++            << QDateTime(QDate(2022, 2, 7), QTime(1, 48, 12),
++                         QTimeZone::fromSecondsAheadOfUtc(-5 * 60 * 60));
+ }
+ 
+ void tst_qqmlecmascript::checkDateTimeParsing()
+-- 
+2.51.2
+

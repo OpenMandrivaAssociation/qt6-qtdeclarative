@@ -1,0 +1,89 @@
+From d7e184cdff143ba5376e91c68c476d68230fbad0 Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Wed, 3 Sep 2025 14:43:59 +0200
+Subject: [PATCH 005/239] QtQuick: Don't store a copy of the model in
+ QQuickItemView
+
+This is pure waste. We don't actually need the model since the
+QQmlInstanceModel is guaranteed to either be the model or hold its
+contents.
+
+Task-number: QTBUG-139941
+Change-Id: I09e898fbc8ea0c6baf854c179dbdd02b9440fabe
+Reviewed-by: Sami Shalayel <sami.shalayel@qt.io>
+(cherry picked from commit efde2263e4984dc3e8a9b317b933196d44fd3588)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quick/items/qquickitemview.cpp   | 20 ++++++++++++++------
+ src/quick/items/qquickitemview_p_p.h |  1 -
+ 2 files changed, 14 insertions(+), 7 deletions(-)
+
+diff --git a/src/quick/items/qquickitemview.cpp b/src/quick/items/qquickitemview.cpp
+index d5b870ad26..1c4d9312ac 100644
+--- a/src/quick/items/qquickitemview.cpp
++++ b/src/quick/items/qquickitemview.cpp
+@@ -147,7 +147,11 @@ QQuickItem *QQuickItemView::currentItem() const
+ QVariant QQuickItemView::model() const
+ {
+     Q_D(const QQuickItemView);
+-    return d->modelVariant;
++    if (d->ownModel)
++        return static_cast<QQmlDelegateModel *>(d->model.data())->model();
++    if (d->model)
++        return QVariant::fromValue(d->model.data());
++    return QVariant();
+ }
+ 
+ void QQuickItemView::setModel(const QVariant &m)
+@@ -157,16 +161,19 @@ void QQuickItemView::setModel(const QVariant &m)
+     if (model.userType() == qMetaTypeId<QJSValue>())
+         model = model.value<QJSValue>().toVariant();
+ 
+-    if (d->modelVariant == model)
++    QQmlDelegateModelPointer oldModel(d->model);
++    if (d->ownModel) {
++        if (oldModel.delegateModel()->model() == model)
++            return;
++    } else if (QVariant::fromValue(d->model) == model) {
+         return;
++    }
+ 
+-    QQmlDelegateModelPointer oldModel(d->model);
+     d->disconnectModel(this, &oldModel);
+ 
+     d->clear();
+     d->model = nullptr;
+     d->setPosition(d->contentStartOffset());
+-    d->modelVariant = model;
+ 
+     QObject *object = qvariant_cast<QObject *>(model);
+ 
+@@ -205,10 +212,11 @@ void QQuickItemView::setModel(const QVariant &m)
+         }
+         d->model = newModel.instanceModel();
+     } else if (d->ownModel) {
++        // d->ownModel can only be set if the old model is a QQmlDelegateModel.
++        Q_ASSERT(oldModel.delegateModel());
+         newModel = oldModel;
+         d->model = newModel.instanceModel();
+-        if (QQmlDelegateModel *delegateModel = newModel.delegateModel())
+-            delegateModel->setModel(model);
++        newModel.delegateModel()->setModel(model);
+     } else {
+         newModel = QQmlDelegateModel::createForView(this, d);
+         if (d->explicitDelegate) {
+diff --git a/src/quick/items/qquickitemview_p_p.h b/src/quick/items/qquickitemview_p_p.h
+index daeb7e0fdb..4750eb2b16 100644
+--- a/src/quick/items/qquickitemview_p_p.h
++++ b/src/quick/items/qquickitemview_p_p.h
+@@ -242,7 +242,6 @@ public:
+     virtual QQuickItemViewAttached *getAttachedObject(const QObject *) const { return nullptr; }
+ 
+     QPointer<QQmlInstanceModel> model;
+-    QVariant modelVariant;
+     int itemCount;
+     int buffer;
+     int bufferMode;
+-- 
+2.51.2
+

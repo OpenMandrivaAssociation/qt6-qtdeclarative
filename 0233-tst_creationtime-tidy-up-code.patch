@@ -1,0 +1,138 @@
+From cd4b85da18c92f6f3ab7eb78ac4ae2c8940d4fad Mon Sep 17 00:00:00 2001
+From: Mitch Curtis <mitch.curtis@qt.io>
+Date: Thu, 28 Aug 2025 10:09:16 +0800
+Subject: [PATCH 233/239] tst_creationtime: tidy up code
+
+- Move exclusions common to all tests into a variable that we can reuse
+- Keep one entry per line to keep git blame useful
+- Sort entries alphabetically
+
+Change-Id: Ib4bd520339d5378ee74b82e414bf994b321d8c7b
+Reviewed-by: Oliver Eftevaag <oliver.eftevaag@qt.io>
+(cherry picked from commit ce4ba524c26ff6371e4741546ac6aa91f1053302)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ .../creationtime/tst_creationtime.cpp         | 75 ++++++++++---------
+ 1 file changed, 40 insertions(+), 35 deletions(-)
+
+diff --git a/tests/benchmarks/quickcontrols/creationtime/tst_creationtime.cpp b/tests/benchmarks/quickcontrols/creationtime/tst_creationtime.cpp
+index 5c2d18d56e..4c3bdd8299 100644
+--- a/tests/benchmarks/quickcontrols/creationtime/tst_creationtime.cpp
++++ b/tests/benchmarks/quickcontrols/creationtime/tst_creationtime.cpp
+@@ -78,22 +78,25 @@ void tst_CreationTime::basic()
+     doBenchmark(styleHelper, url);
+ }
+ 
++static const QStringList commonExclusions = {
++    "ApplicationWindow",
++    // Singleton; can't be created.
++    "Calendar",
++    // Can only be created by HorizontalHeaderView.
++    "HorizontalHeaderViewDelegate",
++    // Can only be created by TreeView.
++    "TreeViewDelegate",
++    // Can only be created by TableView.
++    "TableViewDelegate",
++    // Can only be created by VerticalHeaderView.
++    "VerticalHeaderViewDelegate"
++};
++
+ void tst_CreationTime::basic_data()
+ {
+     QTest::addColumn<QUrl>("url");
+-    // Calendar is excluded because it's a singleton and can't be created.
+-    // TreeViewDelegate is excluded since it's a delegate that can only be created by TreeView.
+-    // TableViewDelegate is excluded since it's a delegate that can only be created by TableView.
+-    // Horizontal/VerticalHeaderViewDelegate is excluded since it's a delegate
+-    // that can only be created by Horizontal/VerticalHeaderView.
+     addTestRowForEachControl(styleHelper.engine.data(), QQC2_IMPORT_PATH, "basic",
+-                             "QtQuick/Controls/Basic",
+-                             QStringList() << "ApplicationWindow"
+-                                           << "Calendar"
+-                                           << "TreeViewDelegate"
+-                                           << "TableViewDelegate"
+-                                           << "HorizontalHeaderViewDelegate"
+-                                           << "VerticalHeaderViewDelegate");
++        "QtQuick/Controls/Basic", commonExclusions);
+ }
+ 
+ void tst_CreationTime::fusion()
+@@ -105,13 +108,15 @@ void tst_CreationTime::fusion()
+ void tst_CreationTime::fusion_data()
+ {
+     QTest::addColumn<QUrl>("url");
+-    addTestRowForEachControl(
+-            styleHelper.engine.data(), QQC2_IMPORT_PATH, "fusion", "QtQuick/Controls/Fusion",
+-            QStringList() << "ApplicationWindow" << "ButtonPanel" << "CheckIndicator"
+-                          << "RadioIndicator" << "SliderGroove" << "SliderHandle"
+-                          << "SwitchIndicator" << "TreeViewDelegate"
+-                          << "HorizontalHeaderViewDelegate"
+-                          << "VerticalHeaderViewDelegate");
++    addTestRowForEachControl(styleHelper.engine.data(), QQC2_IMPORT_PATH, "fusion",
++        "QtQuick/Controls/Fusion", QStringList()
++            << commonExclusions
++            << "ButtonPanel"
++            << "CheckIndicator"
++            << "RadioIndicator"
++            << "SliderGroove"
++            << "SliderHandle"
++            << "SwitchIndicator");
+ }
+ 
+ void tst_CreationTime::imagine()
+@@ -124,10 +129,7 @@ void tst_CreationTime::imagine_data()
+ {
+     QTest::addColumn<QUrl>("url");
+     addTestRowForEachControl(styleHelper.engine.data(), QQC2_IMPORT_PATH, "imagine",
+-                             "QtQuick/Controls/Imagine",
+-                             QStringList() << "ApplicationWindow"
+-                                           << "HorizontalHeaderViewDelegate"
+-                                           << "VerticalHeaderViewDelegate");
++        "QtQuick/Controls/Imagine", commonExclusions);
+ }
+ 
+ void tst_CreationTime::material()
+@@ -140,13 +142,16 @@ void tst_CreationTime::material_data()
+ {
+     QTest::addColumn<QUrl>("url");
+     addTestRowForEachControl(styleHelper.engine.data(), QQC2_IMPORT_PATH, "material",
+-                             "QtQuick/Controls/Material",
+-                             QStringList() << "ApplicationWindow" << "Ripple" << "SliderHandle"
+-                                           << "CheckIndicator" << "RadioIndicator"
+-                                           << "SwitchIndicator" << "BoxShadow" << "ElevationEffect"
+-                                           << "CursorDelegate" << "TreeViewDelegate"
+-                                           << "HorizontalHeaderViewDelegate"
+-                                           << "VerticalHeaderViewDelegate");
++        "QtQuick/Controls/Material", QStringList()
++            << commonExclusions
++            << "BoxShadow"
++            << "CheckIndicator"
++            << "CursorDelegate"
++            << "ElevationEffect"
++            << "RadioIndicator"
++            << "Ripple"
++            << "SliderHandle"
++            << "SwitchIndicator");
+ }
+ 
+ void tst_CreationTime::universal()
+@@ -159,11 +164,11 @@ void tst_CreationTime::universal_data()
+ {
+     QTest::addColumn<QUrl>("url");
+     addTestRowForEachControl(styleHelper.engine.data(), QQC2_IMPORT_PATH, "universal",
+-                             "QtQuick/Controls/Universal",
+-                             QStringList() << "ApplicationWindow" << "CheckIndicator"
+-                                           << "RadioIndicator" << "SwitchIndicator"
+-                                           << "HorizontalHeaderViewDelegate"
+-                                           << "VerticalHeaderViewDelegate");
++        "QtQuick/Controls/Universal", QStringList()
++            << commonExclusions
++            << "CheckIndicator"
++            << "RadioIndicator"
++            << "SwitchIndicator");
+ }
+ 
+ QTEST_MAIN(tst_CreationTime)
+-- 
+2.51.2
+

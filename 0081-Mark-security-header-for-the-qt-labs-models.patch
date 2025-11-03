@@ -1,0 +1,90 @@
+From 22c5001c579db976849af6c3f599647bdf5807b8 Mon Sep 17 00:00:00 2001
+From: Santhosh Kumar <santhosh.kumar.selvaraj@qt.io>
+Date: Wed, 17 Sep 2025 11:40:35 +0200
+Subject: [PATCH 081/239] Mark security header for the qt labs models
+
+QUIP: 23
+Task-number: QTBUG-136184
+Pick-to: 6.8
+Change-Id: I953891130cea2e6a5ff7ee29f62af06503d56abc
+Reviewed-by: Richard Moe Gustavsen <richard.gustavsen@qt.io>
+(cherry picked from commit e23de2b59d189fc52a5ea29b5c2260bfe51c0d6a)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/labs/models/qqmlabstractcolumnmodel.cpp | 1 +
+ src/labs/models/qqmldelegatechooser.cpp     | 1 +
+ src/labs/models/qqmltablemodel.cpp          | 1 +
+ src/labs/models/qqmltablemodelcolumn.cpp    | 1 +
+ src/labs/models/qqmltreemodel.cpp           | 1 +
+ src/labs/models/qqmltreerow.cpp             | 1 +
+ 6 files changed, 6 insertions(+)
+
+diff --git a/src/labs/models/qqmlabstractcolumnmodel.cpp b/src/labs/models/qqmlabstractcolumnmodel.cpp
+index 95d6a65695..ab15195145 100644
+--- a/src/labs/models/qqmlabstractcolumnmodel.cpp
++++ b/src/labs/models/qqmlabstractcolumnmodel.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2025 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #include "qqmlabstractcolumnmodel_p.h"
+ 
+diff --git a/src/labs/models/qqmldelegatechooser.cpp b/src/labs/models/qqmldelegatechooser.cpp
+index 658b632e41..536d94da35 100644
+--- a/src/labs/models/qqmldelegatechooser.cpp
++++ b/src/labs/models/qqmldelegatechooser.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2024 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #include "qqmldelegatechooser_p.h"
+ 
+diff --git a/src/labs/models/qqmltablemodel.cpp b/src/labs/models/qqmltablemodel.cpp
+index ecee0e5eb0..5316d62013 100644
+--- a/src/labs/models/qqmltablemodel.cpp
++++ b/src/labs/models/qqmltablemodel.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2019 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #include "qqmltablemodel_p.h"
+ 
+diff --git a/src/labs/models/qqmltablemodelcolumn.cpp b/src/labs/models/qqmltablemodelcolumn.cpp
+index 86b4c4de53..71fd120dbd 100644
+--- a/src/labs/models/qqmltablemodelcolumn.cpp
++++ b/src/labs/models/qqmltablemodelcolumn.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2019 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #include "qqmltablemodelcolumn_p.h"
+ 
+diff --git a/src/labs/models/qqmltreemodel.cpp b/src/labs/models/qqmltreemodel.cpp
+index a6a9639e8f..5f31025728 100644
+--- a/src/labs/models/qqmltreemodel.cpp
++++ b/src/labs/models/qqmltreemodel.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2025 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #include "qqmltreemodel_p.h"
+ #include "qqmltreerow_p.h"
+diff --git a/src/labs/models/qqmltreerow.cpp b/src/labs/models/qqmltreerow.cpp
+index 1db387afb4..811d184e9d 100644
+--- a/src/labs/models/qqmltreerow.cpp
++++ b/src/labs/models/qqmltreerow.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2025 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #include "qqmltreerow_p.h"
+ 
+-- 
+2.51.2
+

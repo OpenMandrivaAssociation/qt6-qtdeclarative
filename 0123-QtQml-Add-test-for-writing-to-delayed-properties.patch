@@ -1,0 +1,280 @@
+From d0f26302eb525bb38f2b23f090580eebfd208f92 Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Tue, 30 Sep 2025 08:11:48 +0200
+Subject: [PATCH 123/239] QtQml: Add test for writing to delayed properties
+
+This proves that commit a7349e6433d092398d76cafa5408753f06892cd7 fixes
+QTBUG-139687.
+
+Pick-to: 6.8
+Fixes: QTBUG-139687
+Change-Id: I2730b545738bf75e381b0b396b74c5060fa9b0e1
+Reviewed-by: Sami Shalayel <sami.shalayel@qt.io>
+(cherry picked from commit 8203f860d1ba2c61de28dbae5f34db6601e02214)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ .../qml/qmlcppcodegen/data/CMakeLists.txt     |  2 +
+ .../auto/qml/qmlcppcodegen/data/refuseWrite.h | 64 ++++++++++++++
+ .../data/writeBackReferenceObject.qml         | 47 +++++++++++
+ .../qml/qmlcppcodegen/tst_qmlcppcodegen.cpp   | 84 ++++++++++++++++++-
+ 4 files changed, 196 insertions(+), 1 deletion(-)
+ create mode 100644 tests/auto/qml/qmlcppcodegen/data/refuseWrite.h
+ create mode 100644 tests/auto/qml/qmlcppcodegen/data/writeBackReferenceObject.qml
+
+diff --git a/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt b/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
+index 27bd62a67e..d2824f2437 100644
+--- a/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
++++ b/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
+@@ -27,6 +27,7 @@ set(cpp_sources
+     objectwithmethod.h
+     person.cpp person.h
+     qmlusing.h
++    refuseWrite.h
+     resettable.h
+     scriptstringholder.h
+     sequenceToIterable.h
+@@ -346,6 +347,7 @@ set(qml_files
+     versionmismatch.qml
+     voidConversion.qml
+     voidfunction.qml
++    writeBackReferenceObject.qml
+     writeback.qml
+     dummy_imports.qml
+ )
+diff --git a/tests/auto/qml/qmlcppcodegen/data/refuseWrite.h b/tests/auto/qml/qmlcppcodegen/data/refuseWrite.h
+new file mode 100644
+index 0000000000..779eb1cc17
+--- /dev/null
++++ b/tests/auto/qml/qmlcppcodegen/data/refuseWrite.h
+@@ -0,0 +1,64 @@
++// Copyright (C) 2025 The Qt Company Ltd.
++// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
++
++#ifndef REFUSEWRITE_H
++#define REFUSEWRITE_H
++
++#include <QtCore/qobject.h>
++#include <QtCore/qqueue.h>
++#include <QtCore/qvariant.h>
++#include <QtCore/qcoreevent.h>
++#include <QtQmlIntegration/qqmlintegration.h>
++
++class RefuseWrite : public QObject
++{
++    Q_OBJECT
++    QML_ELEMENT
++    Q_PROPERTY(QVariantList things READ things WRITE setThings NOTIFY thingsChanged)
++
++public:
++    RefuseWrite(QObject *parent = nullptr) : QObject(parent) {
++        m_things.enqueue(QVariantList());
++    }
++
++    QVariantList things() const
++    {
++        return m_things.head();
++    }
++
++    void setThings(const QVariantList &newThings)
++    {
++        m_things.enqueue(newThings);
++        startTimer(1);
++    }
++
++    qsizetype pendingChanges() const
++    {
++        return m_things.size() - 1;
++    }
++
++private:
++    void timerEvent(QTimerEvent *event) override
++    {
++        if (m_things.size() < 2) {
++            killTimer(event->id());
++            return;
++        }
++
++        const QVariantList old = m_things.dequeue();
++        if (old != m_things.head())
++            emit thingsChanged();
++    }
++
++signals:
++    void thingsChanged();
++
++private:
++    QQueue<QVariantList> m_things;
++};
++
++#endif // REFUSEWRITE_H
++
++
++
++
+diff --git a/tests/auto/qml/qmlcppcodegen/data/writeBackReferenceObject.qml b/tests/auto/qml/qmlcppcodegen/data/writeBackReferenceObject.qml
+new file mode 100644
+index 0000000000..a92ff17408
+--- /dev/null
++++ b/tests/auto/qml/qmlcppcodegen/data/writeBackReferenceObject.qml
+@@ -0,0 +1,47 @@
++pragma Strict
++import QtQml
++
++RefuseWrite {
++    id: self
++    function idToId() {
++        let v = self.things
++        v[1] = 42.25
++        self.things = v
++    }
++
++    function scopeToScope() {
++        let v = things
++        v[0] = 0.5
++        things = v
++    }
++
++    function idToScope() {
++        let v = self.things
++        v[2] = 3
++        self.things = v
++    }
++
++    function scopeToId() {
++        let v = things
++        v[3] = 4
++        things = v
++    }
++
++    function scopeToUnrelated() {
++        let v = things
++        v[4] = 5
++        a.things = v
++    }
++
++    function idToUnrelated() {
++        let v = self.things
++        v[5] = 6
++        a.things = v
++    }
++
++    property QtObject a: QtObject {
++        id: a
++        property list<var> things
++    }
++}
++
+diff --git a/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp b/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
+index fe5ee65a22..6a9c50ce61 100644
+--- a/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
++++ b/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
+@@ -11,6 +11,7 @@
+ #include <data/listprovider.h>
+ #include <data/objectwithmethod.h>
+ #include <data/qmlusing.h>
++#include <data/refuseWrite.h>
+ #include <data/resettable.h>
+ #include <data/sequenceToIterable.h>
+ #include <data/takenumber.h>
+@@ -233,9 +234,10 @@ private slots:
+     void propertyOfParent();
+     void qmlUsing();
+     void qtfont();
+-    void reduceWithNullThis();
+     void readEnumFromInstance();
+     void readonlyListProperty();
++    void reduceWithNullThis();
++    void refuseWrite();
+     void registerElimination();
+     void registerPropagation();
+     void renameAdjust();
+@@ -4962,6 +4964,86 @@ void tst_QmlCppCodegen::reduceWithNullThis()
+     QCOMPARE(object->property("preferredHeight2").toDouble(), 28.0);
+ }
+ 
++void tst_QmlCppCodegen::refuseWrite()
++{
++    QQmlEngine engine;
++    QQmlComponent component(&engine, QUrl(u"qrc:/qt/qml/TestTypes/writeBackReferenceObject.qml"_s));
++    QVERIFY2(component.isReady(), qPrintable(component.errorString()));
++    QScopedPointer<QObject> object(component.create());
++    QVERIFY(!object.isNull());
++
++    QObject *a = object->property("a").value<QObject*>();
++    QVERIFY(a);
++    QVERIFY(a->property("things").value<QVariantList>().isEmpty());
++
++    RefuseWrite *refuse = qobject_cast<RefuseWrite *>(object.data());
++    QVERIFY(refuse->things().isEmpty());
++    QCOMPARE(refuse->pendingChanges(), 0);
++
++    QMetaObject::invokeMethod(object.data(), "idToId");
++
++    QTRY_COMPARE(refuse->pendingChanges(), 0);
++    QCOMPARE(refuse->things(), QVariantList({QVariant(), QVariant::fromValue<double>(42.25)}));
++    QVERIFY(a->property("things").value<QVariantList>().isEmpty());
++
++    QMetaObject::invokeMethod(object.data(), "scopeToScope");
++
++    QTRY_COMPARE(refuse->pendingChanges(), 0);
++    QCOMPARE(refuse->things(), QVariantList({
++        QVariant::fromValue<double>(0.5),
++        QVariant::fromValue<double>(42.25)
++    }));
++    QVERIFY(a->property("things").value<QVariantList>().isEmpty());
++
++    QMetaObject::invokeMethod(object.data(), "idToScope");
++
++    QTRY_COMPARE(refuse->pendingChanges(), 0);
++    QCOMPARE(refuse->things(), QVariantList({
++        QVariant::fromValue<double>(0.5),
++        QVariant::fromValue<double>(42.25),
++        QVariant::fromValue<double>(3),
++    }));
++    QVERIFY(a->property("things").value<QVariantList>().isEmpty());
++
++    QMetaObject::invokeMethod(object.data(), "scopeToId");
++
++    QTRY_COMPARE(refuse->pendingChanges(), 0);
++    QCOMPARE(refuse->things(), QVariantList({
++        QVariant::fromValue<double>(0.5),
++        QVariant::fromValue<double>(42.25),
++        QVariant::fromValue<double>(3),
++        QVariant::fromValue<double>(4),
++    }));
++    QVERIFY(a->property("things").value<QVariantList>().isEmpty());
++
++    QMetaObject::invokeMethod(object.data(), "scopeToUnrelated");
++
++    QTRY_COMPARE(refuse->pendingChanges(), 0);
++    const QVariantList expected5 = QVariantList({
++        QVariant::fromValue<double>(0.5),
++        QVariant::fromValue<double>(42.25),
++        QVariant::fromValue<double>(3),
++        QVariant::fromValue<double>(4),
++        QVariant::fromValue<double>(5),
++    });
++    QCOMPARE(refuse->things(), expected5);
++    QCOMPARE(a->property("things").value<QVariantList>(), expected5);
++
++    QMetaObject::invokeMethod(object.data(), "idToUnrelated");
++
++    QTRY_COMPARE(refuse->pendingChanges(), 0);
++    const QVariantList expected6 = QVariantList({
++        QVariant::fromValue<double>(0.5),
++        QVariant::fromValue<double>(42.25),
++        QVariant::fromValue<double>(3),
++        QVariant::fromValue<double>(4),
++        QVariant::fromValue<double>(5),
++        QVariant::fromValue<double>(6),
++    });
++    QCOMPARE(refuse->things(), expected6);
++    QCOMPARE(a->property("things").value<QVariantList>(), expected6);
++}
++
+ void tst_QmlCppCodegen::readEnumFromInstance()
+ {
+     QQmlEngine engine;
+-- 
+2.51.2
+

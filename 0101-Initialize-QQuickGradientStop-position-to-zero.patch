@@ -1,0 +1,41 @@
+From 600cb8d8ddba5eb483eeefd5e2aa0991c38297a5 Mon Sep 17 00:00:00 2001
+From: Chris Adams <chris.adams@qinetic.com.au>
+Date: Fri, 19 Sep 2025 14:41:19 +1000
+Subject: [PATCH 101/239] Initialize QQuickGradientStop position to zero
+
+The documentation for GradientStop position says that its default
+value is zero.  However, the member is not initialized, so its
+value is actually random.
+
+This can cause all sorts of problems (included corrupted rendering
+if the value happens to fall into a NaN range).
+
+[ChangeLog][QtQuick][GradientStop] The position property is now
+always initialized to 0.0; previously it was left uninitialized.
+
+Pick-to: 6.9 6.8 6.5
+Task-number: QTBUG-140364
+Change-Id: I5dbc83838fb4d2f1a46c34ae61e25bfe3853eb16
+Reviewed-by: Mitch Curtis <mitch.curtis@qt.io>
+(cherry picked from commit ed607c86a4eff425a708111a63aa2b3feb6d4e66)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quick/items/qquickrectangle_p.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/quick/items/qquickrectangle_p.h b/src/quick/items/qquickrectangle_p.h
+index 690154cd65..0f1bdbff6a 100644
+--- a/src/quick/items/qquickrectangle_p.h
++++ b/src/quick/items/qquickrectangle_p.h
+@@ -80,7 +80,7 @@ private:
+     void updateGradient();
+ 
+ private:
+-    qreal m_position;
++    qreal m_position = 0.0;
+     QColor m_color;
+ };
+ 
+-- 
+2.51.2
+

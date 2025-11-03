@@ -1,0 +1,32 @@
+From 6f13c93783fc5cb4f68b831aaab17ed92a325f81 Mon Sep 17 00:00:00 2001
+From: Shawn Rutledge <shawn.rutledge@qt.io>
+Date: Fri, 24 Oct 2025 09:33:18 +0200
+Subject: [PATCH 203/239] doc: Fix mention of DragHandler in TapHandler docs
+
+Amends 6eaa95662c2d4ba287ac5d1de5ec49bd3a9f59e6
+
+Pick-to: 6.8 6.5
+Change-Id: I195e26fa1a703607b1d65d57e5dc43a072b05e72
+Reviewed-by: Mitch Curtis <mitch.curtis@qt.io>
+(cherry picked from commit 0b17d942f670ff6dba59e8c504a6585ab8ef37c5)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quick/handlers/qquicktaphandler.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/quick/handlers/qquicktaphandler.cpp b/src/quick/handlers/qquicktaphandler.cpp
+index c1f68ec2ec..eef590a597 100644
+--- a/src/quick/handlers/qquicktaphandler.cpp
++++ b/src/quick/handlers/qquicktaphandler.cpp
+@@ -31,7 +31,7 @@ int QQuickTapHandler::m_touchMultiTapDistanceSquared(-1);
+ 
+     Detection of a valid tap gesture depends on \l gesturePolicy.  The default
+     value is DragThreshold, which requires the press and release to be close
+-    together in both space and time.  In this case, DragHandler is able to
++    together in both space and time.  In this case, TapHandler is able to
+     function using only a passive grab, and therefore does not interfere with
+     event delivery to any other Items or Input Handlers.  So the default
+     gesturePolicy is useful when you want to modify behavior of an existing
+-- 
+2.51.2
+

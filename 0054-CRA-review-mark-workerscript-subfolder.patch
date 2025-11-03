@@ -1,0 +1,96 @@
+From bc6c29d509649d99d882f3ecdf450dab33613c62 Mon Sep 17 00:00:00 2001
+From: Fabian Kosmale <fabian.kosmale@qt.io>
+Date: Tue, 26 Aug 2025 11:16:04 +0200
+Subject: [PATCH 054/239] CRA review: mark workerscript subfolder
+
+- Mark the global heades as insignificant, they don't contain any logic.
+- Mark qv4serialize as critical: String data that might get passed to a
+  worker script might come from an untrusted context, and thus the
+  serialization process needs some basic care.
+- Evertything else gets the default significant marker to indicate that
+  it has been reviewed.
+
+Pick-to: 6.9 6.8
+Fixes: QTBUG-136209
+Change-Id: Ib820d551f687cbd41f0306d39552e55e8642a2b3
+Reviewed-by: Ulf Hermann <ulf.hermann@qt.io>
+(cherry picked from commit cf798310238765612891696077f7d70570ad2e3a)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qmlworkerscript/qquickworkerscript.cpp      | 1 +
+ src/qmlworkerscript/qquickworkerscript_p.h      | 1 +
+ src/qmlworkerscript/qtqmlworkerscriptglobal.h   | 1 +
+ src/qmlworkerscript/qtqmlworkerscriptglobal_p.h | 1 +
+ src/qmlworkerscript/qv4serialize.cpp            | 1 +
+ src/qmlworkerscript/qv4serialize_p.h            | 1 +
+ 6 files changed, 6 insertions(+)
+
+diff --git a/src/qmlworkerscript/qquickworkerscript.cpp b/src/qmlworkerscript/qquickworkerscript.cpp
+index 3235fd410d..0b75ff7e22 100644
+--- a/src/qmlworkerscript/qquickworkerscript.cpp
++++ b/src/qmlworkerscript/qquickworkerscript.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qtqmlworkerscriptglobal_p.h"
+ #include "qquickworkerscript_p.h"
+diff --git a/src/qmlworkerscript/qquickworkerscript_p.h b/src/qmlworkerscript/qquickworkerscript_p.h
+index 1c4c0500fe..d7a99da093 100644
+--- a/src/qmlworkerscript/qquickworkerscript_p.h
++++ b/src/qmlworkerscript/qquickworkerscript_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQUICKWORKERSCRIPT_P_H
+ #define QQUICKWORKERSCRIPT_P_H
+diff --git a/src/qmlworkerscript/qtqmlworkerscriptglobal.h b/src/qmlworkerscript/qtqmlworkerscriptglobal.h
+index 1156b27b2d..896d6e0e55 100644
+--- a/src/qmlworkerscript/qtqmlworkerscriptglobal.h
++++ b/src/qmlworkerscript/qtqmlworkerscriptglobal.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2019 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:insignificant
+ 
+ #ifndef QTQMLWORKERSCRIPTGLOBAL_H
+ #define QTQMLWORKERSCRIPTGLOBAL_H
+diff --git a/src/qmlworkerscript/qtqmlworkerscriptglobal_p.h b/src/qmlworkerscript/qtqmlworkerscriptglobal_p.h
+index e0810f40cb..72d169df91 100644
+--- a/src/qmlworkerscript/qtqmlworkerscriptglobal_p.h
++++ b/src/qmlworkerscript/qtqmlworkerscriptglobal_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2019 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:insignificant
+ 
+ #ifndef QTQMLWORKERSCRIPTGLOBAL_P_H
+ #define QTQMLWORKERSCRIPTGLOBAL_P_H
+diff --git a/src/qmlworkerscript/qv4serialize.cpp b/src/qmlworkerscript/qv4serialize.cpp
+index cacaf1b0dd..38a857404d 100644
+--- a/src/qmlworkerscript/qv4serialize.cpp
++++ b/src/qmlworkerscript/qv4serialize.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:critical reason:data-parser
+ 
+ #include "qv4serialize_p.h"
+ 
+diff --git a/src/qmlworkerscript/qv4serialize_p.h b/src/qmlworkerscript/qv4serialize_p.h
+index 82f206f9a0..8101ddf370 100644
+--- a/src/qmlworkerscript/qv4serialize_p.h
++++ b/src/qmlworkerscript/qv4serialize_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4SERIALIZE_P_H
+ #define QV4SERIALIZE_P_H
+-- 
+2.51.2
+

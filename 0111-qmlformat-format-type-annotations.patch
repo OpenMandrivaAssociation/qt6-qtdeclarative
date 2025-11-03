@@ -1,0 +1,178 @@
+From 917833e397c82e72d3bde33757af5750375d8826 Mon Sep 17 00:00:00 2001
+From: Sami Shalayel <sami.shalayel@qt.io>
+Date: Wed, 10 Sep 2025 13:02:37 +0200
+Subject: [PATCH 111/239] qmlformat: format type annotations
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Extend the ScriptFormatter to format type annotations in JS lambdas. We
+can't really reuse the code that formats type annotations in QML methods
+because this one uses the DomItem MethodArgument::writeOut(), and we
+don't have a MethodArgument DomItem for type annotations in JS lambdas.
+
+Add anchors for UiQualifiedId, so that comments can be attached around
+the bits and `.` in an id like `a.b.c.d`.
+
+Partially amends 288e03a84d16f43d220a7f7912f1a5cbd3093062 that made
+ScriptExpression always disable qml mode to enable it when needed (type
+annotations are only enabled when qml mode is enabled), otherwise we
+can't format type annotations in tst_reformatter.
+
+Implement ScriptFormatter for type annotations. Don't process
+UiQualifiedIds for comments when not inside a type annotation.
+
+Task-number: QTBUG-137944
+Change-Id: I897ebead743f78d2a957a09469ce7ff3317aa930
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
+Reviewed-by: Olivier De Cannière <olivier.decanniere@qt.io>
+(cherry picked from commit 80659d79389a0fc5a18dd8fa123310b93ef84a4f)
+---
+ src/qmldom/qqmldomcomments.cpp                | 30 ++++++++++++++++
+ src/qmldom/qqmldomreformatter.cpp             | 25 +++++++++++++
+ src/qmldom/qqmldomreformatter_p.h             |  3 ++
+ .../auto/qmldom/reformatter/tst_reformatter.h | 35 +++++++++++++++++++
+ 4 files changed, 93 insertions(+)
+
+diff --git a/src/qmldom/qqmldomcomments.cpp b/src/qmldom/qqmldomcomments.cpp
+index 70a3853b17..751315ac09 100644
+--- a/src/qmldom/qqmldomcomments.cpp
++++ b/src/qmldom/qqmldomcomments.cpp
+@@ -463,8 +463,38 @@ public:
+         return true;
+     }
+ 
++    bool visit(Type *type) override
++    {
++        // only process UiQualifiedIds when they appear inside of types, otherwise this attaches
++        // comments to the qualified ids of bindings that are not printed out, for example.
++        QScopedValueRollback rollback(m_processUiQualifiedIds, true);
++
++        AST::Node::accept(type->typeId, this);
++        // TODO: typeargument
++        return false;
++    }
++
++    bool visit(UiQualifiedId *id) override
++    {
++        if (!m_processUiQualifiedIds)
++            return true;
++
++        // special case: multiple bits a,b,c and d inside an UiQualified id "a.b.c.d" all have the
++        // same lastSourceLocation(), which breaks the comment attaching. Therefore add locations
++        // here manually instead of in preVisit().
++        addSourceLocations(id, id->dotToken);
++        addSourceLocations(id, id->identifierToken);
++
++        // need to accept manually, see UiQualifiedId::accept0 implementation
++        AST::Node::accept(id->next, this);
++        return true;
++    }
++
+     QMap<qsizetype, ElementRef> starts;
+     QMap<qsizetype, ElementRef> ends;
++
++private:
++    bool m_processUiQualifiedIds = false;
+ };
+ 
+ void AstRangesVisitor::addNodeRanges(AST::Node *rootNode)
+diff --git a/src/qmldom/qqmldomreformatter.cpp b/src/qmldom/qqmldomreformatter.cpp
+index 4e295b9e16..fcc36af8d4 100644
+--- a/src/qmldom/qqmldomreformatter.cpp
++++ b/src/qmldom/qqmldomreformatter.cpp
+@@ -530,6 +530,31 @@ bool ScriptFormatter::visit(PatternElement *ast)
+         }
+         accept(ast->initializer);
+     }
++    accept(ast->typeAnnotation);
++    return false;
++}
++
++bool ScriptFormatter::visit(TypeAnnotation *ast)
++{
++    out(ast->colonToken);
++    lw.lineWriter.ensureSpace();
++    accept(ast->type);
++    return false;
++}
++
++bool ScriptFormatter::visit(Type *ast)
++{
++    accept(ast->typeId);
++    // TODO: type argument
++    return false;
++}
++
++bool ScriptFormatter::visit(UiQualifiedId *ast)
++{
++    for (UiQualifiedId *it = ast; it; it = it->next) {
++        outWithComments(it->dotToken, it);
++        outWithComments(it->identifierToken, it);
++    }
+     return false;
+ }
+ 
+diff --git a/src/qmldom/qqmldomreformatter_p.h b/src/qmldom/qqmldomreformatter_p.h
+index 5eee7e9cde..9607f941a3 100644
+--- a/src/qmldom/qqmldomreformatter_p.h
++++ b/src/qmldom/qqmldomreformatter_p.h
+@@ -135,6 +135,9 @@ protected:
+     bool visit(AST::VariableStatement *ast) override;
+ 
+     bool visit(AST::PatternElement *ast) override;
++    bool visit(AST::TypeAnnotation *ast) override;
++    bool visit(AST::Type *ast) override;
++    bool visit(AST::UiQualifiedId *ast) override;
+ 
+     bool visit(AST::EmptyStatement *ast) override;
+ 
+diff --git a/tests/auto/qmldom/reformatter/tst_reformatter.h b/tests/auto/qmldom/reformatter/tst_reformatter.h
+index de30d3ab60..358c16a682 100644
+--- a/tests/auto/qmldom/reformatter/tst_reformatter.h
++++ b/tests/auto/qmldom/reformatter/tst_reformatter.h
+@@ -443,6 +443,41 @@ private slots:
+         QCOMPARE(formattedDeclaration, expectedFormattedDeclaration);
+     }
+ 
++    void typeAnnotations_data()
++    {
++        QTest::addColumn<QString>("declarationToBeFormatted");
++        QTest::addColumn<QString>("expectedFormattedDeclaration");
++
++        QTest::newRow("Function") << u"function a(a:date,b:int){}"_s
++                                  << u"function a(a: date, b: int) {}"_s;
++        // note: we need to wrap the lambda in `()`, otherwise its invalid JS
++        QTest::newRow("AnonymousFunction")
++                << u"(function (a:date,b:int){})"_s << u"(function (a: date, b: int) {})"_s;
++        QTest::newRow("Generator_lhs_star")
++                << u"function* g(a:date,b:int){}"_s << u"function* g(a: date, b: int) {}"_s;
++        QTest::newRow("Generator_rhs_star")
++                << u"function *g(a:int,b:date){}"_s << u"function* g(a: int, b: date) {}"_s;
++
++        QTest::newRow("comments") << u"function a(/*7*/b/*8*/:/*9*/int/*10*/){}"_s
++                                  << u"function a(/*7*/b/*8*/: /*9*/int/*10*/) {}"_s;
++
++        QTest::newRow("comments2")
++                << u"function a(a: Q/*10*/./*11*/W/*12*/./*13*/E/*14*/./*15*/R/*16*/){}"_s
++                << u"function a(a: Q/*10*/./*11*/W/*12*/./*13*/E/*14*/./*15*/R/*16*/) {}"_s;
++    }
++
++    void typeAnnotations()
++    {
++        QFETCH(QString, declarationToBeFormatted);
++        QFETCH(QString, expectedFormattedDeclaration);
++
++        // type annotations only exist in qml files, not in JS or JS module files
++        const QString formattedDeclaration = formatPlainJS(
++                declarationToBeFormatted, ScriptExpression::ExpressionType::BindingExpression);
++
++        QCOMPARE(formattedDeclaration, expectedFormattedDeclaration);
++    }
++
+     void exportDeclarations_data()
+     {
+         QTest::addColumn<QString>("exportToBeFormatted");
+-- 
+2.51.2
+

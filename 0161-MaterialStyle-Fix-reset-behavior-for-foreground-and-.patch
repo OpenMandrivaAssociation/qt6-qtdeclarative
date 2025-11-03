@@ -1,0 +1,139 @@
+From ad59eacfe1e68626070e49e81c759221e9f30edf Mon Sep 17 00:00:00 2001
+From: Jarkko Koivikko <jarkko.koivikko@code-q.fi>
+Date: Mon, 29 Sep 2025 13:02:16 +0300
+Subject: [PATCH 161/239] MaterialStyle: Fix reset behavior for foreground and
+ background
+
+Resetting foreground and background values did not propagate to
+children when the earlier value matched theme default.
+
+Stop pre-clearing m_hasX/m_customX in reset. Clearing these variables
+prevents propagating the values to children due to early exit
+conditions in the inherit functions.
+
+Clear only m_explicitX and call inherit with the parent's values.
+m_hasX/m_customX values are then cleared in the inherit function,
+if changed. This guarantees propagation to children even when the
+color is unchanged.
+
+Pick-to: 6.8
+Change-Id: Ie4f7276d43afbfaf5b4d10ccf658f27000d640d9
+Reviewed-by: Mitch Curtis <mitch.curtis@qt.io>
+(cherry picked from commit e1e68ec4505869a95bd28047b4071e585e1ad23f)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ .../material/qquickmaterialstyle.cpp          | 12 ++--
+ .../qquickmaterialstyle/data/tst_material.qml | 63 +++++++++++++++++++
+ 2 files changed, 69 insertions(+), 6 deletions(-)
+
+diff --git a/src/quickcontrols/material/qquickmaterialstyle.cpp b/src/quickcontrols/material/qquickmaterialstyle.cpp
+index b88694aa7e..931fd3a20b 100644
+--- a/src/quickcontrols/material/qquickmaterialstyle.cpp
++++ b/src/quickcontrols/material/qquickmaterialstyle.cpp
+@@ -748,11 +748,11 @@ void QQuickMaterialStyle::resetForeground()
+     if (!m_explicitForeground)
+         return;
+ 
+-    m_hasForeground = false;
+-    m_customForeground = false;
+     m_explicitForeground = false;
+     QQuickMaterialStyle *material = qobject_cast<QQuickMaterialStyle *>(attachedParent());
+-    inheritForeground(material ? material->m_foreground : globalForeground, true, material ? material->m_hasForeground : false);
++    inheritForeground(material ? material->m_foreground : globalForeground,
++                      material ? material->m_customForeground : globalForegroundCustom,
++                      material ? material->m_hasForeground : false);
+ }
+ 
+ void QQuickMaterialStyle::foregroundChange()
+@@ -834,11 +834,11 @@ void QQuickMaterialStyle::resetBackground()
+     if (!m_explicitBackground)
+         return;
+ 
+-    m_hasBackground = false;
+-    m_customBackground = false;
+     m_explicitBackground = false;
+     QQuickMaterialStyle *material = qobject_cast<QQuickMaterialStyle *>(attachedParent());
+-    inheritBackground(material ? material->m_background : globalBackground, true, material ? material->m_hasBackground : false);
++    inheritBackground(material ? material->m_background : globalBackground,
++                      material ? material->m_customBackground : globalBackgroundCustom,
++                      material ? material->m_hasBackground : false);
+ }
+ 
+ void QQuickMaterialStyle::backgroundChange()
+diff --git a/tests/auto/quickcontrols/qquickmaterialstyle/data/tst_material.qml b/tests/auto/quickcontrols/qquickmaterialstyle/data/tst_material.qml
+index 6a21110057..9567509abb 100644
+--- a/tests/auto/quickcontrols/qquickmaterialstyle/data/tst_material.qml
++++ b/tests/auto/quickcontrols/qquickmaterialstyle/data/tst_material.qml
+@@ -204,6 +204,69 @@ TestCase {
+         compare(control.Material.roundedScale, Material.NotRounded)
+     }
+ 
++    function test_resetBackground_propagation_fromDefaultSet() {
++        // Parent/child that will exercise propagation
++        let parent = createTemporaryObject(buttonComponent, testCase)
++        verify(parent)
++        let child = buttonComponent.createObject(parent)
++        verify(child)
++
++        // Start from Dark background
++        parent.Material.theme = Material.Dark
++        compare(child.Material.theme, Material.Dark)
++
++        // 1) Make background explicit to light background (children "freeze" to this explicit color)
++        parent.Material.background = "#fafafa"
++        compare(parent.Material.background, "#fafafa")
++        compare(child.Material.background, parent.Material.background)
++
++        // 2) Switch to light theme, background remains unchanged
++        parent.Material.theme = Material.Light
++        compare(parent.Material.background, "#fafafa")
++        compare(child.Material.background, parent.Material.background)
++
++        // 3) Reset background to the theme default (remains unchanged)
++        parent.Material.background = undefined
++        compare(parent.Material.background, "#fffbfe")
++        compare(child.Material.background, parent.Material.background)
++
++        // 4) Now theme flips; child must track theme default (Dark)
++        parent.Material.theme = Material.Dark
++        compare(parent.Material.background, "#1c1b1f")
++        compare(child.Material.background, parent.Material.background)
++    }
++
++    function test_resetForeground_propagation_fromDefaultSet() {
++        let parent = createTemporaryObject(buttonComponent, testCase)
++        verify(parent)
++        let child = buttonComponent.createObject(parent)
++        verify(child)
++
++        // Start from Dark theme
++        parent.Material.theme = Material.Dark
++        compare(child.Material.theme, Material.Dark)
++
++        // 1) Make foreground explicit to light foreground (children "freeze" to this explicit color)
++        parent.Material.foreground = "#dd000000"
++        compare(parent.Material.foreground, "#dd000000")
++        compare(child.Material.foreground, parent.Material.foreground)
++
++        // 2) Switch to light theme, foreground remains unchanged
++        parent.Material.theme = Material.Light
++        compare(parent.Material.foreground, "#dd000000")
++        compare(child.Material.foreground, parent.Material.foreground)
++
++        // 3) Reset foreground to the theme default (remains unchanged)
++        parent.Material.foreground = undefined
++        compare(parent.Material.foreground, "#dd000000")
++        compare(child.Material.foreground, parent.Material.foreground)
++
++        // 4) Now theme flips; child must track theme default (Dark)
++        parent.Material.theme = Material.Dark
++        compare(parent.Material.foreground, "#ffffff")
++        compare(child.Material.foreground, parent.Material.foreground)
++    }
++
+     function test_inheritance_data() {
+         return [
+             { tag: "primary", value1: Material.color(Material.Amber), value2: Material.color(Material.Indigo) },
+-- 
+2.51.2
+

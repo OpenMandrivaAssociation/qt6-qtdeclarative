@@ -1,0 +1,104 @@
+From 176816a3802c822cd535549a7188cc87ac7042f2 Mon Sep 17 00:00:00 2001
+From: Morteza Jamshidi <morteza.jamshidi@qt.io>
+Date: Fri, 15 Aug 2025 17:30:23 +0200
+Subject: [PATCH 121/239] ScrollView: use padding if no rightPadding or
+ bottomPadding is set
+
+Because rightPadding and bottomPadding properties are set in the windows
+and macos ScrollView style implementation if the user try to set the
+padding property there will be no effect. So with this change we make
+sure that the padding property is used if rightPadding or bottomPadding
+aren't explicitly set by the user.
+
+Fixes: QTBUG-123631
+Change-Id: I5078cec1774cef7b99e0735022ddb4ce84cd08df
+Pick-to: 6.8 6.7
+Reviewed-by: Mitch Curtis <mitch.curtis@qt.io>
+(cherry picked from commit 5d29d63e77af7129e67c5bce6dfddaf5cf266ed0)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quickcontrols/macos/ScrollView.qml        |  8 +++++--
+ src/quickcontrols/windows/ScrollView.qml      |  8 +++++--
+ .../controls/data/tst_scrollview.qml          | 23 +++++++++++++++++++
+ 3 files changed, 35 insertions(+), 4 deletions(-)
+
+diff --git a/src/quickcontrols/macos/ScrollView.qml b/src/quickcontrols/macos/ScrollView.qml
+index c564e6d3c6..360fb97bfb 100644
+--- a/src/quickcontrols/macos/ScrollView.qml
++++ b/src/quickcontrols/macos/ScrollView.qml
+@@ -15,8 +15,12 @@ T.ScrollView {
+     implicitHeight: Math.max(implicitBackgroundHeight + topInset + bottomInset,
+                              implicitContentHeight + topPadding + bottomPadding)
+ 
+-    rightPadding: effectiveScrollBarWidth
+-    bottomPadding: effectiveScrollBarHeight
++    // rightPadding and bottomPadding are used to make space for the scrollBars
++    // but because we're setting them explicitly here, there will be no effect
++    // if the user assign a value to the padding property, so we accumulate it
++    // with the scrollbar width and height
++    rightPadding: effectiveScrollBarWidth + padding
++    bottomPadding: effectiveScrollBarHeight + padding
+ 
+     // Don't set __notCustomizable here, because it would require special-casing
+     // setFlickable's call to setContentItem.
+diff --git a/src/quickcontrols/windows/ScrollView.qml b/src/quickcontrols/windows/ScrollView.qml
+index 302e52e2a2..abaa75edac 100644
+--- a/src/quickcontrols/windows/ScrollView.qml
++++ b/src/quickcontrols/windows/ScrollView.qml
+@@ -14,8 +14,12 @@ T.ScrollView {
+     implicitHeight: Math.max(implicitBackgroundHeight + topInset + bottomInset,
+                              implicitContentHeight + topPadding + bottomPadding)
+ 
+-    rightPadding: effectiveScrollBarWidth
+-    bottomPadding: effectiveScrollBarHeight
++    // rightPadding and bottomPadding are used to make space for the scrollBars
++    // but because we're setting them explicitly here, there will be no effect
++    // if the user assign a value to the padding property, so we accumulate it
++    // with the scrollbar width and height
++    rightPadding: effectiveScrollBarWidth + padding
++    bottomPadding: effectiveScrollBarHeight + padding
+ 
+     // Don't set __notCustomizable here, because it would require special-casing
+     // setFlickable's call to setContentItem.
+diff --git a/tests/auto/quickcontrols/controls/data/tst_scrollview.qml b/tests/auto/quickcontrols/controls/data/tst_scrollview.qml
+index 622f341f78..335e6a68d4 100644
+--- a/tests/auto/quickcontrols/controls/data/tst_scrollview.qml
++++ b/tests/auto/quickcontrols/controls/data/tst_scrollview.qml
+@@ -4,6 +4,7 @@
+ import QtQuick
+ import QtTest
+ import QtQuick.Controls
++import Qt.test.controls
+ 
+ TestCase {
+     id: testCase
+@@ -762,4 +763,26 @@ TestCase {
+         compare(scrollview.contentWidth, 400)
+         compare(scrollview.contentHeight, 1200)
+     }
++
++
++    Component {
++        id: scrollViewPaddingComp
++
++        ScrollView {
++            id: scrollView
++            anchors.fill: parent
++            padding: 100
++        }
++    }
++
++    function test_scrollViewPadding() {
++        if (StyleInfo.styleName !== "macOS" && StyleInfo.styleName !== "Windows")
++            skip("rightPadding and bottomPadding properties are only explicitly " +
++                  "set in macos and windows style implementation of ScrollView. " +
++                  "more details in QTBUG-123631")
++        let scrollview = createTemporaryObject(scrollViewPaddingComp, testCase)
++        verify(scrollview)
++        verify(scrollview.rightPadding >= scrollview.padding)
++        verify(scrollview.bottomPadding >= scrollview.padding)
++    }
+ }
+-- 
+2.51.2
+

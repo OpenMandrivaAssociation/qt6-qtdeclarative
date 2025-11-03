@@ -1,0 +1,34 @@
+From e55d5cfc034adb2c3b98c53ac23dd5bbf4335a1f Mon Sep 17 00:00:00 2001
+From: Sami Shalayel <sami.shalayel@qt.io>
+Date: Fri, 17 Oct 2025 08:26:05 +0200
+Subject: [PATCH 192/239] doc: remove \c in brief of
+ QT_QML_GENERATE_QMLLS_INI_NO_CMAKE_CALLS
+
+With \c, the brief gets rendered as:
+Customizes the value of no<@op>-</@op>cmake<@op>-</@op>calls in
+.qmlls.ini files for QML Language Server.
+
+Change-Id: Ib4579d70d10097872cc1bd93092fbf7d2a6c1bc1
+Reviewed-by: Leena Miettinen <riitta-leena.miettinen@qt.io>
+(cherry picked from commit b2173c0b98d6b5bf3821ef07320ae6cb82eafd85)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qml/doc/src/cmake/cmake-variables.qdoc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/qml/doc/src/cmake/cmake-variables.qdoc b/src/qml/doc/src/cmake/cmake-variables.qdoc
+index f21d93362b..0f46133378 100644
+--- a/src/qml/doc/src/cmake/cmake-variables.qdoc
++++ b/src/qml/doc/src/cmake/cmake-variables.qdoc
+@@ -43,7 +43,7 @@ modules, or to merge sets of QML modules under a common base point.
+ 
+ \title QT_QML_GENERATE_QMLLS_INI_NO_CMAKE_CALLS
+ 
+-\brief Customizes the value of \c no-cmake-calls in .qmlls.ini files for \QMLLS.
++\brief Customizes the value of no-cmake-calls in .qmlls.ini files for \QMLLS.
+ \cmakevariablesince 6.10
+ 
+ \c QT_QML_GENERATE_QMLLS_INI_NO_CMAKE_CALLS is a boolean that controls the \c no-cmake-calls value in
+-- 
+2.51.2
+

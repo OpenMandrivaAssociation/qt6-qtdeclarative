@@ -1,0 +1,149 @@
+From d97e7ebdbce7083b71a68ef6f8f3b7c1a29dcef1 Mon Sep 17 00:00:00 2001
+From: Sze Howe Koh <szehowe.koh@gmail.com>
+Date: Fri, 19 Sep 2025 16:41:25 +0800
+Subject: [PATCH 223/239] Examples: Stop using version numbers with QML modules
+
+Continues 2d44365f69b9bc946d085c6b149e2ac319700265 and
+b7f448f8647a9a118cee2d79d446194b20d4b335
+
+* Qt 6.0 enabled and encouraged users to import QML modules without
+  specifying a version number
+* Qt 6.5 enabled and encouraged users to create QML modules without
+  specifying a version number
+
+With this approach, there is little benefit in specifying
+QT_QML_SOURCE_VERSIONS, especially in an example module that is not
+consumed by external software. It does not need to worry about
+compatibility/versioning.
+
+Task-number: QTBUG-89033
+Task-number: QTBUG-140406
+Change-Id: I7f83dc7430180b79b70c75e7ce7b3aef46a028ae
+Pick-to: 6.8
+Reviewed-by: Ulf Hermann <ulf.hermann@qt.io>
+(cherry picked from commit bd4e0441688758d7e73aef43bd8633d68370f7f7)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ .../android/models/qtabstractitemmodel/CMakeLists.txt      | 1 -
+ .../android/models/qtabstractlistmodel/CMakeLists.txt      | 1 -
+ examples/platforms/android/qtquickview/CMakeLists.txt      | 1 -
+ examples/quick/shared/CMakeLists.txt                       | 7 -------
+ examples/quick/tutorials/samegame/samegame4/samegame.js    | 4 ++--
+ examples/quickcontrols/filesystemexplorer/CMakeLists.txt   | 1 -
+ .../quickcontrols/spreadsheets/Spreadsheets/CMakeLists.txt | 1 -
+ examples/quickcontrols/tableofcontents/CMakeLists.txt      | 1 -
+ 8 files changed, 2 insertions(+), 15 deletions(-)
+
+diff --git a/examples/platforms/android/models/qtabstractitemmodel/CMakeLists.txt b/examples/platforms/android/models/qtabstractitemmodel/CMakeLists.txt
+index 57b6269c5e..0388d078e2 100644
+--- a/examples/platforms/android/models/qtabstractitemmodel/CMakeLists.txt
++++ b/examples/platforms/android/models/qtabstractitemmodel/CMakeLists.txt
+@@ -16,7 +16,6 @@ qt_add_executable(qtabstractitemmodel
+ 
+ qt_add_qml_module(qtabstractitemmodel
+     URI QmlModule
+-    VERSION 1.0
+     QML_FILES Main.qml
+ )
+ 
+diff --git a/examples/platforms/android/models/qtabstractlistmodel/CMakeLists.txt b/examples/platforms/android/models/qtabstractlistmodel/CMakeLists.txt
+index fe670511bf..e548a65a53 100644
+--- a/examples/platforms/android/models/qtabstractlistmodel/CMakeLists.txt
++++ b/examples/platforms/android/models/qtabstractlistmodel/CMakeLists.txt
+@@ -16,7 +16,6 @@ qt_add_executable(qtabstractlistmodel
+ 
+ qt_add_qml_module(qtabstractlistmodel
+     URI QmlModule
+-    VERSION 1.0
+     QML_FILES Main.qml
+ )
+ 
+diff --git a/examples/platforms/android/qtquickview/CMakeLists.txt b/examples/platforms/android/qtquickview/CMakeLists.txt
+index 40ca5f5b7a..318dc3ea00 100644
+--- a/examples/platforms/android/qtquickview/CMakeLists.txt
++++ b/examples/platforms/android/qtquickview/CMakeLists.txt
+@@ -16,7 +16,6 @@ qt_add_executable(qtquickview
+ 
+ qt_add_qml_module(qtquickview
+     URI qmlModule
+-    VERSION 1.0
+     QML_FILES Main.qml
+     QML_FILES Second.qml
+ )
+diff --git a/examples/quick/shared/CMakeLists.txt b/examples/quick/shared/CMakeLists.txt
+index 7382df7689..0d9ece8bd3 100644
+--- a/examples/quick/shared/CMakeLists.txt
++++ b/examples/quick/shared/CMakeLists.txt
+@@ -1,20 +1,13 @@
+ # Copyright (C) 2022 The Qt Company Ltd.
+ # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
+ 
+-set_source_files_properties(CheckBox.qml TabSet.qml TextField.qml
+-    PROPERTIES
+-        QT_QML_SOURCE_VERSIONS 2.1
+-)
+-
+ set_source_files_properties(Images.qml
+     PROPERTIES
+         QT_QML_SINGLETON_TYPE true
+-        QT_QML_SOURCE_VERSIONS 2.2
+ )
+ 
+ qt_add_qml_module(${PROJECT_NAME}_shared
+     URI shared
+-    VERSION 2.2
+     PLUGIN_TARGET ${PROJECT_NAME}_shared
+     SOURCES
+         "shared.h"
+diff --git a/examples/quick/tutorials/samegame/samegame4/samegame.js b/examples/quick/tutorials/samegame/samegame4/samegame.js
+index 99d34c64a0..0e1538be84 100644
+--- a/examples/quick/tutorials/samegame/samegame4/samegame.js
++++ b/examples/quick/tutorials/samegame/samegame4/samegame.js
+@@ -1,6 +1,6 @@
+ /* This script file handles the game logic */
+-.import QtQuick.LocalStorage 2.0 as Sql
+-.import QtQuick 2.0 as Quick
++.import QtQuick.LocalStorage as Sql
++.import QtQuick as Quick
+ 
+ var maxColumn = 10;
+ var maxRow = 15;
+diff --git a/examples/quickcontrols/filesystemexplorer/CMakeLists.txt b/examples/quickcontrols/filesystemexplorer/CMakeLists.txt
+index ea388521d9..e69f633894 100644
+--- a/examples/quickcontrols/filesystemexplorer/CMakeLists.txt
++++ b/examples/quickcontrols/filesystemexplorer/CMakeLists.txt
+@@ -24,7 +24,6 @@ set_source_files_properties(qml/Colors.qml
+ 
+ qt_add_qml_module(filesystemexplorer
+     URI FileSystemModule
+-    VERSION 1.0
+     QML_FILES
+         "Main.qml"
+         "qml/About.qml"
+diff --git a/examples/quickcontrols/spreadsheets/Spreadsheets/CMakeLists.txt b/examples/quickcontrols/spreadsheets/Spreadsheets/CMakeLists.txt
+index 03e78452d5..561f3dd37e 100644
+--- a/examples/quickcontrols/spreadsheets/Spreadsheets/CMakeLists.txt
++++ b/examples/quickcontrols/spreadsheets/Spreadsheets/CMakeLists.txt
+@@ -9,7 +9,6 @@ qt_add_library(${PROJECT_NAME} STATIC)
+ 
+ qt_add_qml_module(${PROJECT_NAME}
+     URI ${PROJECT_NAME}
+-    VERSION 1.0
+     QML_FILES
+         Main.qml
+         HeaderToolBar.qml
+diff --git a/examples/quickcontrols/tableofcontents/CMakeLists.txt b/examples/quickcontrols/tableofcontents/CMakeLists.txt
+index db1a42197f..9308757819 100644
+--- a/examples/quickcontrols/tableofcontents/CMakeLists.txt
++++ b/examples/quickcontrols/tableofcontents/CMakeLists.txt
+@@ -22,7 +22,6 @@ qt_add_resources(apptableofcontents "contentdata"
+ 
+ qt_add_qml_module(apptableofcontents
+     URI tableofcontents
+-    VERSION 1.0
+     QML_FILES
+         Main.qml
+     SOURCES
+-- 
+2.51.2
+

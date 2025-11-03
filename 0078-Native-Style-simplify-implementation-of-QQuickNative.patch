@@ -1,0 +1,93 @@
+From d43f407d85fd216e889cec6a6c4b10d2f4821542 Mon Sep 17 00:00:00 2001
+From: Tim Blechmann <tim.blechmann@qt.io>
+Date: Sat, 20 Sep 2025 09:07:11 +0800
+Subject: [PATCH 078/239] Native Style: simplify implementation of
+ QQuickNativeStyle
+
+* use unique_ptr for memory management
+* declare static member as inline to avoid slim down the builds a bit
+
+Change-Id: I3406fb2e5f027303451b0e08de6a565195f23a55
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
+(cherry picked from commit 71f7260b19dc4e31f1563c877d03077be31234e0)
+Reviewed-by: Ulf Hermann <ulf.hermann@qt.io>
+---
+ src/quicknativestyle/CMakeLists.txt             |  2 +-
+ .../qstyle/qquicknativestyle.cpp                | 14 --------------
+ src/quicknativestyle/qstyle/qquicknativestyle.h | 17 +++++------------
+ 3 files changed, 6 insertions(+), 27 deletions(-)
+ delete mode 100644 src/quicknativestyle/qstyle/qquicknativestyle.cpp
+
+diff --git a/src/quicknativestyle/CMakeLists.txt b/src/quicknativestyle/CMakeLists.txt
+index 50ea35dac8..f27553955b 100644
+--- a/src/quicknativestyle/CMakeLists.txt
++++ b/src/quicknativestyle/CMakeLists.txt
+@@ -72,7 +72,7 @@ qt_internal_add_qml_module(qtquickcontrols2nativestyleplugin
+         qstyle/qquickcommonstyle.cpp qstyle/qquickcommonstyle.h qstyle/qquickcommonstyle_p.h
+         qstyle/qquickcommonstylepixmaps_p.h
+         qstyle/qquickdrawutil.cpp qstyle/qquickdrawutil.h
+-        qstyle/qquicknativestyle.cpp qstyle/qquicknativestyle.h
++        qstyle/qquicknativestyle.h
+         qstyle/qquickstyle.cpp qstyle/qquickstyle.h qstyle/qquickstyle_p.h
+         qstyle/qquickstylehelper.cpp qstyle/qquickstylehelper_p.h
+         qstyle/qquickstyleoption.cpp qstyle/qquickstyleoption.h
+diff --git a/src/quicknativestyle/qstyle/qquicknativestyle.cpp b/src/quicknativestyle/qstyle/qquicknativestyle.cpp
+deleted file mode 100644
+index 52b2df5c08..0000000000
+--- a/src/quicknativestyle/qstyle/qquicknativestyle.cpp
++++ /dev/null
+@@ -1,14 +0,0 @@
+-// Copyright (C) 2020 The Qt Company Ltd.
+-// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+-
+-#include "qquicknativestyle.h"
+-
+-QT_BEGIN_NAMESPACE
+-
+-namespace QQC2 {
+-
+-QStyle *QQuickNativeStyle::s_style = nullptr;
+-
+-} // namespace QQC2
+-
+-QT_END_NAMESPACE
+diff --git a/src/quicknativestyle/qstyle/qquicknativestyle.h b/src/quicknativestyle/qstyle/qquicknativestyle.h
+index a063f58b33..6092f5b4e5 100644
+--- a/src/quicknativestyle/qstyle/qquicknativestyle.h
++++ b/src/quicknativestyle/qstyle/qquicknativestyle.h
+@@ -6,6 +6,8 @@
+ 
+ #include "qquickstyle.h"
+ 
++#include <memory>
++
+ QT_BEGIN_NAMESPACE
+ 
+ namespace QQC2 {
+@@ -13,20 +15,11 @@ namespace QQC2 {
+ class QQuickNativeStyle
+ {
+ public:
+-    static void setStyle(QStyle *style)
+-    {
+-        if (s_style)
+-            delete s_style;
+-        s_style = style;
+-    }
+-
+-    inline static QStyle *style()
+-    {
+-        return s_style;
+-    }
++    static void setStyle(QStyle *style) { s_style.reset(style); }
++    static QStyle *style() { return s_style.get(); }
+ 
+ private:
+-    static QStyle *s_style;
++    static inline std::unique_ptr<QStyle> s_style;
+ };
+ 
+ } // namespace QQC2
+-- 
+2.51.2
+

@@ -1,0 +1,90 @@
+From c1fff61a4db328ee6005789cb0f8a6ee6acb7a8c Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Fri, 5 Sep 2025 12:49:51 +0200
+Subject: [PATCH 026/239] QmlModels: Test model-writing behavior of delegates
+
+When writing through a delegate, the original data is already written.
+We are only missing change signals.
+
+Task-number: QTBUG-139941
+Change-Id: I3124a8dc5852e3858a1e9bd9b74c07608bb5e446
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
+(cherry picked from commit b8b1b94ceae758be1003e6e70b8dd28cc6378b7f)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ .../data/delegateModelAccess.qml              | 13 ++++++++++++
+ .../tst_qqmldelegatemodel.cpp                 | 20 +++++++++++++++++++
+ 2 files changed, 33 insertions(+)
+
+diff --git a/tests/auto/qml/qqmldelegatemodel/data/delegateModelAccess.qml b/tests/auto/qml/qqmldelegatemodel/data/delegateModelAccess.qml
+index db819378b6..c553faa76f 100644
+--- a/tests/auto/qml/qqmldelegatemodel/data/delegateModelAccess.qml
++++ b/tests/auto/qml/qqmldelegatemodel/data/delegateModelAccess.qml
+@@ -63,6 +63,19 @@ DelegateModel {
+         property int y: 12
+     }
+ 
++    function xAt0() : real {
++        switch (modelIndex) {
++        case Model.Singular:
++        case Model.List:
++            return model.get(0).x
++        case Model.Array:
++            return model[0].x
++        case Model.Object:
++            return model.x
++        }
++        return -1;
++    }
++
+     property int modelIndex: Model.None
+     property int delegateIndex: Delegate.None
+ 
+diff --git a/tests/auto/qml/qqmldelegatemodel/tst_qqmldelegatemodel.cpp b/tests/auto/qml/qqmldelegatemodel/tst_qqmldelegatemodel.cpp
+index 64b87bcb97..0a222dc272 100644
+--- a/tests/auto/qml/qqmldelegatemodel/tst_qqmldelegatemodel.cpp
++++ b/tests/auto/qml/qqmldelegatemodel/tst_qqmldelegatemodel.cpp
+@@ -985,6 +985,18 @@ void tst_QQmlDelegateModel::delegateModelAccess()
+             ? access != QQmlDelegateModel::ReadOnly
+             : access == QQmlDelegateModel::ReadWrite;
+ 
++    const bool writeShouldPropagate =
++
++            // If we've explicitly asked for the model to be written, it is
++            (access == QQmlDelegateModel::ReadWrite) ||
++
++            // If it's a QAIM or an object, it's implicitly written
++            (modelKind != Model::Kind::Array) ||
++
++            // When writing through the model object from a typed delegate,
++            // the value was propagated even before.
++            (access == QQmlDelegateModel::Qt5ReadWrite && delegateKind == Delegate::Typed);
++
+     double expected = 11;
+ 
+     QCOMPARE(delegate->property("immediateX").toDouble(), expected);
+@@ -997,6 +1009,10 @@ void tst_QQmlDelegateModel::delegateModelAccess()
+     QCOMPARE(delegate->property("immediateX").toDouble(), expected);
+     QCOMPARE(delegate->property("modelX").toDouble(), expected);
+ 
++    double xAt0 = -1;
++    QMetaObject::invokeMethod(object.data(), "xAt0", Q_RETURN_ARG(double, xAt0));
++    QCOMPARE(xAt0, writeShouldPropagate ? expected : 11);
++
+     if (immediateWritable)
+         expected = 1;
+ 
+@@ -1007,6 +1023,10 @@ void tst_QQmlDelegateModel::delegateModelAccess()
+              delegateKind == Delegate::Untyped ? expected : 1);
+ 
+     QCOMPARE(delegate->property("modelX").toDouble(), expected);
++
++    xAt0 = -1;
++    QMetaObject::invokeMethod(object.data(), "xAt0", Q_RETURN_ARG(double, xAt0));
++    QCOMPARE(xAt0, writeShouldPropagate ? expected : 11);
+ }
+ 
+ QTEST_MAIN(tst_QQmlDelegateModel)
+-- 
+2.51.2
+

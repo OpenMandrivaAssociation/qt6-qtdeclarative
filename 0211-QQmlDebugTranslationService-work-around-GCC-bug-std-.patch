@@ -1,0 +1,55 @@
+From 071ffb82f28ab7d6117a9c95d8b764f45683c63f Mon Sep 17 00:00:00 2001
+From: Thiago Macieira <thiago.macieira@intel.com>
+Date: Tue, 21 Oct 2025 11:04:38 -0700
+Subject: [PATCH 211/239] QQmlDebugTranslationService: work around GCC bug
+ std::variant
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Like std::optional, libstdc++'s std::variant may leave space outside of
+the active object uninitialized. Then GCC complains.
+
+Amends 4c6fb83b980aaca1e039e43ff0504e1ac0cd3aad, which attempted to
+workaround this bug by switching from std::monostate to
+std::nullptr_t. It didn't work.
+
+qqmldebugserviceinterfaces.cpp:54:21: error: ‘((QArrayDataPointer<char>*)((char*)&translation + offsetof(QQmlTranslation, QQmlTranslation::m_data.std::variant<std::nullptr_t, QQmlTranslation::QsTrData, QQmlTranslation::QsTrIdData>::<unnamed>.std::__detail::__variant::_Variant_base<std::nullptr_t, QQmlTranslation::QsTrData, QQmlTranslation::QsTrIdData>::<unnamed>.std::__detail::__variant::_Move_assign_base<false, std::nullptr_t, QQmlTranslation::QsTrData, QQmlTranslation::QsTrIdData>::<unnamed>.std::__detail::__variant::_Copy_assign_base<false, std::nullptr_t, QQmlTranslation::QsTrData, QQmlTranslation::QsTrIdData>::<unnamed>.std::__detail::__variant::_Move_ctor_base<false, std::nullptr_t, QQmlTranslation::QsTrData, QQmlTranslation::QsTrIdData>::<unnamed>.std::__detail::__variant::_Copy_ctor_base<false, std::nullptr_t, QQmlTranslation::QsTrData, QQmlTranslation::QsTrIdData>::<unnamed>.std::__detail::__variant::_Variant_storage<false, std::nullptr_t, QQmlTranslation::QsTrData, QQmlTranslation::QsTrIdData>::_M_u)))[2].QArrayDataPointer<char>::d’ may be used uninitialized [-Werror=maybe-uninitialized]
+
+This cannot be our bug. QQmlTranslation has a single, non-trivial member
+of type std::variant, so the variant is definitely initialized. If
+there's a bug, it's in libstdc++, so make the warning go away.
+
+Pick-to: 6.8
+Change-Id: Id599211844d0350d7262fffd7315a20f9d367402
+Reviewed-by: Ulf Hermann <ulf.hermann@qt.io>
+(cherry picked from commit 6776cd639175b4fe673fd4c7290a4cb60a117321)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qml/debugger/qqmldebugserviceinterfaces.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/qml/debugger/qqmldebugserviceinterfaces.cpp b/src/qml/debugger/qqmldebugserviceinterfaces.cpp
+index db1ec2db5e..86bf635f91 100644
+--- a/src/qml/debugger/qqmldebugserviceinterfaces.cpp
++++ b/src/qml/debugger/qqmldebugserviceinterfaces.cpp
+@@ -46,6 +46,8 @@ QQmlDebugStatesDelegate *QQmlEngineDebugService::createStatesDelegate()
+ QQmlDebugTranslationService::~QQmlDebugTranslationService()
+     = default;
+ 
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_GCC("-Wmaybe-uninitialized") // known GCC bug with std::optional and std::variant
+ const TranslationBindingInformation TranslationBindingInformation::create(
+         const QQmlRefPointer<QV4::ExecutableCompilationUnit> &compilationUnit,
+         const QV4::CompiledData::Binding *binding, QObject *scopeObject,
+@@ -89,6 +91,7 @@ const TranslationBindingInformation TranslationBindingInformation::create(
+              binding->location.line(),
+              binding->location.column() };
+ }
++QT_WARNING_POP
+ #endif
+ 
+ QT_END_NAMESPACE
+-- 
+2.51.2
+

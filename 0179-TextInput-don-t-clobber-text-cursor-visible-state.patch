@@ -1,0 +1,57 @@
+From 3936c2ed165a413116e0eebd299c29df74baa467 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Morten=20S=C3=B8rvig?= <morten.sorvig@qt.io>
+Date: Fri, 27 Jun 2025 15:03:50 +0200
+Subject: [PATCH 179/239] TextInput: don't clobber text cursor visible state
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+User code connected to onTextChange may cause changes
+which affect the text cursor visibility state, for
+example by moving focus to a different item.
+
+Set set text cursor visibility state before updating
+the text in order to avoid overwriting state changes
+from user code.
+
+Fixes: QTBUG-131895
+Pick-to: 6.9 6.8
+Change-Id: I8e8ae7497b56067eb251e318c1fbff23c8e46332
+Reviewed-by: Lorn Potter <lorn.potter@qt.io>
+Reviewed-by: Piotr Wierciński <piotr.wiercinski@qt.io>
+Reviewed-by: Shawn Rutledge <shawn.rutledge@qt.io>
+(cherry picked from commit 12cf5ccbe65ffeef21af36d9fdbce2fbadd315c3)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quick/items/qquicktextinput.cpp | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/quick/items/qquicktextinput.cpp b/src/quick/items/qquicktextinput.cpp
+index 721a069509..f0757b9e41 100644
+--- a/src/quick/items/qquicktextinput.cpp
++++ b/src/quick/items/qquicktextinput.cpp
+@@ -3685,6 +3685,12 @@ void QQuickTextInputPrivate::processInputMethodEvent(QInputMethodEvent *event)
+     }
+     m_textLayout.setFormats(formats);
+ 
++    // Set cursor visible state. Do this before updating the text,
++    // since user code connected to onTextChanged may set a different
++    // cursor visible state (for instance by setting the focus), which
++    // we don't want to overwrite.
++    q->setCursorVisible(cursorVisible);
++
+     updateDisplayText(/*force*/ true);
+     if (cursorPositionChanged && emitCursorPositionChanged())
+         q->updateInputMethod(Qt::ImCursorPosition | Qt::ImAnchorPosition);
+@@ -3694,8 +3700,6 @@ void QQuickTextInputPrivate::processInputMethodEvent(QInputMethodEvent *event)
+     if (isGettingInput)
+         finishChange(priorState);
+ 
+-    q->setCursorVisible(cursorVisible);
+-
+     if (selectionChange) {
+         emit q->selectionChanged();
+         q->updateInputMethod(Qt::ImCursorRectangle | Qt::ImAnchorRectangle
+-- 
+2.51.2
+

@@ -1,0 +1,544 @@
+From e2a9de7aa3f7d685ef914e5d1d16d1d4c5c5c6ee Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Tue, 30 Sep 2025 14:54:36 +0200
+Subject: [PATCH 145/239] QtQml: Fix assigning to QML-defined list properties
+
+Returning an invalid QVariant from toVariant() is not helpful. We can't
+produce a QQmlListReference in that case because there is no object,
+but a QObjectList works just fine.
+
+Writing to list properties via the metaobject is very much supported.
+We can easily implement it using the same technique we use for reading.
+
+Finally, to get the signal counts right, we also need to compare the
+lists before assignment when taking the QQmlProperty code path.
+
+Pick-to: 6.8
+Fixes: QTBUG-140690
+Change-Id: I09d6412f3f2ec86144810f47d0d620b63dfcd280
+Reviewed-by: Sami Shalayel <sami.shalayel@qt.io>
+(cherry picked from commit 7fa397156c831b410b551c2ad84d17f2eaf9e5c6)
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
+---
+ src/qml/qml/qqmllistwrapper.cpp               |   8 +-
+ src/qml/qml/qqmlproperty.cpp                  | 165 +++++++++++++++---
+ src/qml/qml/qqmlvmemetaobject.cpp             | 104 +++++++----
+ src/qml/qml/qqmlvmemetaobject_p.h             |   1 +
+ .../qml/qmlcppcodegen/data/CMakeLists.txt     |   1 +
+ .../data/detachedListAssignment.qml           |  42 +++++
+ .../qml/qmlcppcodegen/tst_qmlcppcodegen.cpp   |  28 +++
+ .../data/listAssignmentSignals.qml            |   4 +
+ .../qml/qqmlproperty/tst_qqmlproperty.cpp     |   5 +
+ 9 files changed, 296 insertions(+), 62 deletions(-)
+ create mode 100644 tests/auto/qml/qmlcppcodegen/data/detachedListAssignment.qml
+
+diff --git a/src/qml/qml/qqmllistwrapper.cpp b/src/qml/qml/qqmllistwrapper.cpp
+index 89ca1e325e..c3a5f5266e 100644
+--- a/src/qml/qml/qqmllistwrapper.cpp
++++ b/src/qml/qml/qqmllistwrapper.cpp
+@@ -164,10 +164,10 @@ ReturnedValue QmlListWrapper::create(ExecutionEngine *engine, QMetaType propType
+ 
+ QVariant QmlListWrapper::toVariant() const
+ {
+-    if (!d()->object())
+-        return QVariant();
+-
+-    return QVariant::fromValue(toListReference());
++    Heap::QmlListWrapper *p = d();
++    return p->object()
++            ? QVariant::fromValue(toListReference())
++            : QVariant::fromValue(p->property()->toList<QObjectList>());
+ }
+ 
+ QQmlListReference QmlListWrapper::toListReference() const
+diff --git a/src/qml/qml/qqmlproperty.cpp b/src/qml/qml/qqmlproperty.cpp
+index c388af5196..e922cb63c8 100644
+--- a/src/qml/qml/qqmlproperty.cpp
++++ b/src/qml/qml/qqmlproperty.cpp
+@@ -21,6 +21,7 @@
+ #include <private/qqmlvmemetaobject_p.h>
+ #include <private/qv4functionobject_p.h>
+ #include <private/qv4qobjectwrapper_p.h>
++#include <private/qv4sequenceobject_p.h>
+ 
+ #include <QtQml/qqmlcontext.h>
+ #include <QtQml/qqmlengine.h>
+@@ -1506,6 +1507,114 @@ static bool tryAssignBinding(
+     return true;
+ }
+ 
++template<typename L>
++qsizetype listCount(const L *list)
++{
++    if constexpr (std::is_same_v<L, QQmlListReference>)
++        return list->count();
++    if constexpr (std::is_same_v<L, QObjectList>)
++        return list->count();
++    if constexpr (std::is_same_v<L, QVariantList>)
++        return list->count();
++    return -1;
++}
++
++template<typename L, typename F>
++bool iterateList(const L *list, qsizetype size, F &&callback)
++{
++    for (qsizetype i = 0; i < size; ++i){
++        if (!callback(i, list->at(i)))
++            return false;
++    }
++
++    return true;
++}
++
++static QObject *extractObject(const QVariant &variant)
++{
++    return QQmlMetaType::toQObject(variant);
++}
++
++static QObject *extractObject(QObject *object)
++{
++    return object;
++}
++
++using AssignResult = QV4::SequencePrototype::RawCopyResult;
++
++template<typename L, typename DoAppend>
++AssignResult assignListToListProperty(
++        QQmlListProperty<QObject> *prop, const L *list, DoAppend &&doAppend)
++{
++    const qsizetype newSize = listCount(list);
++    if (prop->at && prop->count && newSize == prop->count(prop)) {
++        if (iterateList(list, newSize, [prop](qsizetype i, const auto &element) {
++            return (extractObject(element) == prop->at(prop, i));
++        })) {
++            // Nothing to do, the lists are the same
++            return AssignResult::WasEqual;
++        }
++    }
++
++    prop->clear(prop);
++    iterateList(list, newSize, [&](qsizetype, const auto &element) {
++        return doAppend(prop, extractObject(element));
++    });
++
++    return AssignResult::Copied;
++}
++
++template<typename DoAppend>
++AssignResult assignMetaContainerToListProperty(
++        QQmlListProperty<QObject> *prop, QMetaType metaType, const void *data, DoAppend &&doAppend)
++{
++    QSequentialIterable iterable;
++    if (!QMetaType::convert(metaType, data, QMetaType::fromType<QSequentialIterable>(), &iterable))
++        return AssignResult::TypeMismatch;
++
++    const QMetaSequence metaSequence = iterable.metaContainer();
++    if (!metaSequence.hasConstIterator()
++            || !metaSequence.canGetValueAtConstIterator()
++            || !iterable.valueMetaType().flags().testFlag(QMetaType::PointerToQObject)) {
++        return AssignResult::TypeMismatch;
++    }
++
++    const void *container = iterable.constIterable();
++    const void *end = metaSequence.constEnd(container);
++
++    QObject *o = nullptr;
++    bool same = false;
++    if (prop->at && prop->count && metaSequence.hasSize()
++            && metaSequence.size(container) == prop->count(prop)) {
++        void *it = metaSequence.constBegin(container);
++        same = true;
++        qsizetype i = -1;
++        while (!metaSequence.compareConstIterator(it, end)) {
++            metaSequence.valueAtConstIterator(it, &o);
++            if (o != prop->at(prop, ++i)) {
++                same = false;
++                break;
++            }
++            metaSequence.advanceConstIterator(it, 1);
++        }
++        metaSequence.destroyConstIterator(it);
++    }
++
++    if (!same) {
++        prop->clear(prop);
++        void *it = metaSequence.constBegin(container);
++        while (!metaSequence.compareConstIterator(it, end)) {
++            metaSequence.valueAtConstIterator(it, &o);
++            doAppend(prop, o);
++            metaSequence.advanceConstIterator(it, 1);
++        }
++        metaSequence.destroyConstIterator(it);
++    }
++
++    metaSequence.destroyConstIterator(end);
++    return same ? AssignResult::WasEqual : AssignResult::Copied;
++}
++
+ static bool assignToListProperty(
+         const QQmlPropertyData &property, QQmlPropertyData::WriteFlags flags,
+         const QMetaType propertyMetaType, const QMetaType variantMetaType, const QVariant &value,
+@@ -1520,50 +1629,56 @@ static bool assignToListProperty(
+         QQmlListProperty<QObject> prop;
+         property.readProperty(object, &prop);
+ 
++        // clear and append are the minimum operations we need to perform an assignment.
+         if (!prop.clear || !prop.append)
+             return false;
+ 
+         const bool useNonsignalingListOps = prop.clear == &QQmlVMEMetaObject::list_clear
+                 && prop.append == &QQmlVMEMetaObject::list_append;
++        if (useNonsignalingListOps) {
++            prop.clear = &QQmlVMEMetaObject::list_clear_nosignal;
++            prop.append = &QQmlVMEMetaObject::list_append_nosignal;
++        }
+ 
+-        auto propClear =
+-                useNonsignalingListOps ? &QQmlVMEMetaObject::list_clear_nosignal : prop.clear;
+-        auto propAppend =
+-                useNonsignalingListOps ? &QQmlVMEMetaObject::list_append_nosignal : prop.append;
+-
+-        propClear(&prop);
+-
+-        const auto doAppend = [&](QObject *o) {
++        auto doAppend = [&](QQmlListProperty<QObject> *propPtr, QObject *o) {
+             if (Q_UNLIKELY(o && !QQmlMetaObject::canConvert(o, valueMetaObject))) {
+                 qCWarning(lcIncompatibleElement)
+                 << "Cannot append" << o << "to a QML list of" << listValueType.name();
+                 o = nullptr;
+             }
+-            propAppend(&prop, o);
++            propPtr->append(propPtr, o);
++            return true;
+         };
+ 
++        AssignResult result = AssignResult::TypeMismatch;
+         if (variantMetaType == QMetaType::fromType<QQmlListReference>()) {
+-            QQmlListReference qdlr = value.value<QQmlListReference>();
+-            for (qsizetype ii = 0; ii < qdlr.count(); ++ii)
+-                doAppend(qdlr.at(ii));
+-        } else if (variantMetaType == QMetaType::fromType<QList<QObject *>>()) {
+-            const QList<QObject *> &list = qvariant_cast<QList<QObject *> >(value);
+-            for (qsizetype ii = 0; ii < list.size(); ++ii)
+-                doAppend(list.at(ii));
+-        } else if (variantMetaType == QMetaType::fromType<QList<QVariant>>()) {
+-            const QList<QVariant> &list
+-                    = *static_cast<const QList<QVariant> *>(value.constData());
+-            for (const QVariant &entry : list)
+-                doAppend(QQmlMetaType::toQObject(entry));
+-        } else if (!iterateQObjectContainer(variantMetaType, value.data(), doAppend)) {
+-            doAppend(QQmlMetaType::toQObject(value));
++            result = assignListToListProperty(
++                    &prop, static_cast<const QQmlListReference *>(value.constData()),
++                    std::move(doAppend));
++        } else if (variantMetaType == QMetaType::fromType<QObjectList>()) {
++            result = assignListToListProperty(
++                    &prop, static_cast<const QObjectList *>(value.constData()),
++                    std::move(doAppend));
++        } else if (variantMetaType == QMetaType::fromType<QVariantList>()) {
++            result = assignListToListProperty(
++                    &prop, static_cast<const QVariantList *>(value.constData()),
++                    std::move(doAppend));
++        } else {
++            result = assignMetaContainerToListProperty(
++                    &prop, variantMetaType, value.data(), doAppend);
++            if (result == AssignResult::TypeMismatch) {
++                prop.clear(&prop);
++                doAppend(&prop, QQmlMetaType::toQObject(value));
++                result = AssignResult::Copied;
++            }
+         }
+-        if (useNonsignalingListOps) {
++
++        if (useNonsignalingListOps && result == AssignResult::Copied) {
+             Q_ASSERT(QQmlVMEMetaObject::get(object));
+             QQmlVMEResolvedList(&prop).activateSignal();
+         }
+ 
+-        return true;
++        return result != AssignResult::TypeMismatch;
+     } else if (variantMetaType == propertyMetaType) {
+         QVariant v = value;
+         return property.writeProperty(object, v.data(), flags);
+diff --git a/src/qml/qml/qqmlvmemetaobject.cpp b/src/qml/qml/qqmlvmemetaobject.cpp
+index a6b634a27e..62f0b0a07f 100644
+--- a/src/qml/qml/qqmlvmemetaobject.cpp
++++ b/src/qml/qml/qqmlvmemetaobject.cpp
+@@ -769,39 +769,10 @@ int QQmlVMEMetaObject::metaCall(QObject *o, QMetaObject::Call c, int _id, void *
+                         const QMetaType propType = propertyData->propType();
+ 
+                         if (propType.flags().testFlag(QMetaType::IsQmlList)) {
+-                            // when reading from the list, we need to find the correct MetaObject,
+-                            // namely this. However, obejct->metaObject might point to any
+-                            // MetaObject down the inheritance hierarchy, so we need to store how
+-                            // far we have to go down
+-                            // To do this, we encode the hierarchy depth together with the id of the
+-                            // property in a single quintptr, with the first half storing the depth
+-                            // and the second half storing the property id
+-                            auto mo = static_cast<QQmlVMEMetaObject *>(
+-                                        QObjectPrivate::get(object)->metaObject);
+-                            quintptr inheritanceDepth = 0u;
+-                            while (mo && mo != this) {
+-                                mo = mo->parentVMEMetaObject();
+-                                ++inheritanceDepth;
+-                            }
+-                            constexpr quintptr idBits = sizeof(quintptr) * CHAR_BIT / 2u;
+-                            if (Q_UNLIKELY(inheritanceDepth >= (quintptr(1) << idBits))) {
+-                                qmlWarning(object) << "Too many objects in inheritance hierarchy "
+-                                                      "for list property";
+-                                return -1;
+-                            }
+-                            if (Q_UNLIKELY(quintptr(id) >= (quintptr(1) << idBits))) {
+-                                qmlWarning(object) << "Too many properties in object "
+-                                                      "for list property";
++                            if (!getListProperty(
++                                        id, static_cast<QQmlListProperty<QObject> *>(a[0]))) {
+                                 return -1;
+                             }
+-                            quintptr encodedIndex = (inheritanceDepth << idBits) + id;
+-
+-                            initPropertyAsList(id);
+-                            *static_cast<QQmlListProperty<QObject> *>(a[0])
+-                                    = QQmlListProperty<QObject>(
+-                                        object, reinterpret_cast<void *>(quintptr(encodedIndex)),
+-                                        list_append, list_count, list_at,
+-                                        list_clear, list_replace, list_removeLast);
+                         } else if (QV4::MemberData *md = propertyAndMethodStorageAsMemberData()) {
+                             // Value type list
+                             QV4::Scope scope(engine);
+@@ -912,8 +883,37 @@ int QQmlVMEMetaObject::metaCall(QObject *o, QMetaObject::Call c, int _id, void *
+                         const QMetaType propType = propertyData->propType();
+ 
+                         if (propType.flags().testFlag(QMetaType::IsQmlList)) {
+-                            // Writing such a property is not supported. Content is added through
+-                            // the list property methods.
++                            // Object list
++                            QQmlListProperty<QObject> listProp;
++                            if (!getListProperty(id, &listProp))
++                                return -1;
++
++                            QQmlListProperty<QObject> *input
++                                    = static_cast<QQmlListProperty<QObject> *>(a[0]);
++
++                            // First check if we need to do anything at all. If the lists are
++                            // the same we don't.
++                            if (listProp.count(&listProp) != input->count(input)) {
++                                needActivate = true;
++                            } else {
++                                for (qsizetype i = 0, end = input->count(input); i < end; ++i) {
++                                    if (listProp.at(&listProp, i) == input->at(input, i))
++                                        continue;
++                                    needActivate = true;
++                                    break;
++                                }
++                            }
++
++                            // Then clear the property and re-fill it using the input list,
++                            // without sending separate signals for each element. We're sending a
++                            // summary signal below.
++                            if (needActivate) {
++                                QQmlVMEMetaObject::list_clear_nosignal(&listProp);
++                                for (qsizetype i = 0, end = input->count(input); i < end; ++i) {
++                                    QQmlVMEMetaObject::list_append_nosignal(
++                                            &listProp, input->at(input, i));
++                                }
++                            }
+                         } else if (QV4::MemberData *md = propertyAndMethodStorageAsMemberData()) {
+                             // Value type list
+                             QV4::Scope scope(engine);
+@@ -1233,6 +1233,44 @@ int QQmlVMEMetaObject::metaCall(QObject *o, QMetaObject::Call c, int _id, void *
+         return object->qt_metacall(c, _id, a);
+ }
+ 
++bool QQmlVMEMetaObject::getListProperty(int id, QQmlListProperty<QObject> *target)
++{
++    // when accessing the list, we need to find the correct MetaObject,
++    // namely this. However, obejct->metaObject might point to any
++    // MetaObject down the inheritance hierarchy, so we need to store how
++    // far we have to go down
++    // To do this, we encode the hierarchy depth together with the id of the
++    // property in a single quintptr, with the first half storing the depth
++    // and the second half storing the property id
++
++    auto mo = static_cast<QQmlVMEMetaObject *>(
++            QObjectPrivate::get(object)->metaObject);
++    quintptr inheritanceDepth = 0u;
++    while (mo && mo != this) {
++        mo = mo->parentVMEMetaObject();
++        ++inheritanceDepth;
++    }
++    constexpr quintptr idBits = sizeof(quintptr) * CHAR_BIT / 2u;
++    if (Q_UNLIKELY(inheritanceDepth >= (quintptr(1) << idBits))) {
++        qmlWarning(object) << "Too many objects in inheritance hierarchy "
++                              "for list property";
++        return false;
++    }
++    if (Q_UNLIKELY(quintptr(id) >= (quintptr(1) << idBits))) {
++        qmlWarning(object) << "Too many properties in object "
++                              "for list property";
++        return false;
++    }
++    quintptr encodedIndex = (inheritanceDepth << idBits) + id;
++
++    initPropertyAsList(id);
++    *target = QQmlListProperty<QObject>(
++                    object, reinterpret_cast<void *>(quintptr(encodedIndex)),
++                    list_append, list_count, list_at,
++                    list_clear, list_replace, list_removeLast);
++    return true;
++}
++
+ QV4::ReturnedValue QQmlVMEMetaObject::method(int localMethodIndex) const
+ {
+     if (ctxt.isNull() || !ctxt->isValid()) {
+diff --git a/src/qml/qml/qqmlvmemetaobject_p.h b/src/qml/qml/qqmlvmemetaobject_p.h
+index ac1fd7ad3c..a039205afa 100644
+--- a/src/qml/qml/qqmlvmemetaobject_p.h
++++ b/src/qml/qml/qqmlvmemetaobject_p.h
+@@ -205,6 +205,7 @@ public:
+ 
+ protected:
+     int metaCall(QObject *o, QMetaObject::Call _c, int _id, void **_a) override;
++    bool getListProperty(int id, QQmlListProperty<QObject> *target);
+ 
+ public:
+     QV4::ExecutionEngine *engine;
+diff --git a/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt b/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
+index 8dd780368b..c30e70cc22 100644
+--- a/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
++++ b/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
+@@ -152,6 +152,7 @@ set(qml_files
+     deadStoreLoop.qml
+     destroyAndToString.qml
+     detachOnAssignment.qml
++    detachedListAssignment.qml
+     detachedreferences.qml
+     dialog.qml
+     dialogButtonBox.qml
+diff --git a/tests/auto/qml/qmlcppcodegen/data/detachedListAssignment.qml b/tests/auto/qml/qmlcppcodegen/data/detachedListAssignment.qml
+new file mode 100644
+index 0000000000..87916dfdce
+--- /dev/null
++++ b/tests/auto/qml/qmlcppcodegen/data/detachedListAssignment.qml
+@@ -0,0 +1,42 @@
++import QtQml
++
++QtObject {
++    id: root
++    property int changes: 0
++
++    component MyCustomType : QtObject {
++        property int myPropA: 0
++    }
++
++    property list<MyCustomType> testProp: []
++    onTestPropChanged: ++changes
++
++    function testF() {
++        const l = makeMyCustomTypes()
++        console.log("Return value (l):", l.length)
++        console.log("root.testProp before assigning l:", root.testProp.length)
++        root.testProp = l
++        console.log("root.testProp after assigning l:", root.testProp.length)
++    }
++
++    function testG() {
++        const l = getMyCustomTypes()
++        console.log("Return value (l):", l.length)
++        console.log("root.testProp before assigning l:", root.testProp.length)
++        root.testProp = l
++        console.log("root.testProp after assigning l:", root.testProp.length)
++    }
++
++    property Component myCustomTypeComp: Component {
++        MyCustomType {}
++    }
++
++    function makeMyCustomTypes(): list<MyCustomType> {
++        return [root.myCustomTypeComp.createObject(root, { "myPropA": 7 }),
++                root.myCustomTypeComp.createObject(root, { "myPropA": 8 })]
++    }
++
++    function getMyCustomTypes(): list<MyCustomType> {
++        return [testProp[0], testProp[1]]
++    }
++}
+diff --git a/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp b/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
+index 751cff324a..ba1d108112 100644
+--- a/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
++++ b/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
+@@ -103,6 +103,7 @@ private slots:
+     void deduplicateConversionOrigins();
+     void destroyAndToString();
+     void detachOnAssignment();
++    void detachedListAssignment();
+     void detachedReferences();
+     void dialogButtonBox();
+     void disappearingArrowFunction();
+@@ -1805,6 +1806,33 @@ void tst_QmlCppCodegen::detachOnAssignment()
+     QCOMPARE(p->things()[0], QStringLiteral("c"));
+ }
+ 
++void tst_QmlCppCodegen::detachedListAssignment()
++{
++    QQmlEngine engine;
++    QQmlComponent c(&engine, QUrl(u"qrc:/qt/qml/TestTypes/detachedListAssignment.qml"_s));
++    QVERIFY2(c.isReady(), qPrintable(c.errorString()));
++
++    QScopedPointer<QObject> o(c.create());
++    QVERIFY(o);
++    QCOMPARE(o->property("changes").toInt(), 0);
++
++    QTest::ignoreMessage(QtDebugMsg, "Return value (l): 2");
++    QTest::ignoreMessage(QtDebugMsg, "root.testProp before assigning l: 0");
++    QTest::ignoreMessage(QtDebugMsg, "root.testProp after assigning l: 2");
++    QMetaObject::invokeMethod(o.data(), "testF");
++
++    // Changes only once in total, not once per element added
++    QCOMPARE(o->property("changes").toInt(), 1);
++
++    QTest::ignoreMessage(QtDebugMsg, "Return value (l): 2");
++    QTest::ignoreMessage(QtDebugMsg, "root.testProp before assigning l: 2");
++    QTest::ignoreMessage(QtDebugMsg, "root.testProp after assigning l: 2");
++    QMetaObject::invokeMethod(o.data(), "testG");
++
++    // No further changes: The lists stay the same
++    QCOMPARE(o->property("changes").toInt(), 1);
++}
++
+ void tst_QmlCppCodegen::detachedReferences()
+ {
+     QQmlEngine engine;
+diff --git a/tests/auto/qml/qqmlproperty/data/listAssignmentSignals.qml b/tests/auto/qml/qqmlproperty/data/listAssignmentSignals.qml
+index 8a2c68ab5d..0786c829ba 100644
+--- a/tests/auto/qml/qqmlproperty/data/listAssignmentSignals.qml
++++ b/tests/auto/qml/qqmlproperty/data/listAssignmentSignals.qml
+@@ -10,4 +10,8 @@ Item {
+     function assignList() {
+         targetList1 = sourceList
+     }
++
++    function assignList2() {
++        targetList1 = [sourceList[2], sourceList[1], sourceList[0]]
++    }
+ }
+diff --git a/tests/auto/qml/qqmlproperty/tst_qqmlproperty.cpp b/tests/auto/qml/qqmlproperty/tst_qqmlproperty.cpp
+index 2f511003a0..f97b6caae3 100644
+--- a/tests/auto/qml/qqmlproperty/tst_qqmlproperty.cpp
++++ b/tests/auto/qml/qqmlproperty/tst_qqmlproperty.cpp
+@@ -2615,7 +2615,12 @@ void tst_qqmlproperty::listAssignmentSignals()
+     QVERIFY(!root.isNull());
+ 
+     QCOMPARE(root->property("signalCounter").toInt(), 1);
++
++    // Does not actually assign anything since all the objects are the same
+     QMetaObject::invokeMethod(root.get(), "assignList");
++    QCOMPARE(root->property("signalCounter").toInt(), 1);
++
++    QMetaObject::invokeMethod(root.get(), "assignList2");
+     QCOMPARE(root->property("signalCounter").toInt(), 2);
+ }
+ 
+-- 
+2.51.2
+

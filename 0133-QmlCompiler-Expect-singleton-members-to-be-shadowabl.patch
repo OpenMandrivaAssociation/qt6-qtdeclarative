@@ -1,0 +1,237 @@
+From bbd52e5d72eecb8372756678a2f284c1c2091ead Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Tue, 7 Oct 2025 09:21:28 +0200
+Subject: [PATCH 133/239] QmlCompiler: Expect singleton members to be
+ shadowable
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+You can return an instance of a derived class from a singleton's
+create() method and that derived class can shadow members of the
+singleton. We have no choice but to run many singleton accesses through
+the shadow check. There are some exceptions:
+
+1. Extended singletons can't be shadowed since their concrete type
+   can't be known in advance and the respective QQmlType can't stitch
+   the metaobjects together to make that happen.
+
+2. Composite singletons can't have factory functions. They also cannot
+   be shadowed.
+
+3. If the whole class is final. We can't detect that, yet, though.
+
+Fixes: QTBUG-140738
+Change-Id: Ia6c235636aec723e834db0089a9471f3b0a1e2fa
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
+Reviewed-by: Olivier De Cannière <olivier.decanniere@qt.io>
+(cherry picked from commit 95ed95f548cc27edbe063ffb3e3c1d4c1ecb53e9)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qmlcompiler/qqmljsshadowcheck.cpp         | 20 ++++++-
+ .../qml/qmlcppcodegen/data/CMakeLists.txt     |  2 +
+ .../qmlcppcodegen/data/shadowingSingleton.h   | 55 +++++++++++++++++++
+ .../qmlcppcodegen/data/shadowingSingleton.qml |  9 +++
+ .../qml/qmlcppcodegen/data/weathermoduleurl.h | 13 +++++
+ .../qml/qmlcppcodegen/tst_qmlcppcodegen.cpp   | 12 ++++
+ 6 files changed, 108 insertions(+), 3 deletions(-)
+ create mode 100644 tests/auto/qml/qmlcppcodegen/data/shadowingSingleton.h
+ create mode 100644 tests/auto/qml/qmlcppcodegen/data/shadowingSingleton.qml
+
+diff --git a/src/qmlcompiler/qqmljsshadowcheck.cpp b/src/qmlcompiler/qqmljsshadowcheck.cpp
+index 5f246c3b33..c3ca6edcdc 100644
+--- a/src/qmlcompiler/qqmljsshadowcheck.cpp
++++ b/src/qmlcompiler/qqmljsshadowcheck.cpp
+@@ -161,6 +161,22 @@ QQmlJSShadowCheck::Shadowability QQmlJSShadowCheck::checkShadowing(
+         return NotShadowable;
+ 
+     switch (baseType.variant()) {
++    case QQmlJSRegisterContent::Singleton:
++        // composite singletons can't have a create() function. The create() function
++        // is what allows a derived class to be returned.
++        if (baseType.containedType()->isComposite())
++            return NotShadowable;
++
++        // Extended singletons aren't shadowable. There is no space for the extra members
++        // in between the type's metaobject and the extension's metaobject. The derived type
++        // can't be known in advance since you can only produce it through a factory function
++        // that covertly returns a derived type rather than the declared one.
++        if (baseType.containedType()->extensionType().extensionSpecifier
++                != QQmlJSScope::NotExtension) {
++            return NotShadowable;
++        }
++
++        Q_FALLTHROUGH();
+     case QQmlJSRegisterContent::MethodCall:
+     case QQmlJSRegisterContent::Property:
+     case QQmlJSRegisterContent::TypeByName:
+@@ -208,9 +224,7 @@ QQmlJSShadowCheck::Shadowability QQmlJSShadowCheck::checkShadowing(
+         return Shadowable;
+     }
+     default:
+-        // In particular ObjectById is fine as that cannot change into something else
+-        // Singleton should also be fine, unless the factory function creates an object
+-        // with different property types than the declared class.
++        // In particular ObjectById is fine as that cannot change into something else.
+         return NotShadowable;
+     }
+ }
+diff --git a/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt b/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
+index d2824f2437..c1c323370c 100644
+--- a/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
++++ b/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
+@@ -32,6 +32,7 @@ set(cpp_sources
+     scriptstringholder.h
+     sequenceToIterable.h
+     sequencetypeexample.cpp sequencetypeexample.h
++    shadowingSingleton.h
+     state.h
+     takenumber.cpp takenumber.h
+     theme.cpp theme.h
+@@ -296,6 +297,7 @@ set(qml_files
+     shadowedAsCasts.qml
+     shadowedMethod.qml
+     shadowedPrimitiveCmpEqNull.qml
++    shadowingSingleton.qml
+     shared/Slider.qml
+     shifts.qml
+     signal.qml
+diff --git a/tests/auto/qml/qmlcppcodegen/data/shadowingSingleton.h b/tests/auto/qml/qmlcppcodegen/data/shadowingSingleton.h
+new file mode 100644
+index 0000000000..6a40db17e3
+--- /dev/null
++++ b/tests/auto/qml/qmlcppcodegen/data/shadowingSingleton.h
+@@ -0,0 +1,55 @@
++// Copyright (C) 2025 The Qt Company Ltd.
++// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
++
++#ifndef SHADOWINGSINGLETON_H
++#define SHADOWINGSINGLETON_H
++
++#include <QtCore/qobject.h>
++#include <QtQml/qqmlengine.h>
++#include <QtQmlIntegration/qqmlintegration.h>
++
++class ShadowingSingletonBase : public QObject
++{
++    Q_OBJECT
++
++public:
++    using QObject::QObject;
++
++    Q_INVOKABLE virtual QString aFunction() const = 0;
++
++signals:
++    void aSignal(int);
++};
++
++
++class ShadowingSingleton : public ShadowingSingletonBase
++{
++    Q_OBJECT
++public:
++
++    explicit ShadowingSingleton(QObject *parent = nullptr)
++        : ShadowingSingletonBase(parent)
++    {}
++
++    Q_INVOKABLE QString aFunction() const override
++    {
++        return QStringLiteral("Hej");
++    }
++};
++
++class ShadowingSingletonForeign
++{
++    Q_GADGET
++    QML_FOREIGN(ShadowingSingletonBase)
++    QML_SINGLETON
++    QML_NAMED_ELEMENT(ShadowingSingleton)
++public:
++    static ShadowingSingletonBase *create(QQmlEngine *engine, QJSEngine *scriptEngine)
++    {
++        Q_UNUSED(engine);
++        Q_UNUSED(scriptEngine)
++        return new ShadowingSingleton;
++    }
++};
++
++#endif // SHADOWINGSINGLETON_H
+diff --git a/tests/auto/qml/qmlcppcodegen/data/shadowingSingleton.qml b/tests/auto/qml/qmlcppcodegen/data/shadowingSingleton.qml
+new file mode 100644
+index 0000000000..fe7a98870a
+--- /dev/null
++++ b/tests/auto/qml/qmlcppcodegen/data/shadowingSingleton.qml
+@@ -0,0 +1,9 @@
++// Copyright (C) 2025 The Qt Company Ltd.
++// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
++
++import QtQml
++import TestTypes
++
++QtObject {
++    objectName: ShadowingSingleton.aFunction()
++}
+diff --git a/tests/auto/qml/qmlcppcodegen/data/weathermoduleurl.h b/tests/auto/qml/qmlcppcodegen/data/weathermoduleurl.h
+index b4a58f56bc..afb633db28 100644
+--- a/tests/auto/qml/qmlcppcodegen/data/weathermoduleurl.h
++++ b/tests/auto/qml/qmlcppcodegen/data/weathermoduleurl.h
+@@ -56,12 +56,25 @@ class WeatherModelUrlDerived : public WeatherModelUrl
+     QML_VALUE_TYPE(weatherModelUrlDerived)
+ };
+ 
++class WeatherModelUrlExtended : public QObject
++{
++    Q_OBJECT
++public:
++    WeatherModelUrlExtended(QObject *parent = nullptr) : QObject(parent) {}
++};
++
+ class WeatherModelUrlUtils : public QObject
+ {
+     Q_OBJECT
+     QML_ELEMENT
+     QML_SINGLETON
+ 
++    // Hack: Add an extension to mark the singleton as not shadowable
++    // TODO: Remove this when we either can assign QVariant to WeatherModuleUrl or
++    //       when we can mark the url() method as final or when moc can recognize
++    //       a whole class as final and we can draw conclusions from that.
++    QML_EXTENDED(WeatherModelUrlExtended)
++
+ public:
+     WeatherModelUrlUtils(QObject *parent = nullptr) : QObject(parent) {}
+ 
+diff --git a/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp b/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
+index 9f85f64203..ac9ccc1d9d 100644
+--- a/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
++++ b/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
+@@ -257,6 +257,7 @@ private slots:
+     void shadowedAsCasts();
+     void shadowedMethod();
+     void shadowedPrimitiveCmpEqNull();
++    void shadowingSingleton();
+     void shifts();
+     void signalHandler();
+     void signalIndexMismatch();
+@@ -5380,6 +5381,17 @@ void tst_QmlCppCodegen::shadowedPrimitiveCmpEqNull()
+     QVERIFY(!o.isNull());
+ }
+ 
++void tst_QmlCppCodegen::shadowingSingleton()
++{
++    QQmlEngine e;
++    QQmlComponent c(&e, QUrl(u"qrc:/qt/qml/TestTypes/shadowingSingleton.qml"_s));
++    QVERIFY2(c.isReady(), qPrintable(c.errorString()));
++    QScopedPointer<QObject> o(c.create());
++    QVERIFY(!o.isNull());
++
++    QCOMPARE(o->objectName(), u"Hej"_s);
++}
++
+ void tst_QmlCppCodegen::shifts()
+ {
+     QQmlEngine engine;
+-- 
+2.51.2
+

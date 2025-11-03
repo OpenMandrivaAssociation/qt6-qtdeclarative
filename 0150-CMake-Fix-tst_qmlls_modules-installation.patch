@@ -1,0 +1,45 @@
+From 78e15f4382eeaa34d49a8e35a4aad80d9a326da4 Mon Sep 17 00:00:00 2001
+From: Alexandru Croitor <alexandru.croitor@qt.io>
+Date: Mon, 13 Oct 2025 13:14:38 +0200
+Subject: [PATCH 150/239] CMake: Fix tst_qmlls_modules installation
+
+DEPENDENCIES is not a valid option for qt_internal_add_test(), it was
+likely mistaken with the option from qt_add_qml_module.
+Remove the option.
+
+Gets rid of
+
+CMake Error at
+ qtdeclarative/tests/auto/qmlls/modules/cmake_install.cmake:51 (file):
+ file INSTALL cannot find
+ "qtdeclarative/tests/auto/qmlls/modules/DEPENDENCIES":
+ No such file or directory.
+Call Stack (most recent call first):
+ qtdeclarative/tests/auto/qmlls/cmake_install.cmake:67 (include)
+
+Amends cdd5cc94374ce32e55bfccbba07d144437b78b3a
+
+Fixes: QTBUG-141085
+Change-Id: Idce92217375b753d4935be9c2441a7d439f867e4
+Reviewed-by: Sami Shalayel <sami.shalayel@qt.io>
+(cherry picked from commit 575f6aa521f23aa1de6e72cbcb99c16fb5315e0c)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ tests/auto/qmlls/modules/CMakeLists.txt | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/tests/auto/qmlls/modules/CMakeLists.txt b/tests/auto/qmlls/modules/CMakeLists.txt
+index 4004ee56e7..5cf7990cda 100644
+--- a/tests/auto/qmlls/modules/CMakeLists.txt
++++ b/tests/auto/qmlls/modules/CMakeLists.txt
+@@ -34,7 +34,6 @@ qt_internal_add_test(tst_qmlls_modules
+         Qt::QuickTestUtilsPrivate
+         Qt::QmlLSPrivate
+     TESTDATA ${test_data}
+-    DEPENDENCIES TARGET MyModule
+ )
+ 
+ qt_internal_extend_target(tst_qmlls_modules CONDITION ANDROID OR IOS
+-- 
+2.51.2
+

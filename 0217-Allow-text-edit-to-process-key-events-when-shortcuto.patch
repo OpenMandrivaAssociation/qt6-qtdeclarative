@@ -1,0 +1,118 @@
+From 21b291e102665b6188eccd23bf41bb2f96b6dfca Mon Sep 17 00:00:00 2001
+From: Santhosh Kumar <santhosh.kumar.selvaraj@qt.io>
+Date: Fri, 12 Sep 2025 15:07:02 +0200
+Subject: [PATCH 217/239] Allow text edit to process key events when
+ shortcutoverride configured
+
+The shortcut override has been made to be ignored by default as part of
+the patch 1aefea26e5a574dad25646d330a6b3bb943a596c. And the further
+changes in the same patch were made to check whether the shortcut
+override can be accepted by text edit before processing the events.
+
+If the shortcut override has not been accepted (either by default or
+explicitly ignored by the user), the keys would be processed further by
+the textedit. The validation added as part of the same patch for
+processing the event doesn't seem to be correct, as it allows the key to
+be processed by the text edit control only when the key handler is not
+configured. This approach seems to be incorrect, as the text edit
+control shall be allowed to process the key events regardless of key
+handler configuration.
+
+This patch removes that validation, thus allowing the text edit control
+to process the key events regardless of key handler configuration.
+
+Fixes: QTBUG-139679
+Task-number: QTBUG-136959
+Pick-to: 6.8 6.5
+Change-Id: I7c066e5f3709a00d0b18f0c5e8b9d1f7944c4e4e
+Reviewed-by: Shawn Rutledge <shawn.rutledge@qt.io>
+(cherry picked from commit 30b4419e112643775e788e51fd460fe267093707)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quick/items/qquicktextedit.cpp              |  5 +----
+ .../data/keys_shortcutoverride.qml              | 17 ++++++++++++++++-
+ .../quick/qquicktextedit/tst_qquicktextedit.cpp | 10 +++++++++-
+ 3 files changed, 26 insertions(+), 6 deletions(-)
+
+diff --git a/src/quick/items/qquicktextedit.cpp b/src/quick/items/qquicktextedit.cpp
+index 40491bd3b7..7489e436a1 100644
+--- a/src/quick/items/qquicktextedit.cpp
++++ b/src/quick/items/qquicktextedit.cpp
+@@ -1977,10 +1977,7 @@ bool QQuickTextEdit::event(QEvent *event)
+     Q_D(QQuickTextEdit);
+     bool state = QQuickImplicitSizeItem::event(event);
+     if (event->type() == QEvent::ShortcutOverride && !event->isAccepted()) {
+-        QQuickItemPrivate *itemPriv = QQuickItemPrivate::get(this);
+-        if (!itemPriv->extra.isAllocated() || !itemPriv->extra->keyHandler) {
+-            d->control->processEvent(event, QPointF(-d->xoff, -d->yoff));
+-        }
++        d->control->processEvent(event, QPointF(-d->xoff, -d->yoff));
+         state = true;
+     }
+     return state;
+diff --git a/tests/auto/quick/qquicktextedit/data/keys_shortcutoverride.qml b/tests/auto/quick/qquicktextedit/data/keys_shortcutoverride.qml
+index b753d844be..30d9dbf559 100644
+--- a/tests/auto/quick/qquicktextedit/data/keys_shortcutoverride.qml
++++ b/tests/auto/quick/qquicktextedit/data/keys_shortcutoverride.qml
+@@ -11,7 +11,7 @@ Item {
+     }
+ 
+     TextEdit {
+-        id: txt
++        objectName: "txt"
+         x: 100
+         text: "enter text"
+         Keys.onShortcutOverride: (event) => {
+@@ -20,6 +20,21 @@ Item {
+         }
+     }
+ 
++    Shortcut {
++        sequence: "A"
++        onActivated: who = "ShortcutA"
++    }
++
++    TextEdit {
++        objectName: "testOverride"
++        x: 100
++        y: 100
++        text: "enter text"
++        Keys.onTabPressed: (event) => {
++            who = "Superfluous" // Just for test and no intention to handle
++        }
++    }
++
+     Rectangle {
+         objectName: "rectangle"
+         width: 90
+diff --git a/tests/auto/quick/qquicktextedit/tst_qquicktextedit.cpp b/tests/auto/quick/qquicktextedit/tst_qquicktextedit.cpp
+index 99feed8013..01e9478f5d 100644
+--- a/tests/auto/quick/qquicktextedit/tst_qquicktextedit.cpp
++++ b/tests/auto/quick/qquicktextedit/tst_qquicktextedit.cpp
+@@ -6607,7 +6607,7 @@ void tst_qquicktextedit::keys_shortcutoverride()
+     // Tests that QML TextEdit receives Keys.onShortcutOverride  (QTBUG-68711)
+     QQuickView window;
+     QVERIFY(QQuickTest::showView(window, testFileUrl("keys_shortcutoverride.qml")));
+-    QQuickTextEdit *textEdit = window.rootObject()->findChild<QQuickTextEdit*>();
++    QQuickTextEdit *textEdit = window.rootObject()->findChild<QQuickTextEdit*>(QLatin1String("txt"));
+     QVERIFY(textEdit);
+     QQuickRectangle *rectangle = window.rootObject()->findChild<QQuickRectangle*>(QLatin1String("rectangle"));
+     QVERIFY(rectangle);
+@@ -6624,6 +6624,14 @@ void tst_qquicktextedit::keys_shortcutoverride()
+     textEdit->setFocus(true);
+     QTest::keyPress(&window, Qt::Key_Escape);
+     QCOMPARE(window.rootObject()->property("who").value<QString>(), QLatin1String("TextEdit"));
++
++    // Check for any valid input to the text edit
++    auto *textEditOverride = window.rootObject()->findChild<QQuickTextEdit*>(QLatin1String("testOverride"));
++    QVERIFY(textEditOverride);
++    textEditOverride->setFocus(true);
++    QTest::keyPress(&window, Qt::Key_A);
++    // Retain the same text and shouldn't switch to "ShortcutA"
++    QCOMPARE(window.rootObject()->property("who"), "TextEdit");
+ }
+ 
+ void tst_qquicktextedit::transparentSelectionColor()
+-- 
+2.51.2
+

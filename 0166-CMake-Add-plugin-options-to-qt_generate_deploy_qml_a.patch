@@ -1,0 +1,90 @@
+From 9b86adf5dc4a78e31847e65a900888b3c22b76d5 Mon Sep 17 00:00:00 2001
+From: Joerg Bornemann <joerg.bornemann@qt.io>
+Date: Mon, 29 Sep 2025 11:45:56 +0200
+Subject: [PATCH 166/239] CMake: Add plugin options to
+ qt_generate_deploy_qml_app_script
+
+Add the following options to qt_generate_deploy_qml_app_script to be in
+sync with qt_generate_deploy_app_script: NO_PLUGINS, EXCLUDE_PLUGINS,
+EXCLUDE_PLUGIN_TYPES, INCLUDE_PLUGINS, and INCLUDE_PLUGIN_TYPES.
+
+[ChangeLog][CMake] Added NO_PLUGINS, EXCLUDE_PLUGINS,
+EXCLUDE_PLUGIN_TYPES, INCLUDE_PLUGINS, and INCLUDE_PLUGIN_TYPES options
+to qt_generate_deploy_qml_app_script.
+
+Fixes: QTBUG-140665
+Change-Id: Ida20a07379e152cb0b65e278c8cd72c016ed07b0
+Reviewed-by: Alexandru Croitor <alexandru.croitor@qt.io>
+(cherry picked from commit 03cd2dea762be7712ac0113561f895da6a035b70)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qml/Qt6QmlMacros.cmake                           |  8 ++++++++
+ .../src/cmake/qt_generate_deploy_qml_app_script.qdoc | 12 ++++++++++++
+ 2 files changed, 20 insertions(+)
+
+diff --git a/src/qml/Qt6QmlMacros.cmake b/src/qml/Qt6QmlMacros.cmake
+index 0927ad82d7..b75224a39c 100644
+--- a/src/qml/Qt6QmlMacros.cmake
++++ b/src/qml/Qt6QmlMacros.cmake
+@@ -4838,6 +4838,7 @@ function(qt6_generate_deploy_qml_app_script)
+     # need information associated with the target (scanning all its .qml files
+     # for imported QML modules).
+     set(no_value_options
++        NO_PLUGINS
+         NO_UNSUPPORTED_PLATFORM_ERROR
+         NO_TRANSLATIONS
+         NO_COMPILER_RUNTIME
+@@ -4850,6 +4851,10 @@ function(qt6_generate_deploy_qml_app_script)
+     )
+     set(qt_deploy_runtime_dependencies_options
+         # These options are forwarded as is to qt_deploy_runtime_dependencies.
++        EXCLUDE_PLUGINS
++        EXCLUDE_PLUGIN_TYPES
++        INCLUDE_PLUGINS
++        INCLUDE_PLUGIN_TYPES
+         PRE_INCLUDE_REGEXES
+         PRE_EXCLUDE_REGEXES
+         POST_INCLUDE_REGEXES
+@@ -4923,6 +4928,9 @@ function(qt6_generate_deploy_qml_app_script)
+     string(APPEND skip_message "\n)")
+ 
+     set(common_deploy_args "")
++    if(arg_NO_PLUGINS)
++        string(APPEND common_deploy_args "    NO_PLUGINS\n")
++    endif()
+     if(arg_NO_TRANSLATIONS)
+         string(APPEND common_deploy_args "    NO_TRANSLATIONS\n")
+     endif()
+diff --git a/src/qml/doc/src/cmake/qt_generate_deploy_qml_app_script.qdoc b/src/qml/doc/src/cmake/qt_generate_deploy_qml_app_script.qdoc
+index 9d1beac3fd..71c8e55e11 100644
+--- a/src/qml/doc/src/cmake/qt_generate_deploy_qml_app_script.qdoc
++++ b/src/qml/doc/src/cmake/qt_generate_deploy_qml_app_script.qdoc
+@@ -25,6 +25,11 @@ qt_generate_deploy_qml_app_script(
+     [NO_UNSUPPORTED_PLATFORM_ERROR]
+     [NO_TRANSLATIONS]
+     [NO_COMPILER_RUNTIME]
++    [NO_PLUGINS]                                  # since Qt 6.10
++    [EXCLUDE_PLUGIN_TYPES type_or_target...]      # since Qt 6.10
++    [INCLUDE_PLUGIN_TYPES type_or_target...]      # since Qt 6.10
++    [EXCLUDE_PLUGINS name...]                     # since Qt 6.10
++    [INCLUDE_PLUGINS name...]                     # since Qt 6.10
+     [DEPLOY_TOOL_OPTIONS ...]
+     [DEPLOY_USER_QML_MODULES_ON_UNSUPPORTED_PLATFORM]
+     [MACOS_BUNDLE_POST_BUILD]
+@@ -115,6 +120,13 @@ dependencies. These options do not apply to all platforms and are forwarded
+ unmodified to
+ \l{qt6_deploy_runtime_dependencies}{qt_deploy_runtime_dependencies()}.
+ 
++The options \c EXCLUDE_PLUGINS, \c EXCLUDE_PLUGIN_TYPES, \c INCLUDE_PLUGINS, and
++\c INCLUDE_PLUGIN_TYPES are used to select Qt plugins. See
++\l{qt6_deploy_runtime_dependencies}{qt_deploy_runtime_dependencies()} for their
++documentation.
++
++You can turn off plugin deployment altogether with the \c NO_PLUGINS option.
++
+ For deploying a non-QML application, use
+ \l{qt6_generate_deploy_app_script}{qt_generate_deploy_app_script()}
+ instead. It is an error to call both \c{qt_generate_deploy_qml_app_script()}
+-- 
+2.51.2
+

@@ -1,0 +1,54 @@
+From 92211ecbdc7f593772cfc2bd4906d9d2740dfe75 Mon Sep 17 00:00:00 2001
+From: Richard Moe Gustavsen <richard.gustavsen@qt.io>
+Date: Wed, 8 Oct 2025 10:56:09 +0200
+Subject: [PATCH 130/239] QQuickMacStyle: tweak NSTextFieldCell's drawing
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This cell is drawing a frame/outline around a text field (a line edit in Qt).
+Starting from macOS Tahoe this frame is slightly offset and with
+larger size than requested (probably because now text field has
+rounded corners and also the outline is thin and barely visible),
+and as a result clipped by the current context's clip. In the
+'Light' theme QLineEdit is completely invisible (unless it has a
+focus). To address this issue we adjust the rect we draw line edit
+with so it's the same as prior to Tahoe.
+
+Note: this patch is a cherry-pick of fb61543e6e2 in qtbase, which
+fixes the exact same problem for Widgets.
+
+Pick-to: 6.9 6.8 6.5
+Fixes: QTBUG-138465
+Change-Id: I5955f4304e9fcd56de993267ff8963f6b133f14a
+Reviewed-by: Tor Arne Vestbø <tor.arne.vestbo@qt.io>
+(cherry picked from commit 01f096cea97f1793e005311233b9555b24a8aba0)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quicknativestyle/qstyle/mac/qquickmacstyle_mac.mm | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/src/quicknativestyle/qstyle/mac/qquickmacstyle_mac.mm b/src/quicknativestyle/qstyle/mac/qquickmacstyle_mac.mm
+index e0b4dec2dc..6e5251aecc 100644
+--- a/src/quicknativestyle/qstyle/mac/qquickmacstyle_mac.mm
++++ b/src/quicknativestyle/qstyle/mac/qquickmacstyle_mac.mm
+@@ -2769,7 +2769,15 @@ void QMacStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt, QPai
+                         }
+                     }
+ 
+-                    [tf.cell drawWithFrame:rect inView:tf];
++                    CGRect fixedRect = rect;
++                    if (qt_apple_runningWithLiquidGlass()) {
++                        // The text edit cell is drawn with a little offset to the left and
++                        // the size increase compared to the 'rect' we want it to be drawn in. As a
++                        // result, the cell's 'outline' is clipped away. Adjusting the rectangle
++                        // for this, so that it's inside the clip rect, as it was before Tahoe.
++                        fixedRect = CGRectInset(rect, 1., 1.);
++                    }
++                    [tf.cell drawWithFrame:fixedRect inView:tf];
+                 });
+             } else {
+                 QCommonStyle::drawPrimitive(pe, opt, p);
+-- 
+2.51.2
+

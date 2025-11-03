@@ -1,0 +1,94 @@
+From ee77c14ec3f9091ca25c62335e7ff2f1871c2b06 Mon Sep 17 00:00:00 2001
+From: Fabian Kosmale <fabian.kosmale@qt.io>
+Date: Tue, 23 Sep 2025 15:24:44 +0200
+Subject: [PATCH 075/239] qmllint: Consider "on-bindings" for required
+ properties
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The runtime doesn't complain if a required property is satisfied via a
+ValueSource or an Interceptor, so qmllint shouldn't complain either.
+
+Whether this really should apply to interceptors is debatable, but for
+now let's aim for consistency. And that a ValueSource can satifsy the
+requirement is arguably to be expected.
+
+Pick-to: 6.8
+Fixes: QTBUG-139632
+Change-Id: I355b8a48e6b9bc2749839267c3b799e8eba5d72f
+Reviewed-by: Olivier De Cannière <olivier.decanniere@qt.io>
+(cherry picked from commit 46925f589fadf9f16c4db2462e086f28a104f629)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qmlcompiler/qqmljsimportvisitor.cpp       |  6 ++++-
+ .../data/requiredPropertySetViaOnBinding.qml  | 27 +++++++++++++++++++
+ tests/auto/qml/qmllint/tst_qmllint.cpp        |  1 +
+ 3 files changed, 33 insertions(+), 1 deletion(-)
+ create mode 100644 tests/auto/qml/qmllint/data/requiredPropertySetViaOnBinding.qml
+
+diff --git a/src/qmlcompiler/qqmljsimportvisitor.cpp b/src/qmlcompiler/qqmljsimportvisitor.cpp
+index 650310ae8b..b6006d05fd 100644
+--- a/src/qmlcompiler/qqmljsimportvisitor.cpp
++++ b/src/qmlcompiler/qqmljsimportvisitor.cpp
+@@ -1149,7 +1149,11 @@ void QQmlJSImportVisitor::checkRequiredProperties()
+                 continue;
+             const auto &[begin, end] = scope->ownPropertyBindings(propName);
+             for (auto it = begin; it != end; ++it) {
+-                if (!QQmlSA::isRegularBindingType(it->bindingType()))
++                // attached and grouped bindings should not be considered here
++                const bool isRelevantBinding = QQmlSA::isRegularBindingType(it->bindingType())
++                        || it->bindingType() == QQmlSA::BindingType::Interceptor
++                        || it->bindingType() == QQmlSA::BindingType::ValueSource;
++                if (!isRelevantBinding)
+                     continue;
+                 if (QQmlJSScope::ownerOfProperty(scope, propName).scope == owner)
+                     return true;
+diff --git a/tests/auto/qml/qmllint/data/requiredPropertySetViaOnBinding.qml b/tests/auto/qml/qmllint/data/requiredPropertySetViaOnBinding.qml
+new file mode 100644
+index 0000000000..e595218bac
+--- /dev/null
++++ b/tests/auto/qml/qmllint/data/requiredPropertySetViaOnBinding.qml
+@@ -0,0 +1,27 @@
++import QtQuick
++
++Window {
++    id: window
++    width: 640
++    height: 480
++    visible: true
++
++    property int refValue: 0
++
++    component TestObject: QtObject {
++        required property int value
++    }
++
++
++    TestObject {
++        // consistent with runtime
++        Behavior on value {}
++    }
++
++    TestObject {
++        Binding on value {
++            value: 42
++        }
++    }
++}
++
+diff --git a/tests/auto/qml/qmllint/tst_qmllint.cpp b/tests/auto/qml/qmllint/tst_qmllint.cpp
+index ff446bb58a..763663cd85 100644
+--- a/tests/auto/qml/qmllint/tst_qmllint.cpp
++++ b/tests/auto/qml/qmllint/tst_qmllint.cpp
+@@ -2113,6 +2113,7 @@ void TestQmllint::cleanQmlCode_data()
+     QTest::newRow("qualifiedAttached")         << QStringLiteral("Drawer.qml");
+     QTest::addRow("regExp") << u"regExp.qml"_s;
+     QTest::newRow("requiredPropertyInGroupedPropertyScope") << QStringLiteral("requiredPropertyInGroupedPropertyScope.qml");
++    QTest::newRow("requiredPropertySetViaOnBinding") << QStringLiteral("requiredPropertySetViaOnBinding.qml");
+     QTest::newRow("requiredWithRootLevelAlias") << QStringLiteral("RequiredWithRootLevelAlias.qml");
+     QTest::newRow("required_property_in_Component") << QStringLiteral("requiredPropertyInComponent.qml");
+     QTest::newRow("retrieveFunction") << QStringLiteral("retrieveFunction.qml");
+-- 
+2.51.2
+

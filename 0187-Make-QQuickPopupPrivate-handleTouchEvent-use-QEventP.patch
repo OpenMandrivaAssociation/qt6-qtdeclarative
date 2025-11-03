@@ -1,0 +1,136 @@
+From 3f7bcb23a92fe06e3027b9457236e27a071a22a5 Mon Sep 17 00:00:00 2001
+From: Sze Howe Koh <szehowe.koh@gmail.com>
+Date: Sun, 19 Jan 2025 23:24:46 +0800
+Subject: [PATCH 187/239] Make QQuickPopupPrivate::handleTouchEvent() use
+ QEventPoint::scenePosition()
+
+QQuickPopupPrivate::handleMouseEvent() has already converted from
+`item->mapToScene(point.position())` to `point.scenePosition()`:
+1. fe86b0fda7bcce099a0bca08e6925e89efc634c4
+2. e481f1c414d7c243efabe4215b1865c616d25ce0
+
+Give QQuickPopupPrivate::handleTouchEvent() the same treatment to fix
+swiping open Drawers by touch.
+
+Change-Id: Ieb4b8f0677043f09771e5700c8d441cc90d7fa75
+Fixes: QTBUG-132914
+Pick-to: 6.8
+Reviewed-by: Shawn Rutledge <shawn.rutledge@qt.io>
+(cherry picked from commit 7690e5b8511826341101b1706a835232a56f12fe)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quicktemplates/qquickdrawer_p_p.h         |  2 +-
+ src/quicktemplates/qquickpopup.cpp            |  6 ++--
+ .../qquickdrawer/data/rotate.qml              |  2 +-
+ .../qquickdrawer/tst_qquickdrawer.cpp         | 36 +++++++++++++++++++
+ 4 files changed, 41 insertions(+), 5 deletions(-)
+
+diff --git a/src/quicktemplates/qquickdrawer_p_p.h b/src/quicktemplates/qquickdrawer_p_p.h
+index c61cf450c5..bdd7975922 100644
+--- a/src/quicktemplates/qquickdrawer_p_p.h
++++ b/src/quicktemplates/qquickdrawer_p_p.h
+@@ -22,7 +22,7 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
+-class QQuickDrawerPrivate : public QQuickPopupPrivate
++class Q_QUICKTEMPLATES2_EXPORT QQuickDrawerPrivate : public QQuickPopupPrivate
+ {
+     Q_DECLARE_PUBLIC(QQuickDrawer)
+ 
+diff --git a/src/quicktemplates/qquickpopup.cpp b/src/quicktemplates/qquickpopup.cpp
+index fbcdce4e5a..fad09b7880 100644
+--- a/src/quicktemplates/qquickpopup.cpp
++++ b/src/quicktemplates/qquickpopup.cpp
+@@ -738,11 +738,11 @@ bool QQuickPopupPrivate::handleTouchEvent(QQuickItem *item, QTouchEvent *event)
+ 
+             switch (point.state()) {
+             case QEventPoint::Pressed:
+-                return handlePress(item, item->mapToScene(point.position()), event->timestamp());
++                return handlePress(item, point.scenePosition(), event->timestamp());
+             case QEventPoint::Updated:
+-                return handleMove(item, item->mapToScene(point.position()), event->timestamp());
++                return handleMove(item, point.scenePosition(), event->timestamp());
+             case QEventPoint::Released:
+-                return handleRelease(item, item->mapToScene(point.position()), event->timestamp());
++                return handleRelease(item, point.scenePosition(), event->timestamp());
+             default:
+                 break;
+             }
+diff --git a/tests/auto/quickcontrols/qquickdrawer/data/rotate.qml b/tests/auto/quickcontrols/qquickdrawer/data/rotate.qml
+index 25595f92cf..ae0f9814fa 100644
+--- a/tests/auto/quickcontrols/qquickdrawer/data/rotate.qml
++++ b/tests/auto/quickcontrols/qquickdrawer/data/rotate.qml
+@@ -17,7 +17,7 @@ ApplicationWindow {
+     }
+     Overlay.overlay.anchors.fill: background
+     contentItem.anchors.fill: background
+-    contentItem.parent.rotation: rotated ? 90 : 0
++    Overlay.overlay.parent.rotation: rotated ? 90 : 0
+ 
+     property bool rotated: false
+     property int drawerSize: 100
+diff --git a/tests/auto/quickcontrols/qquickdrawer/tst_qquickdrawer.cpp b/tests/auto/quickcontrols/qquickdrawer/tst_qquickdrawer.cpp
+index 135734bab5..da282a5ecf 100644
+--- a/tests/auto/quickcontrols/qquickdrawer/tst_qquickdrawer.cpp
++++ b/tests/auto/quickcontrols/qquickdrawer/tst_qquickdrawer.cpp
+@@ -21,6 +21,7 @@
+ #include <QtQuickTemplates2/private/qquickoverlay_p_p.h>
+ #include <QtQuickTemplates2/private/qquickpopup_p_p.h>
+ #include <QtQuickTemplates2/private/qquickdrawer_p.h>
++#include <QtQuickTemplates2/private/qquickdrawer_p_p.h>
+ #include <QtQuickTemplates2/private/qquickbutton_p.h>
+ #include <QtQuickTemplates2/private/qquickslider_p.h>
+ #include <QtQuickTestUtils/private/viewtestutils_p.h>
+@@ -57,6 +58,7 @@ private slots:
+ 
+     void reposition();
+     void rotate();
++    void rotateTouchOpen();
+     void header();
+ 
+     void dragHandlerInteraction();
+@@ -538,6 +540,40 @@ void tst_QQuickDrawer::rotate()
+     }
+ }
+ 
++void tst_QQuickDrawer::rotateTouchOpen()
++{
++    QQuickControlsApplicationHelper helper(this, u"rotate.qml"_s);
++    QVERIFY2(helper.ready, helper.failureMessage());
++
++    QQuickApplicationWindow *window = helper.appWindow;
++    window->setProperty("rotated", true);
++    window->show();
++    QVERIFY(QTest::qWaitForWindowExposed(window));
++
++    QQuickDrawer *drawer_LR = window->property("drawer_LR").value<QQuickDrawer*>();
++    QQuickDrawer *drawer_TB = window->property("drawer_TB").value<QQuickDrawer*>();
++    QVERIFY(drawer_LR);
++    QVERIFY(drawer_TB);
++    QCOMPARE(drawer_LR->edge(), Qt::LeftEdge);
++    QCOMPARE(drawer_TB->edge(), Qt::TopEdge);
++    QCOMPARE(drawer_LR->position(), 0.0);
++    QCOMPARE(drawer_TB->position(), 0.0);
++    QCOMPARE(window->QQuickWindow::contentItem()->rotation(), 90);
++    QCOMPARE(QQuickDrawerPrivate::get(drawer_LR)->effectiveEdge(), Qt::TopEdge);
++    QCOMPARE(QQuickDrawerPrivate::get(drawer_TB)->effectiveEdge(), Qt::RightEdge);
++
++    // Swipe down from the window's top edge
++    const int hCenter = window->width()/2;
++    const int vCenter = window->height()/2;
++    QTest::touchEvent(window, touchDevice.data()).press(0, QPoint(hCenter, 0));
++    QTest::touchEvent(window, touchDevice.data()).move(0, QPoint(hCenter, vCenter/2));
++    QTest::touchEvent(window, touchDevice.data()).move(0, QPoint(hCenter, vCenter));
++    QTest::touchEvent(window, touchDevice.data()).release(0, QPoint(hCenter, vCenter));
++
++    QTRY_COMPARE(drawer_LR->position(), 1.0); // "Left Drawer" is at the window's top edge
++    QTRY_COMPARE(drawer_TB->position(), 0.0); // "Top Drawer" is at the window's right edge
++}
++
+ void tst_QQuickDrawer::header()
+ {
+     QQuickControlsApplicationHelper helper(this, QStringLiteral("header.qml"));
+-- 
+2.51.2
+

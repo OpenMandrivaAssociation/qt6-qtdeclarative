@@ -1,0 +1,118 @@
+From 358559b9552bf750718c6b2f1ac9287813234f17 Mon Sep 17 00:00:00 2001
+From: Morteza Jamshidi <morteza.jamshidi@qt.io>
+Date: Thu, 18 Sep 2025 08:59:49 +0200
+Subject: [PATCH 065/239] Give ownership to qml instead of deleting the object
+
+after calling grabToImage in the callback it returns a qml wrapper
+around QQuickItemGrabResult object but then in the Event_Grab_Completed
+event it destroys the QQuickItemGrabResult object so the wrapper is
+also automatically destroyed after that.
+so in order for qml to be able to store the wrapper object and hold the
+result as long as needed we give the ownership of QQuickItemGrabResult
+to qml instead of deleting it.
+
+Pick-to: 6.8
+Fixes: QTBUG-128483
+Change-Id: Ibf9b9765e22ee8e0caf8b3646d86f8a4cf789ff1
+Reviewed-by: Ulf Hermann <ulf.hermann@qt.io>
+(cherry picked from commit 8f0d9f613360ea19af701916a406fd666d07555c)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quick/items/qquickitemgrabresult.cpp      |  2 +-
+ .../auto/quick/qquickitem/data/grabImage.qml  | 27 +++++++++++++++++++
+ .../auto/quick/qquickitem/tst_qquickitem.cpp  | 18 +++++++++++++
+ 3 files changed, 46 insertions(+), 1 deletion(-)
+ create mode 100644 tests/auto/quick/qquickitem/data/grabImage.qml
+
+diff --git a/src/quick/items/qquickitemgrabresult.cpp b/src/quick/items/qquickitemgrabresult.cpp
+index 5db83a5c60..fbd1c0d04b 100644
+--- a/src/quick/items/qquickitemgrabresult.cpp
++++ b/src/quick/items/qquickitemgrabresult.cpp
+@@ -219,7 +219,7 @@ bool QQuickItemGrabResult::event(QEvent *e)
+         // JS callback
+         if (d->qmlEngine && d->callback.isCallable()) {
+             d->callback.call(QJSValueList() << d->qmlEngine->newQObject(this));
+-            deleteLater();
++            QQmlEngine::setObjectOwnership(this, QQmlEngine::JavaScriptOwnership);
+         } else {
+             Q_EMIT ready();
+         }
+diff --git a/tests/auto/quick/qquickitem/data/grabImage.qml b/tests/auto/quick/qquickitem/data/grabImage.qml
+new file mode 100644
+index 0000000000..7252900ef5
+--- /dev/null
++++ b/tests/auto/quick/qquickitem/data/grabImage.qml
+@@ -0,0 +1,27 @@
++import QtQuick 2.3
++
++Window {
++    id: root
++    width: 300
++    height: 300
++    visible: true
++
++    property bool finishedSuccessfuly: false
++    property var itemGrabResult: null
++
++    Item {
++        id: child
++        x: 50
++        y: 50
++        width: 50
++        height: 50
++
++        Component.onCompleted: {
++            const grabbed = child.grabToImage(function(itemGrabResult) {
++                finishedSuccessfuly = true
++                root.itemGrabResult = itemGrabResult
++            })
++        }
++    }
++}
++
+diff --git a/tests/auto/quick/qquickitem/tst_qquickitem.cpp b/tests/auto/quick/qquickitem/tst_qquickitem.cpp
+index d0368f499f..0b8f097da8 100644
+--- a/tests/auto/quick/qquickitem/tst_qquickitem.cpp
++++ b/tests/auto/quick/qquickitem/tst_qquickitem.cpp
+@@ -5,6 +5,7 @@
+ 
+ #include <QtQml/QQmlComponent>
+ #include <QtQuick/qquickitem.h>
++#include <QtQuick/qquickitemgrabresult.h>
+ #include <QtQuick/qquickwindow.h>
+ #include <QtQuick/qquickview.h>
+ #include "private/qquickfocusscope_p.h"
+@@ -233,6 +234,8 @@ private slots:
+ 
+     void transformChanged();
+ 
++    void grabImage();
++
+ private:
+ 
+     enum PaintOrderOp {
+@@ -2678,6 +2681,21 @@ void tst_qquickitem::transformChanged()
+     QCOMPARE(transformItem.mapToScene(QPoint(0, 0)), parents[1][0]->position());
+ }
+ 
++void tst_qquickitem::grabImage()
++{
++    QQmlEngine engine;
++    QQmlComponent component(&engine, testFileUrl("grabImage.qml"));
++
++    QScopedPointer<QQuickWindow> window(qobject_cast<QQuickWindow*>(component.create()));
++    QVERIFY(window);
++
++    gc(engine);
++
++    QTRY_VERIFY(window->property("finishedSuccessfuly").toBool());
++    QQuickItemGrabResult *result = window->property("itemGrabResult").value<QQuickItemGrabResult*>();
++    QVERIFY(result);
++}
++
+ QTEST_MAIN(tst_qquickitem)
+ 
+ #include "tst_qquickitem.moc"
+-- 
+2.51.2
+

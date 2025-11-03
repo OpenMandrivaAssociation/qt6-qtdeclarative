@@ -1,0 +1,74 @@
+From 00250b52adca7eceb869dc07a7dcafe89d3bb4c8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?M=C3=A5rten=20Nordheim?= <marten.nordheim@qt.io>
+Date: Mon, 13 Oct 2025 11:05:36 +0200
+Subject: [PATCH 153/239] XmlHttpRequest: Don't treat content-related errors as
+ network errors
+
+By not testing for these extra errors they get treated as if the request itself
+was a failure, rather than the server returning an error as a perfectly
+valid response.
+
+Amends 1faca908dddb90824d94bed6a1561f4f192328d3.
+
+Pick-to: 6.8
+Fixes: QTBUG-141063
+Change-Id: I3c7aee696ada58de8f1c2dcf7d4c941e644c6ab1
+Reviewed-by: Ulf Hermann <ulf.hermann@qt.io>
+(cherry picked from commit c20d1be867642166d3c277406c5fbcdd74d9e130)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qml/qml/qqmlxmlhttprequest.cpp                           | 2 ++
+ tests/auto/qml/qqmlxmlhttprequest/data/status.409.reply      | 3 +++
+ tests/auto/qml/qqmlxmlhttprequest/data/status.410.reply      | 3 +++
+ tests/auto/qml/qqmlxmlhttprequest/tst_qqmlxmlhttprequest.cpp | 2 ++
+ 4 files changed, 10 insertions(+)
+ create mode 100644 tests/auto/qml/qqmlxmlhttprequest/data/status.409.reply
+ create mode 100644 tests/auto/qml/qqmlxmlhttprequest/data/status.410.reply
+
+diff --git a/src/qml/qml/qqmlxmlhttprequest.cpp b/src/qml/qml/qqmlxmlhttprequest.cpp
+index 6f7aea9eaf..21a81318cc 100644
+--- a/src/qml/qml/qqmlxmlhttprequest.cpp
++++ b/src/qml/qml/qqmlxmlhttprequest.cpp
+@@ -1373,6 +1373,8 @@ void QQmlXMLHttpRequest::error(QNetworkReply::NetworkError error)
+         error == QNetworkReply::ContentNotFoundError ||
+         error == QNetworkReply::AuthenticationRequiredError ||
+         error == QNetworkReply::ContentReSendError ||
++        error == QNetworkReply::ContentConflictError ||
++        error == QNetworkReply::ContentGoneError ||
+         error == QNetworkReply::UnknownContentError ||
+         error == QNetworkReply::ProtocolInvalidOperationError ||
+         error == QNetworkReply::InternalServerError ||
+diff --git a/tests/auto/qml/qqmlxmlhttprequest/data/status.409.reply b/tests/auto/qml/qqmlxmlhttprequest/data/status.409.reply
+new file mode 100644
+index 0000000000..2509757ab4
+--- /dev/null
++++ b/tests/auto/qml/qqmlxmlhttprequest/data/status.409.reply
+@@ -0,0 +1,3 @@
++HTTP/1.0 409 Conflict
++Connection: close
++Content-type: text/html; charset=UTF-8
+diff --git a/tests/auto/qml/qqmlxmlhttprequest/data/status.410.reply b/tests/auto/qml/qqmlxmlhttprequest/data/status.410.reply
+new file mode 100644
+index 0000000000..24663b404f
+--- /dev/null
++++ b/tests/auto/qml/qqmlxmlhttprequest/data/status.410.reply
+@@ -0,0 +1,3 @@
++HTTP/1.0 410 Gone
++Connection: close
++Content-type: text/html; charset=UTF-8
+diff --git a/tests/auto/qml/qqmlxmlhttprequest/tst_qqmlxmlhttprequest.cpp b/tests/auto/qml/qqmlxmlhttprequest/tst_qqmlxmlhttprequest.cpp
+index f908633193..b30210d521 100644
+--- a/tests/auto/qml/qqmlxmlhttprequest/tst_qqmlxmlhttprequest.cpp
++++ b/tests/auto/qml/qqmlxmlhttprequest/tst_qqmlxmlhttprequest.cpp
+@@ -1020,6 +1020,8 @@ void tst_qqmlxmlhttprequest::responseText_data()
+     QTest::newRow("Not Found") << testFileUrl("status.404.reply") << testFileUrl("testdocument.html") << "QML Rocks!\n";
+     QTest::newRow("Bad Request") << testFileUrl("status.400.reply") << testFileUrl("testdocument.html") << "QML Rocks!\n";
+     QTest::newRow("Internal server error") << testFileUrl("status.500.reply") << testFileUrl("testdocument.html") << "QML Rocks!\n";
++    QTest::newRow("Content Conflict") << testFileUrl("status.409.reply") << testFileUrl("testdocument.html") << "QML Rocks!\n";
++    QTest::newRow("Content Gone") << testFileUrl("status.410.reply") << testFileUrl("testdocument.html") << "QML Rocks!\n";
+ }
+ 
+ 
+-- 
+2.51.2
+

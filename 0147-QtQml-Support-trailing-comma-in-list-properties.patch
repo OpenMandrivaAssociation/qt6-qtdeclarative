@@ -1,0 +1,113 @@
+From ddd80a5261ed4cfbb4cb55421de4f38034c0c66e Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Wed, 8 Oct 2025 13:42:14 +0200
+Subject: [PATCH 147/239] QtQml: Support trailing comma in list properties
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Fixes: QTBUG-119504
+Change-Id: I553c8ea3277fef6a04e48aab4a5b510bee4e9e0c
+Reviewed-by: Olivier De Cannière <olivier.decanniere@qt.io>
+(cherry picked from commit a9818146f2a60e7183b3e973e848aadd956dbf7e)
+Reviewed-by: Sami Shalayel <sami.shalayel@qt.io>
+---
+ src/qml/parser/qqmljs.g                          | 11 +++++++----
+ tests/auto/qml/qqmlparser/data/trailingComma.qml | 11 +++++++++++
+ tests/auto/qml/qqmlparser/tst_qqmlparser.cpp     | 14 ++++++++++++++
+ 3 files changed, 32 insertions(+), 4 deletions(-)
+ create mode 100644 tests/auto/qml/qqmlparser/data/trailingComma.qml
+
+diff --git a/src/qml/parser/qqmljs.g b/src/qml/parser/qqmljs.g
+index 8837b174c5..30309ffe82 100644
+--- a/src/qml/parser/qqmljs.g
++++ b/src/qml/parser/qqmljs.g
+@@ -1065,13 +1065,16 @@ UiAnnotatedObjectMember: UiObjectMember;
+ 
+ UiObjectMember: UiObjectDefinition;
+ 
+-UiObjectMember: UiQualifiedId T_COLON ExpressionStatementLookahead T_LBRACKET UiArrayMemberList T_RBRACKET;
++CommaOpt: T_COMMA;
++CommaOpt: ;
++
++UiObjectMember: UiQualifiedId T_COLON ExpressionStatementLookahead T_LBRACKET UiArrayMemberList CommaOpt T_RBRACKET;
+ /.
+     case $rule_number: {
+         AST::UiArrayBinding *node = new (pool) AST::UiArrayBinding(sym(1).UiQualifiedId, sym(5).UiArrayMemberList->finish());
+         node->colonToken = loc(2);
+         node->lbracketToken = loc(4);
+-        node->rbracketToken = loc(6);
++        node->rbracketToken = loc(7);
+         sym(1).Node = node;
+     } break;
+ ./
+@@ -1444,7 +1447,7 @@ UiObjectMemberWithScriptStatement: UiPropertyAttributes T_IDENTIFIER T_LT UiProp
+ 
+ UiObjectMember: UiObjectMemberWithScriptStatement;
+ 
+-UiObjectMemberWithArray: UiPropertyAttributes T_IDENTIFIER T_LT UiPropertyType T_GT QmlIdentifier T_COLON ExpressionStatementLookahead T_LBRACKET UiArrayMemberList T_RBRACKET Semicolon;
++UiObjectMemberWithArray: UiPropertyAttributes T_IDENTIFIER T_LT UiPropertyType T_GT QmlIdentifier T_COLON ExpressionStatementLookahead T_LBRACKET UiArrayMemberList CommaOpt T_RBRACKET Semicolon;
+ /.
+     case $rule_number: {
+         AST::UiPublicMember *node = new (pool) AST::UiPublicMember(sym(4).UiQualifiedId->finish(), stringRef(6));
+@@ -1466,7 +1469,7 @@ UiObjectMemberWithArray: UiPropertyAttributes T_IDENTIFIER T_LT UiPropertyType T
+         AST::UiArrayBinding *binding = new (pool) AST::UiArrayBinding(propertyName, sym(10).UiArrayMemberList->finish());
+         binding->colonToken = loc(7);
+         binding->lbracketToken = loc(9);
+-        binding->rbracketToken = loc(11);
++        binding->rbracketToken = loc(12);
+ 
+         node->binding = binding;
+ 
+diff --git a/tests/auto/qml/qqmlparser/data/trailingComma.qml b/tests/auto/qml/qqmlparser/data/trailingComma.qml
+new file mode 100644
+index 0000000000..1df5955220
+--- /dev/null
++++ b/tests/auto/qml/qqmlparser/data/trailingComma.qml
+@@ -0,0 +1,11 @@
++import QtQml
++
++QtObject {
++    property list<QtObject> list1: [
++        QtObject {},
++        QtObject {},
++    ]
++
++    property list<QtObject> list3
++    list3: [ QtObject{}, ]
++}
+diff --git a/tests/auto/qml/qqmlparser/tst_qqmlparser.cpp b/tests/auto/qml/qqmlparser/tst_qqmlparser.cpp
+index a96a7605ab..0d5467ea8a 100644
+--- a/tests/auto/qml/qqmlparser/tst_qqmlparser.cpp
++++ b/tests/auto/qml/qqmlparser/tst_qqmlparser.cpp
+@@ -53,6 +53,8 @@ private slots:
+     void invalidImportVersion_data();
+     void invalidImportVersion();
+ 
++    void trailingCommaInUiArray();
++
+ private:
+     QStringList excludedDirs;
+ 
+@@ -839,6 +841,18 @@ void tst_qqmlparser::invalidImportVersion()
+     QVERIFY(regexp.match(parser.errorMessage()).hasMatch());
+ }
+ 
++void tst_qqmlparser::trailingCommaInUiArray()
++{
++    QFile file(testFile("trailingComma.qml"));
++    QVERIFY(file.open(QIODevice::ReadOnly));
++
++    QQmlJS::Engine engine;
++    QQmlJS::Lexer lexer(&engine);
++    lexer.setCode(file.readAll(), 1);
++    QQmlJS::Parser parser(&engine);
++    QVERIFY(parser.parse());
++}
++
+ QTEST_MAIN(tst_qqmlparser)
+ 
+ #include "tst_qqmlparser.moc"
+-- 
+2.51.2
+

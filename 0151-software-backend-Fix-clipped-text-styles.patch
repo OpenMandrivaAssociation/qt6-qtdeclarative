@@ -1,0 +1,70 @@
+From 5ce7318e05915fc7ed528a799757ed0765fc32ea Mon Sep 17 00:00:00 2001
+From: Eskil Abrahamsen Blomfeldt <eskil.abrahamsen-blomfeldt@qt.io>
+Date: Fri, 10 Oct 2025 08:02:28 +0200
+Subject: [PATCH 151/239] software backend: Fix clipped text styles
+
+When we paint text with any other style than Normal, we will offset
+painting by up to 1 logical pixel. To avoid clipping the style, we
+need to make sure the bounding rect of the text also accounts for
+this. This does overestimate the bounding rect in cases where the
+dpr is not 1, but this is better than underestimating it.
+
+Pick-to: 6.8
+Fixes: QTBUG-137404
+Change-Id: I670a3709fcc6ac7fd6d58a8d524f534800cafdff
+Reviewed-by: Eirik Aavitsland <eirik.aavitsland@qt.io>
+(cherry picked from commit 2ceae8f7e1674296fe9489651929d5a4e4d16098)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ .../adaptations/software/qsgsoftwareglyphnode.cpp | 15 ++++++++++++++-
+ .../adaptations/software/qsgsoftwareglyphnode_p.h |  1 +
+ 2 files changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/src/quick/scenegraph/adaptations/software/qsgsoftwareglyphnode.cpp b/src/quick/scenegraph/adaptations/software/qsgsoftwareglyphnode.cpp
+index 83eef8b54f..8f6748aa06 100644
+--- a/src/quick/scenegraph/adaptations/software/qsgsoftwareglyphnode.cpp
++++ b/src/quick/scenegraph/adaptations/software/qsgsoftwareglyphnode.cpp
+@@ -63,7 +63,18 @@ void QSGSoftwareGlyphNode::setGlyphs(const QPointF &position, const QGlyphRun &g
+     m_glyphRun.setOverline(false);
+     m_glyphRun.setStrikeOut(false);
+     m_glyphRun.setUnderline(false);
+-    m_bounding_rect = calculateBoundingRect(position, glyphs);
++
++    recalculateBoundingRect();
++}
++
++void QSGSoftwareGlyphNode::recalculateBoundingRect()
++{
++    int x1Offset = m_style == QQuickText::Outline ? -1 : 0;
++    int x2Offset = m_style == QQuickText::Outline ? 1 : 0;
++    int y1Offset = m_style == QQuickText::Outline || m_style == QQuickText::Sunken ? -1 : 0;
++    int y2Offset = m_style == QQuickText::Outline || m_style == QQuickText::Raised ? 1 : 0;
++
++    m_bounding_rect = calculateBoundingRect(m_position, m_glyphRun).adjusted(x1Offset, y1Offset, x2Offset, y2Offset);
+ }
+ 
+ void QSGSoftwareGlyphNode::setColor(const QColor &color)
+@@ -74,6 +85,8 @@ void QSGSoftwareGlyphNode::setColor(const QColor &color)
+ void QSGSoftwareGlyphNode::setStyle(QQuickText::TextStyle style)
+ {
+     m_style = style;
++
++    recalculateBoundingRect();
+ }
+ 
+ void QSGSoftwareGlyphNode::setStyleColor(const QColor &color)
+diff --git a/src/quick/scenegraph/adaptations/software/qsgsoftwareglyphnode_p.h b/src/quick/scenegraph/adaptations/software/qsgsoftwareglyphnode_p.h
+index e2b599db17..dbf204f3f6 100644
+--- a/src/quick/scenegraph/adaptations/software/qsgsoftwareglyphnode_p.h
++++ b/src/quick/scenegraph/adaptations/software/qsgsoftwareglyphnode_p.h
+@@ -35,6 +35,7 @@ public:
+     void paint(QPainter *painter);
+ 
+ private:
++    void recalculateBoundingRect();
+     QPointF m_position;
+     QGlyphRun m_glyphRun;
+     QColor m_color;
+-- 
+2.51.2
+

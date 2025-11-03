@@ -1,0 +1,182 @@
+From 29a674e4e119cebe1ef058b120e2075db378a1f2 Mon Sep 17 00:00:00 2001
+From: Fabian Kosmale <fabian.kosmale@qt.io>
+Date: Tue, 23 Sep 2025 12:15:20 +0200
+Subject: [PATCH 219/239] qmlformat: Group "pure" formatting and tool behavior
+ options
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Make it easier to see which options can be configured via the
+.qmlformat.ini file, by grouping them together, both in qdoc as well as
+in the help options.
+
+Fixes: QTBUG-127344
+Change-Id: I39501f8d30ce43a50e8a87a44f9d3769993f59ab
+Reviewed-by: Semih Yavuz <semih.yavuz@qt.io>
+Reviewed-by: Olivier De Cannière <olivier.decanniere@qt.io>
+(cherry picked from commit 96764ff52393abc81aae1b72946297ccb7e7d507)
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
+---
+ .../src/tools/qtqml-tooling-qmlformat.qdoc    | 32 +++++++-------
+ src/qmlformat/qqmlformatoptions.cpp           | 42 ++++++++++++++++---
+ 2 files changed, 54 insertions(+), 20 deletions(-)
+
+diff --git a/src/qml/doc/src/tools/qtqml-tooling-qmlformat.qdoc b/src/qml/doc/src/tools/qtqml-tooling-qmlformat.qdoc
+index 8ddda91ada..1c19cf256b 100644
+--- a/src/qml/doc/src/tools/qtqml-tooling-qmlformat.qdoc
++++ b/src/qml/doc/src/tools/qtqml-tooling-qmlformat.qdoc
+@@ -21,47 +21,53 @@ with the \l{QML Coding Conventions}. \l{Details}{More...}
+ 
+ \section2 Options
+ \target options
+-The following options are available:
++qmlformat can be configured via command line options. There are two groups of options: Those which
++are directly related to formatting, and those which control the behavior of the tool.
+ 
++
++The following options only affect the tool behavior:
+ \table
+ \header
+-    \li Option
+-    \li Default Value
++    \li Command Line Option
+     \li Description
+ \row
+     \li \c{-h}, \c{--help}
+-    \li
+     \li Displays help on commandline options.
+ \row
+     \li \c{--help-all}
+-    \li
+     \li Displays help, including generic Qt options.
+ 
+ \row
+     \li \c{-v}, \c{--version}
+-    \li
+     \li Displays version information.
+ \row
+     \li \c{-V}, \c{--verbose}
+-    \li
+     \li Verbose mode. Outputs more detailed information.
+ \row
+     \li \c{--write-defaults}
+-    \li
+     \li Writes defaults settings to .qmlformat.ini and exits
+         (Warning: This will overwrite any existing settings and comments!)
+ \row
+     \li \c{--ignore-settings}
+-    \li
+     \li Ignores all settings files and only takes command line options into consideration
+ \row
+     \li \c{-i}, \c{--inplace}
+-    \li
+     \li Edit file in-place instead of outputting to stdout.
+ \row
+     \li \c{-f}, \c{--force}
+-    \li
+     \li Continue even if an error has occurred.
++\row
++    \li \c{-F}, \c{--files <file>}
++    \li Format all files listed in file, in-place
++\endtable
++
++The next group of options controls how files should be formatted, and can additionally also be
++controlled via a  \l{Settings File}{settings file}.:
++\table
++\header
++    \li Option
++    \li Default Value
++    \li Description
+ \row
+     \li \c{-t}, \c{--tabs}
+     \li
+@@ -80,10 +86,6 @@ The following options are available:
+     \li \c{-n}, \c{--normalize}
+     \li
+     \li Reorders the attributes of the objects according to the QML Coding Guidelines.
+-\row
+-    \li \c{-F}, \c{--files <file>}
+-    \li
+-    \li Format all files listed in file, in-place
+ \row
+     \li \c{-l}, \c{--newline <newline>}
+     \li
+diff --git a/src/qmlformat/qqmlformatoptions.cpp b/src/qmlformat/qqmlformatoptions.cpp
+index 66c9383fdb..21241b6eec 100644
+--- a/src/qmlformat/qqmlformatoptions.cpp
++++ b/src/qmlformat/qqmlformatoptions.cpp
+@@ -116,10 +116,15 @@ QQmlFormatOptions QQmlFormatOptions::buildCommandLineOptions(const QStringList &
+     QQmlFormatOptions options;
+     QCommandLineParser parser;
+     parser.setApplicationDescription(
+-            "Formats QML files according to the QML Coding Conventions."_L1);
++            "Formats QML files according to the QML Coding Conventions.\n"_L1
++            "Options below the \"Formatting options\" section can also be set via .qmlformat.ini"_L1
++            " unless --ignore-settings is used"_L1);
+     parser.addHelpOption();
+     parser.addVersionOption();
+ 
++    //
++    // options that only are set via CLI
++    //
+     parser.addOption(
+             QCommandLineOption({ "V"_L1, "verbose"_L1 },
+                                QStringLiteral("Verbose mode. Outputs more detailed information.")));
+@@ -135,12 +140,42 @@ QQmlFormatOptions QQmlFormatOptions::buildCommandLineOptions(const QStringList &
+                                                     "command line options into consideration"_L1));
+     parser.addOption(ignoreSettings);
+ 
++    QCommandLineOption filesOption(
++            { "F"_L1, "files"_L1 }, "Format all files listed in file, in-place"_L1, "file"_L1);
++    parser.addOption(filesOption);
++
++
++    QCommandLineOption dryrunOption(
++            QStringList() << "dry-run"_L1,
++            QStringLiteral("Prints the settings file that would be used for this instance."
++                           "This is useful to see what settings would be used "
++                           "without actually performing anything."));
++    parser.addOption(dryrunOption);
++
++    QCommandLineOption settingsOption(
++            { "s"_L1, "settings"_L1 },
++            QStringLiteral("Use the specified .qmlformat.ini file as the only configuration source."
++                           "Overrides any per-directory configuration lookup."),
++            "file"_L1);
++    parser.addOption(settingsOption);
++
+     parser.addOption(QCommandLineOption(
+             { "i"_L1, "inplace"_L1 },
+             QStringLiteral("Edit file in-place instead of outputting to stdout.")));
+ 
++    // Note the blatant abuse of the option's help text to add a "section marker"
++    // Therefore, this needs to come last. Also, on Windows, the unicode characters seem to cause issues
+     parser.addOption(QCommandLineOption({ "f"_L1, "force"_L1 },
+-                                        QStringLiteral("Continue even if an error has occurred.")));
++                                        #ifdef Q_OS_WINDOWS
++                                        "Continue even if an error has occurred.\n<><><><><><><><><>\nFormatting options\n<><><><><><><><><>"_L1
++                                        #else
++                                        u"Continue even if an error has occurred.\n♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦\nFormatting options\n♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦♦"_s
++                                        #endif
++                                        ));
++
++    //
++    // options that can be configured by qmlformat.ini
++    //
+ 
+     parser.addOption(QCommandLineOption({ "t"_L1, "tabs"_L1 },
+                                         QStringLiteral("Use tabs instead of spaces.")));
+@@ -159,9 +194,6 @@ QQmlFormatOptions QQmlFormatOptions::buildCommandLineOptions(const QStringList &
+                                         QStringLiteral("Reorders the attributes of the objects "
+                                                        "according to the QML Coding Guidelines.")));
+ 
+-    QCommandLineOption filesOption(
+-            { "F"_L1, "files"_L1 }, "Format all files listed in file, in-place"_L1, "file"_L1);
+-    parser.addOption(filesOption);
+ 
+     parser.addOption(QCommandLineOption(
+             { "l"_L1, "newline"_L1 },
+-- 
+2.51.2
+

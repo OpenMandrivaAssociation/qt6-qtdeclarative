@@ -1,0 +1,62 @@
+From c3a4ef27feb75e0c9283f4e74909fe256d9f2f52 Mon Sep 17 00:00:00 2001
+From: Sami Shalayel <sami.shalayel@qt.io>
+Date: Fri, 17 Oct 2025 09:54:43 +0200
+Subject: [PATCH 216/239] qmllint: load different import paths from setting
+ file correctly
+
+Use the same logic as qmlls to load import paths in qmllint:
+QVariant::toStringList() always returns a QStringList() of length one.
+Instead, use the QDir::listSeparator() char to split the list into
+multiple one, allowing the users to pass multiple paths via settings
+files. Somehow the setting file entries to pass paths to qmllint are not
+documented, so no need to update the documentation it seems.
+
+Task-number: QTBUG-141385
+Change-Id: Iaf34c09601bfb423ceb658e9a87a961b5d8c1c90
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
+(cherry picked from commit 7200662649d9464f7d651309971154242dae77c5)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ tools/qmllint/main.cpp | 14 +++-----------
+ 1 file changed, 3 insertions(+), 11 deletions(-)
+
+diff --git a/tools/qmllint/main.cpp b/tools/qmllint/main.cpp
+index d570d17057..2267e02a34 100644
+--- a/tools/qmllint/main.cpp
++++ b/tools/qmllint/main.cpp
+@@ -340,21 +340,13 @@ All warnings can be set to three levels:
+             settings.search(filename);
+         updateLogLevels();
+ 
+-        const QDir fileDir = QFileInfo(filename).absoluteDir();
+-        auto addAbsolutePaths = [&](QStringList &list, const QStringList &entries) {
+-            for (const QString &file : entries)
+-                list << (QFileInfo(file).isAbsolute() ? file : fileDir.filePath(file));
+-        };
+-
+         resourceFiles = defaultResourceFiles;
+-
+-        addAbsolutePaths(resourceFiles, settings.value(resourceSetting).toStringList());
++        resourceFiles.append(settings.valueAsAbsolutePathList(resourceSetting, filename));
+ 
+         qmldirFiles = defaultQmldirFiles;
+         if (settings.isSet(qmldirFilesSetting)
+             && !settings.value(qmldirFilesSetting).toStringList().isEmpty()) {
+-            qmldirFiles = {};
+-            addAbsolutePaths(qmldirFiles, settings.value(qmldirFilesSetting).toStringList());
++            qmldirFiles = settings.valueAsAbsolutePathList(qmldirFilesSetting, filename);
+         }
+ 
+         if (parser.isSet(qmlImportNoDefault)
+@@ -396,7 +388,7 @@ All warnings can be set to three levels:
+             }
+         }
+ 
+-        addAbsolutePaths(qmlImportPaths, settings.value(qmlImportPathsSetting).toStringList());
++        qmlImportPaths.append(settings.valueAsAbsolutePathList(qmlImportPathsSetting, filename));
+ 
+         QSet<QString> disabledPlugins;
+ 
+-- 
+2.51.2
+

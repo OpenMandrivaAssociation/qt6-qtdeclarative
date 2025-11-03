@@ -1,0 +1,43 @@
+From f253f1f45995bdf2e6d95f4114c2847d95297350 Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Tue, 28 Oct 2025 12:43:50 +0100
+Subject: [PATCH 227/239] QtQml: Adapt to restructuring of QUnicodeTables
+
+case conversions are now separate from other properties.
+
+See commit 763f19151cc31ca1ba4912e0828359be5dba89e8 in qtbase.
+
+Pick-to: 6.8 6.5
+Change-Id: Ia13f515e613c7470f816c9930e870e391c88e367
+Reviewed-by: Marc Mutz <marc.mutz@qt.io>
+(cherry picked from commit cc1772e74ba2dda3994026d929ab28ea5a056fb8)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/3rdparty/masm/stubs/wtf/unicode/Unicode.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/3rdparty/masm/stubs/wtf/unicode/Unicode.h b/src/3rdparty/masm/stubs/wtf/unicode/Unicode.h
+index 44a7d65571..e13fc7731b 100644
+--- a/src/3rdparty/masm/stubs/wtf/unicode/Unicode.h
++++ b/src/3rdparty/masm/stubs/wtf/unicode/Unicode.h
+@@ -15,7 +15,7 @@ namespace Unicode {
+     inline UChar32 u_tolower(UChar32 ch) {
+         if (ch > QChar::LastValidCodePoint)
+             return ch;
+-        const auto fold = QUnicodeTables::properties(char32_t(ch))->cases[QUnicodeTables::LowerCase];
++        const auto fold = QUnicodeTables::caseConversion(char32_t(ch))[QUnicodeTables::LowerCase];
+         return fold.special ? ch : (ch + fold.diff);
+     }
+ 
+@@ -23,7 +23,7 @@ namespace Unicode {
+     inline UChar32 u_toupper(UChar32 ch) {
+         if (ch > QChar::LastValidCodePoint)
+             return ch;
+-        const auto fold = QUnicodeTables::properties(char32_t(ch))->cases[QUnicodeTables::UpperCase];
++        const auto fold = QUnicodeTables::caseConversion(char32_t(ch))[QUnicodeTables::UpperCase];
+         return fold.special ? ch : (ch + fold.diff);
+     }
+ }
+-- 
+2.51.2
+

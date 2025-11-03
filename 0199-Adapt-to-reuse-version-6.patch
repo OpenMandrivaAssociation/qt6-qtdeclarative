@@ -1,0 +1,33 @@
+From e5e7d7cdb1e2032ff564c679f7d02b6c42bafbf4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Lucie=20G=C3=A9rard?= <lucie.gerard@qt.io>
+Date: Mon, 13 Oct 2025 15:50:16 +0200
+Subject: [PATCH 199/239] Adapt to reuse version 6
+
+Task-number: QTBUG-140916
+Pick-to: 6.8
+Change-Id: I7c3e50c277f28a9af9347fcf61e205187334be2f
+Reviewed-by: Alexandru Croitor <alexandru.croitor@qt.io>
+(cherry picked from commit 2cc0302d412bde1353155d1972bcca6a0aa1ef7d)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ examples/quick/multieffect/REUSE.toml | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+ create mode 100644 examples/quick/multieffect/REUSE.toml
+
+diff --git a/examples/quick/multieffect/REUSE.toml b/examples/quick/multieffect/REUSE.toml
+new file mode 100644
+index 0000000000..0b5b45f500
+--- /dev/null
++++ b/examples/quick/multieffect/REUSE.toml
+@@ -0,0 +1,8 @@
++version = 1
++
++[[annotations]]
++path = ["neumorphicpanel/qml/CloudyRectMaterial/CloudyRectMaterial.qep",
++        "testbed/qml/CustomMultiEffect/CustomMultiEffect.qep"]
++precedence = "override"
++SPDX-FileCopyrightText = "Copyright (C) The Qt Company Ltd."
++SPDX-License-Identifier = "LicenseRef-Qt-Commercial OR BSD-3-Clause"
+-- 
+2.51.2
+

@@ -1,0 +1,86 @@
+From d37a7aa56cf255d4746220e3c92abedce0c6c945 Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Wed, 24 Sep 2025 14:48:23 +0200
+Subject: [PATCH 097/239] Doc: Remove misleading example about alias overriding
+
+Apparently the author wanted to show an alias overriding a property and
+still retain control over the property. This doesn't work and simply
+confuses any reader.
+
+Pick-to: 6.8
+Change-Id: Id63708eb7623d4cd24a81135156b237d85f2ca74
+Reviewed-by: Dmitrii Akshintsev <dmitrii.akshintsev@qt.io>
+Reviewed-by: Shawn Rutledge <shawn.rutledge@qt.io>
+(cherry picked from commit 78c1e301a61087b7a11ade36cd9f4acb4fc8a555)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qml/doc/snippets/qml/properties.qml       | 25 -------------------
+ .../syntax/objectattributes.qdoc              | 16 ------------
+ 2 files changed, 41 deletions(-)
+
+diff --git a/src/qml/doc/snippets/qml/properties.qml b/src/qml/doc/snippets/qml/properties.qml
+index 59c05f9e98..6c22f03169 100644
+--- a/src/qml/doc/snippets/qml/properties.qml
++++ b/src/qml/doc/snippets/qml/properties.qml
+@@ -235,31 +235,6 @@ Item {
+     Text {id: label}
+ }
+ 
+-//![alias overwrite]
+-Rectangle {
+-    id: coloredrectangle
+-    property alias color: bluerectangle.color
+-    color: "red"
+-
+-    Rectangle {
+-        id: bluerectangle
+-        color: "#1234ff"
+-    }
+-
+-    Component.onCompleted: {
+-        console.log (coloredrectangle.color)    //prints "#1234ff"
+-        setInternalColor()
+-        console.log (coloredrectangle.color)    //prints "#111111"
+-        coloredrectangle.color = "#884646"
+-        console.log (coloredrectangle.color)    //prints #884646
+-    }
+-
+-    //internal function that has access to internal properties
+-    function setInternalColor() {
+-        color = "#111111"
+-    }
+-}
+-//![alias overwrite]
+ //! [parent end]
+ }
+ //! [parent end]
+diff --git a/src/qml/doc/src/qmllanguageref/syntax/objectattributes.qdoc b/src/qml/doc/src/qmllanguageref/syntax/objectattributes.qdoc
+index 3cc6dd08c7..e0d17641d0 100644
+--- a/src/qml/doc/src/qmllanguageref/syntax/objectattributes.qdoc
++++ b/src/qml/doc/src/qmllanguageref/syntax/objectattributes.qdoc
+@@ -511,22 +511,6 @@ the displayed text at all, as property bindings are not bi-directional: the
+ \c buttonText value would have changed if textItem.text was changed, but not
+ the other way around.
+ 
+-
+-\section4 Considerations for Property Aliases
+-
+-It is possible for an aliasing property to have the same name as an existing
+-property, effectively overwriting the existing property. For example,
+-the following QML type has a \c color alias property, named the same as the
+-built-in \l {Rectangle::color} property:
+-
+-\snippet qml/properties.qml alias overwrite
+-
+-Any object that use this type and refer to its \c color property will be
+-referring to the alias rather than the ordinary \l {Rectangle::color} property.
+-Internally, however, the rectangle can correctly set its \c color
+-property and refer to the actual defined property rather than the alias.
+-
+-
+ \section4 Property Aliases and Types
+ 
+ Property aliases cannot have explicit type specifications. The type of a
+-- 
+2.51.2
+

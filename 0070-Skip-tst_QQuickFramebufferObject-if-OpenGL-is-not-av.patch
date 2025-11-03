@@ -1,0 +1,55 @@
+From 5ca79c7485a4e481c7d32583b5b076669e2124e0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tor=20Arne=20Vestb=C3=B8?= <tor.arne.vestbo@qt.io>
+Date: Fri, 12 Sep 2025 17:03:01 +0200
+Subject: [PATCH 070/239] Skip tst_QQuickFramebufferObject if OpenGL is not
+ available at runtime
+
+Pick-to: 6.9 6.8 6.5
+Change-Id: I6dfa9c0abf4bef736c39caee578b630efdea748d
+Reviewed-by: Timur Pocheptsov <timur.pocheptsov@qt.io>
+(cherry picked from commit 11cc077da6a7e5fa06242fee2d8fbf581363c175)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ tests/auto/quick/qquickframebufferobject/CMakeLists.txt     | 1 +
+ .../qquickframebufferobject/tst_qquickframebufferobject.cpp | 6 ++++++
+ 2 files changed, 7 insertions(+)
+
+diff --git a/tests/auto/quick/qquickframebufferobject/CMakeLists.txt b/tests/auto/quick/qquickframebufferobject/CMakeLists.txt
+index 9d87a5703d..7bac1eeb2f 100644
+--- a/tests/auto/quick/qquickframebufferobject/CMakeLists.txt
++++ b/tests/auto/quick/qquickframebufferobject/CMakeLists.txt
+@@ -24,6 +24,7 @@ qt_internal_add_test(tst_qquickframebufferobject
+         tst_qquickframebufferobject.cpp
+     LIBRARIES
+         Qt::Gui
++        Qt::GuiPrivate
+         Qt::Quick
+         Qt::QuickTestUtilsPrivate
+     TESTDATA ${test_data}
+diff --git a/tests/auto/quick/qquickframebufferobject/tst_qquickframebufferobject.cpp b/tests/auto/quick/qquickframebufferobject/tst_qquickframebufferobject.cpp
+index ffd6478f9c..7741401b5a 100644
+--- a/tests/auto/quick/qquickframebufferobject/tst_qquickframebufferobject.cpp
++++ b/tests/auto/quick/qquickframebufferobject/tst_qquickframebufferobject.cpp
+@@ -10,6 +10,9 @@
+ #include <qopenglframebufferobject.h>
+ #include <qopenglfunctions.h>
+ 
++#include <qpa/qplatformintegration.h>
++#include <private/qguiapplication_p.h>
++
+ #include <QtQuick/QQuickFramebufferObject>
+ 
+ #include <QtQuickTestUtils/private/qmlutils_p.h>
+@@ -136,6 +139,9 @@ tst_QQuickFramebufferObject::tst_QQuickFramebufferObject()
+ 
+ void tst_QQuickFramebufferObject::initTestCase()
+ {
++    if (!QGuiApplicationPrivate::platformIntegration()->hasCapability(QPlatformIntegration::OpenGL))
++        QSKIP("OpenGL is not enabled in this configuration");
++
+     QQmlDataTest::initTestCase();
+     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGLRhi);
+ }
+-- 
+2.51.2
+

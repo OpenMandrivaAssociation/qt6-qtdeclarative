@@ -1,0 +1,149 @@
+From 6472b66612805f024af1f025f72b6f6fdc6438aa Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Wed, 8 Oct 2025 08:15:30 +0200
+Subject: [PATCH 136/239] QtQml: Reset scope object call lookup if it fails
+
+In exceptional circumstances the function can turn out to be null. This
+may happen if the context has already been torn down. We must not try to
+call it then.
+
+Also, fix the error message to include the actual object.
+
+Fixes: QTBUG-140465
+Change-Id: I6fc446fbc8df70c9652c1efef03daed9fa9ea839
+Reviewed-by: Sami Shalayel <sami.shalayel@qt.io>
+(cherry picked from commit 4381eaf567337c2b2892adeec0d2fef878c1eed3)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qml/qml/qqml.cpp                          | 10 ++++-
+ .../qml/qmlcppcodegen/data/CMakeLists.txt     |  1 +
+ .../qml/qmlcppcodegen/data/deadContext.qml    | 41 +++++++++++++++++++
+ .../qml/qmlcppcodegen/tst_qmlcppcodegen.cpp   | 23 +++++++++++
+ 4 files changed, 73 insertions(+), 2 deletions(-)
+ create mode 100644 tests/auto/qml/qmlcppcodegen/data/deadContext.qml
+
+diff --git a/src/qml/qml/qqml.cpp b/src/qml/qml/qqml.cpp
+index 879bbefac9..cf4e5a1165 100644
+--- a/src/qml/qml/qqml.cpp
++++ b/src/qml/qml/qqml.cpp
+@@ -2333,9 +2333,15 @@ void AOTCompiledContext::initCallQmlContextPropertyLookup(uint index, int relati
+         return;
+     }
+ 
++    QV4::Scoped<QV4::QObjectWrapper> object(
++            scope, QV4::QObjectWrapper::wrap(scope.engine, qmlScopeObject));
+     scope.engine->throwTypeError(
+-            QStringLiteral("Property '%1' of object [null] is not a function").arg(
+-                    compilationUnit->runtimeStrings[lookup->nameIndex]->toQString()));
++            QStringLiteral("Property '%1' of object %2 is not a function").arg(
++                    compilationUnit->runtimeStrings[lookup->nameIndex]->toQString(),
++                    object->toQStringNoThrow()));
++
++    lookup->releasePropertyCache();
++    lookup->call = QV4::Lookup::Call::ContextGetterGeneric;
+ }
+ 
+ bool AOTCompiledContext::loadContextIdLookup(uint index, void *target) const
+diff --git a/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt b/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
+index c1c323370c..8dd780368b 100644
+--- a/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
++++ b/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
+@@ -147,6 +147,7 @@ set(qml_files
+     cycleHead.qml
+     dateConstruction.qml
+     dateConversions.qml
++    deadContext.qml
+     deadShoeSize.qml
+     deadStoreLoop.qml
+     destroyAndToString.qml
+diff --git a/tests/auto/qml/qmlcppcodegen/data/deadContext.qml b/tests/auto/qml/qmlcppcodegen/data/deadContext.qml
+new file mode 100644
+index 0000000000..e8f94451eb
+--- /dev/null
++++ b/tests/auto/qml/qmlcppcodegen/data/deadContext.qml
+@@ -0,0 +1,41 @@
++pragma ComponentBehavior: Bound
++import QtQuick
++
++Item {
++    id: root
++
++    property Component a: Item {
++        Timer {
++            interval: 1
++            running: root.choice < 4
++
++            function doit() {}
++            onTriggered: {
++                ++root.choice
++                doit()
++            }
++        }
++    }
++
++    property Component b: Item {
++        Timer {
++            interval: 1
++            running: root.choice < 4
++
++            function doit() {}
++            onTriggered: {
++                ++root.choice
++                doit()
++            }
++        }
++    }
++
++    property int choice: 0
++
++    Loader {
++        sourceComponent: switch (root.choice % 2) {
++            case 0: return root.a
++            case 1: return root.b
++        }
++    }
++}
+diff --git a/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp b/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
+index ac9ccc1d9d..751cff324a 100644
+--- a/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
++++ b/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
+@@ -98,6 +98,7 @@ private slots:
+     void cppValueTypeList();
+     void dateConstruction();
+     void dateConversions();
++    void deadContext();
+     void deadShoeSize();
+     void deduplicateConversionOrigins();
+     void destroyAndToString();
+@@ -1671,6 +1672,28 @@ void tst_QmlCppCodegen::dateConversions()
+ 
+ }
+ 
++void tst_QmlCppCodegen::deadContext()
++{
++    QQmlEngine engine;
++    QQmlComponent c(&engine, QUrl(u"qrc:/qt/qml/TestTypes/deadContext.qml"_s));
++    QVERIFY2(c.isReady(), qPrintable(c.errorString()));
++    QScopedPointer<QObject> o(c.create());
++    QVERIFY(o);
++
++    const char *vmeError = "QQmlVMEMetaObject: Internal error "
++                           "- attempted to evaluate a function in an invalid context";
++    static const QRegularExpression timerError(
++                u"qrc:/qt/qml/TestTypes/deadContext\\.qml:[0-9]+: TypeError: Property 'doit' of "
++                 "object QQmlTimer_QML_[0-9]+\\(0x[0-9a-f]+\\) is not a function"_s);
++
++    for (int i = 0; i < 4; ++i) {
++        QTest::ignoreMessage(QtWarningMsg,  vmeError);
++        QTest::ignoreMessage(QtWarningMsg,  timerError);
++    }
++
++    QTRY_COMPARE(o->property("choice").toInt(), 4);
++}
++
+ void tst_QmlCppCodegen::deadShoeSize()
+ {
+     QQmlEngine engine;
+-- 
+2.51.2
+

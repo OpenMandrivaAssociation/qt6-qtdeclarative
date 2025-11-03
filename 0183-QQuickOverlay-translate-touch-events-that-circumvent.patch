@@ -1,0 +1,58 @@
+From f424bdd3d02b0b5242ad90add43d0ec1c9a916b4 Mon Sep 17 00:00:00 2001
+From: Oliver Eftevaag <oliver.eftevaag@qt.io>
+Date: Fri, 17 Oct 2025 06:29:55 +0200
+Subject: [PATCH 183/239] QQuickOverlay: translate touch events that circumvent
+ the deliveryagent
+
+The touch event's scene position is normally set in the delivery agent.
+However, since the overlay installs an event filter on the window
+itself, it will circumvent the delivery agent and thus never set the
+scene position properly.
+
+This patch ensures that the scene position gets set when we're entering
+overlayEvent from the event filter, for touch release events.
+
+Task-number: QTBUG-132914
+Pick-to: 6.8
+Change-Id: Id59ed9e5252ba594ce0e40039cb3a783032caef1
+Reviewed-by: Mitch Curtis <mitch.curtis@qt.io>
+Reviewed-by: Shawn Rutledge <shawn.rutledge@qt.io>
+(cherry picked from commit 89f08f960993bf4b55ed9f72ac7278bb1a772001)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quick/util/qquickdeliveryagent_p_p.h | 2 +-
+ src/quicktemplates/qquickoverlay.cpp     | 4 +++-
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/quick/util/qquickdeliveryagent_p_p.h b/src/quick/util/qquickdeliveryagent_p_p.h
+index 14437c0cd0..d3c896849d 100644
+--- a/src/quick/util/qquickdeliveryagent_p_p.h
++++ b/src/quick/util/qquickdeliveryagent_p_p.h
+@@ -121,7 +121,7 @@ public:
+     // Mouse positions are saved in widget coordinates
+     QPointF lastMousePosition;
+     bool deliverTouchAsMouse(QQuickItem *item, QTouchEvent *pointerEvent);
+-    void translateTouchEvent(QTouchEvent *touchEvent);
++    static void translateTouchEvent(QTouchEvent *touchEvent);
+     void removeGrabber(QQuickItem *grabber, bool mouse = true, bool touch = true, bool cancel = false);
+     void clearGrabbers(QPointerEvent *pointerEvent);
+     void onGrabChanged(QObject *grabber, QPointingDevice::GrabTransition transition, const QPointerEvent *event, const QEventPoint &point);
+diff --git a/src/quicktemplates/qquickoverlay.cpp b/src/quicktemplates/qquickoverlay.cpp
+index be1ee33833..0f564c8209 100644
+--- a/src/quicktemplates/qquickoverlay.cpp
++++ b/src/quicktemplates/qquickoverlay.cpp
+@@ -529,8 +529,10 @@ bool QQuickOverlay::eventFilter(QObject *object, QEvent *event)
+ 
+         // allow non-modal popups to close on touch release outside
+         if (!d->mouseGrabberPopup) {
+-            for (const QTouchEvent::TouchPoint &point : static_cast<QTouchEvent *>(event)->points()) {
++            QTouchEvent *touchEvent = static_cast<QTouchEvent *>(event);
++            for (const QTouchEvent::TouchPoint &point : touchEvent->points()) {
+                 if (point.state() == QEventPoint::Released) {
++                    QQuickDeliveryAgentPrivate::translateTouchEvent(touchEvent);
+                     if (d->handleRelease(d->window->contentItem(), event, nullptr))
+                         break;
+                 }
+-- 
+2.51.2
+

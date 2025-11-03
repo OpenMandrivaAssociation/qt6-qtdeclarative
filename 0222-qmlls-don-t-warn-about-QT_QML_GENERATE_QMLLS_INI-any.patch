@@ -1,0 +1,62 @@
+From e73e67e75e686eb5f38d25216d7c74c377dc6f18 Mon Sep 17 00:00:00 2001
+From: Sami Shalayel <sami.shalayel@qt.io>
+Date: Fri, 17 Oct 2025 08:19:06 +0200
+Subject: [PATCH 222/239] qmlls: don't warn about QT_QML_GENERATE_QMLLS_INI
+ anymore
+
+We don't need the .qmlls.ini generation anymore in 6.10. Don't hint the
+user about it in qmlls.
+
+Task-number: QTBUG-141225
+Change-Id: Ie31e486a9b517cd442feb6dec3ec47f144d5e7ac
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
+(cherry picked from commit b3173a4a064db2293700d4ec9c004818bb558d42)
+---
+ src/qmlls/qqmllintsuggestions.cpp              | 4 +---
+ tests/auto/qmlls/modules/tst_qmlls_modules.cpp | 7 +++----
+ 2 files changed, 4 insertions(+), 7 deletions(-)
+
+diff --git a/src/qmlls/qqmllintsuggestions.cpp b/src/qmlls/qqmllintsuggestions.cpp
+index e15616c3cc..e768dfbc1b 100644
+--- a/src/qmlls/qqmllintsuggestions.cpp
++++ b/src/qmlls/qqmllintsuggestions.cpp
+@@ -391,9 +391,7 @@ void QmlLintSuggestions::diagnoseHelper(const QByteArray &url,
+             }
+ 
+             Message modified {message};
+-            modified.message.append(
+-                    u" Did you build your project? If yes, did you set the "
+-                    u"\"QT_QML_GENERATE_QMLLS_INI\" CMake variable on your project to \"ON\"?");
++            modified.message.append(u" Did you build your project?");
+ 
+             diagnostics.append(messageToDiagnostic(modified));
+         });
+diff --git a/tests/auto/qmlls/modules/tst_qmlls_modules.cpp b/tests/auto/qmlls/modules/tst_qmlls_modules.cpp
+index 1202bbfbd3..06986d6fd9 100644
+--- a/tests/auto/qmlls/modules/tst_qmlls_modules.cpp
++++ b/tests/auto/qmlls/modules/tst_qmlls_modules.cpp
+@@ -1304,9 +1304,9 @@ void tst_qmlls_modules::warnings_data()
+             << u"warnings/InvalidImport.qml"_s
+             << ExpectedWarnings{ {
+                        u"Warnings occurred while importing module \"foobar\": [import]"_s,
+-                       u"Failed to import foobar. Are your import paths set up properly? Did you build your project? If yes, did you set the \"QT_QML_GENERATE_QMLLS_INI\" CMake variable on your project to \"ON\"? [import]"_s,
++                       u"Failed to import foobar. Are your import paths set up properly? Did you build your project? [import]"_s,
+                        u"Warnings occurred while importing module \"foobaz\": [import]"_s,
+-                       u"Failed to import foobaz. Are your import paths set up properly? Did you build your project? If yes, did you set the \"QT_QML_GENERATE_QMLLS_INI\" CMake variable on your project to \"ON\"? [import]"_s,
++                       u"Failed to import foobaz. Are your import paths set up properly? Did you build your project? [import]"_s,
+                } };
+ 
+     QTest::addRow("WithoutQmllsBuildIni")
+@@ -1314,8 +1314,7 @@ void tst_qmlls_modules::warnings_data()
+             << ExpectedWarnings{
+                    { "Warnings occurred while importing module \"MyModule\": [import]"_L1,
+                      "Failed to import MyModule. Are your import paths set up properly? Did you "
+-                     "build your project? If yes, did you set the \"QT_QML_GENERATE_QMLLS_INI\" "
+-                     "CMake variable on your project to \"ON\"? [import]"_L1,
++                     "build your project? [import]"_L1,
+                      "MyComponent was not found. Did you add all imports and dependencies?: Did "
+                      "you mean \"Component\"? [import]"_L1 }
+                };
+-- 
+2.51.2
+

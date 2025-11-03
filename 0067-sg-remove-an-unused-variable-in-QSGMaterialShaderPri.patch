@@ -1,0 +1,33 @@
+From fea2b695eb09396844f2631d1fc3e6ce42104fb8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Aur=C3=A9lien=20Brooke?= <aurelien@bahiasoft.fr>
+Date: Mon, 22 Sep 2025 17:26:06 +0200
+Subject: [PATCH 067/239] sg: remove an unused variable in
+ QSGMaterialShaderPrivate::prepare()
+
+It seems to have been forgotten in a previous cleanup.
+
+Amends b87b3d3d43c200f22f0799ca59ab366d851b5db6.
+
+Change-Id: Ibabeeea164448b381603252da05a81ff76faccab
+Reviewed-by: Laszlo Agocs <laszlo.agocs@qt.io>
+(cherry picked from commit b0720f5024641b3c4ef8a500163cf78c491839ab)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quick/scenegraph/coreapi/qsgmaterialshader.cpp | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/src/quick/scenegraph/coreapi/qsgmaterialshader.cpp b/src/quick/scenegraph/coreapi/qsgmaterialshader.cpp
+index 2da68407a4..89f3003f36 100644
+--- a/src/quick/scenegraph/coreapi/qsgmaterialshader.cpp
++++ b/src/quick/scenegraph/coreapi/qsgmaterialshader.cpp
+@@ -210,7 +210,6 @@ void QSGMaterialShaderPrivate::prepare(QShader::Variant vertexShaderVariant)
+     for (QShader::Stage stage : { QShader::VertexStage, QShader::FragmentStage }) {
+         auto it = shaderFileNames.constFind(stage);
+         if (it != shaderFileNames.cend()) {
+-            QString fn = *it;
+             const QShader s = loadShader(*it);
+             if (!s.isValid())
+                 continue;
+-- 
+2.51.2
+

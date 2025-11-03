@@ -1,0 +1,54 @@
+From 78e78f008e8aa0b4913b473d5a5fa8721b1f8ade Mon Sep 17 00:00:00 2001
+From: Santhosh Kumar <santhosh.kumar.selvaraj@qt.io>
+Date: Tue, 23 Sep 2025 11:01:51 +0200
+Subject: [PATCH 071/239] Mark security header for the qt labs wavefrontmesh
+
+QUIP: 23
+Task-number: QTBUG-136184
+Pick-to: 6.8
+Change-Id: Iad6ee24119f8b0198e4d7fbb93db013999e65c7a
+Reviewed-by: Oliver Eftevaag <oliver.eftevaag@qt.io>
+(cherry picked from commit 7b70ea74306e541dc5b8cd45b32e27596fd05db8)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/labs/wavefrontmesh/qqmlwavefrontmeshglobal_p.h | 1 +
+ src/labs/wavefrontmesh/qwavefrontmesh.cpp          | 1 +
+ src/labs/wavefrontmesh/qwavefrontmesh_p.h          | 1 +
+ 3 files changed, 3 insertions(+)
+
+diff --git a/src/labs/wavefrontmesh/qqmlwavefrontmeshglobal_p.h b/src/labs/wavefrontmesh/qqmlwavefrontmeshglobal_p.h
+index ccf5a681f1..911a2a2c17 100644
+--- a/src/labs/wavefrontmesh/qqmlwavefrontmeshglobal_p.h
++++ b/src/labs/wavefrontmesh/qqmlwavefrontmeshglobal_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2021 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:insignificant
+ 
+ #ifndef QTLABSWAVEFRONTMESHGLOBAL_P_H
+ #define QTLABSWAVEFRONTMESHGLOBAL_P_H
+diff --git a/src/labs/wavefrontmesh/qwavefrontmesh.cpp b/src/labs/wavefrontmesh/qwavefrontmesh.cpp
+index 86458e2ecb..46cb5e4406 100644
+--- a/src/labs/wavefrontmesh/qwavefrontmesh.cpp
++++ b/src/labs/wavefrontmesh/qwavefrontmesh.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:critical reason:data-parser
+ 
+ #include "qwavefrontmesh_p.h"
+ 
+diff --git a/src/labs/wavefrontmesh/qwavefrontmesh_p.h b/src/labs/wavefrontmesh/qwavefrontmesh_p.h
+index b68f6578eb..5ef96c8747 100644
+--- a/src/labs/wavefrontmesh/qwavefrontmesh_p.h
++++ b/src/labs/wavefrontmesh/qwavefrontmesh_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #ifndef QWAVEFRONTMESH_P_H
+ #define QWAVEFRONTMESH_P_H
+-- 
+2.51.2
+

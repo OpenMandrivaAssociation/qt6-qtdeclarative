@@ -1,0 +1,562 @@
+From 45be501c9a688db9b5f46ab88ae06fb6ea3f8071 Mon Sep 17 00:00:00 2001
+From: Fabian Kosmale <fabian.kosmale@qt.io>
+Date: Mon, 15 Sep 2025 14:58:43 +0200
+Subject: [PATCH 052/239] Add security header for  src/qmlmodels
+
+As we assume that all QML comes from trusted sources, everything remains
+at the default "signicant" security level. The exception are the module
+headers which only include other headers and add a few defines.
+
+QUIP: 23
+Fixes: QTBUG-136203
+Pick-to: 6.9 6.8
+Change-Id: Ib1a2abbb94dbb25420f03e01a2b444f89517a902
+Reviewed-by: Ulf Hermann <ulf.hermann@qt.io>
+(cherry picked from commit c86476db1fa845b9414e2a83191ed93c1c5a7936)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qmlmodels/qqmlabstractdelegatecomponent.cpp | 1 +
+ src/qmlmodels/qqmlabstractdelegatecomponent_p.h | 1 +
+ src/qmlmodels/qqmladaptormodel.cpp              | 1 +
+ src/qmlmodels/qqmladaptormodel_p.h              | 1 +
+ src/qmlmodels/qqmladaptormodelenginedata.cpp    | 1 +
+ src/qmlmodels/qqmladaptormodelenginedata_p.h    | 1 +
+ src/qmlmodels/qqmlchangeset.cpp                 | 1 +
+ src/qmlmodels/qqmlchangeset_p.h                 | 1 +
+ src/qmlmodels/qqmldelegatecomponent.cpp         | 1 +
+ src/qmlmodels/qqmldelegatecomponent_p.h         | 1 +
+ src/qmlmodels/qqmldelegatemodel.cpp             | 1 +
+ src/qmlmodels/qqmldelegatemodel_p.h             | 1 +
+ src/qmlmodels/qqmldelegatemodel_p_p.h           | 1 +
+ src/qmlmodels/qqmldmabstractitemmodeldata.cpp   | 1 +
+ src/qmlmodels/qqmldmabstractitemmodeldata_p.h   | 1 +
+ src/qmlmodels/qqmldmlistaccessordata.cpp        | 1 +
+ src/qmlmodels/qqmldmlistaccessordata_p.h        | 1 +
+ src/qmlmodels/qqmldmobjectdata.cpp              | 1 +
+ src/qmlmodels/qqmldmobjectdata_p.h              | 1 +
+ src/qmlmodels/qqmlinstantiator.cpp              | 1 +
+ src/qmlmodels/qqmlinstantiator_p.h              | 1 +
+ src/qmlmodels/qqmlinstantiator_p_p.h            | 1 +
+ src/qmlmodels/qqmllistaccessor.cpp              | 1 +
+ src/qmlmodels/qqmllistaccessor_p.h              | 1 +
+ src/qmlmodels/qqmllistcompositor.cpp            | 1 +
+ src/qmlmodels/qqmllistcompositor_p.h            | 1 +
+ src/qmlmodels/qqmllistmodel.cpp                 | 1 +
+ src/qmlmodels/qqmllistmodel_p.h                 | 1 +
+ src/qmlmodels/qqmllistmodel_p_p.h               | 1 +
+ src/qmlmodels/qqmllistmodelworkeragent.cpp      | 1 +
+ src/qmlmodels/qqmllistmodelworkeragent_p.h      | 1 +
+ src/qmlmodels/qqmlmodelindexvaluetype.cpp       | 1 +
+ src/qmlmodels/qqmlmodelindexvaluetype_p.h       | 1 +
+ src/qmlmodels/qqmlmodelsmodule.cpp              | 1 +
+ src/qmlmodels/qqmlmodelsmodule_p.h              | 1 +
+ src/qmlmodels/qqmlobjectmodel.cpp               | 1 +
+ src/qmlmodels/qqmlobjectmodel_p.h               | 1 +
+ src/qmlmodels/qqmltableinstancemodel.cpp        | 1 +
+ src/qmlmodels/qqmltableinstancemodel_p.h        | 1 +
+ src/qmlmodels/qqmltreemodeltotablemodel.cpp     | 1 +
+ src/qmlmodels/qqmltreemodeltotablemodel_p_p.h   | 1 +
+ src/qmlmodels/qquickpackage.cpp                 | 1 +
+ src/qmlmodels/qquickpackage_p.h                 | 1 +
+ src/qmlmodels/qtqmlmodelsglobal.h               | 1 +
+ src/qmlmodels/qtqmlmodelsglobal_p.h             | 1 +
+ 45 files changed, 45 insertions(+)
+
+diff --git a/src/qmlmodels/qqmlabstractdelegatecomponent.cpp b/src/qmlmodels/qqmlabstractdelegatecomponent.cpp
+index 709233a6c9..7fc29c825a 100644
+--- a/src/qmlmodels/qqmlabstractdelegatecomponent.cpp
++++ b/src/qmlmodels/qqmlabstractdelegatecomponent.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2019 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <QtQmlModels/private/qqmlabstractdelegatecomponent_p.h>
+ #include <QtQmlModels/private/qqmladaptormodel_p.h>
+diff --git a/src/qmlmodels/qqmlabstractdelegatecomponent_p.h b/src/qmlmodels/qqmlabstractdelegatecomponent_p.h
+index ae4811dd9c..4bf522141d 100644
+--- a/src/qmlmodels/qqmlabstractdelegatecomponent_p.h
++++ b/src/qmlmodels/qqmlabstractdelegatecomponent_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2019 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLABSTRACTDELEGATECOMPONENT_P_H
+ #define QQMLABSTRACTDELEGATECOMPONENT_P_H
+diff --git a/src/qmlmodels/qqmladaptormodel.cpp b/src/qmlmodels/qqmladaptormodel.cpp
+index b36b524981..59f6ae0836 100644
+--- a/src/qmlmodels/qqmladaptormodel.cpp
++++ b/src/qmlmodels/qqmladaptormodel.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qqmladaptormodel_p.h"
+ 
+diff --git a/src/qmlmodels/qqmladaptormodel_p.h b/src/qmlmodels/qqmladaptormodel_p.h
+index bc46a4a8d4..d23525e96f 100644
+--- a/src/qmlmodels/qqmladaptormodel_p.h
++++ b/src/qmlmodels/qqmladaptormodel_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLADAPTORMODEL_P_H
+ #define QQMLADAPTORMODEL_P_H
+diff --git a/src/qmlmodels/qqmladaptormodelenginedata.cpp b/src/qmlmodels/qqmladaptormodelenginedata.cpp
+index dd3301d258..a471769e0a 100644
+--- a/src/qmlmodels/qqmladaptormodelenginedata.cpp
++++ b/src/qmlmodels/qqmladaptormodelenginedata.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2023 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <private/qqmladaptormodelenginedata_p.h>
+ #include <private/qqmldmlistaccessordata_p.h>
+diff --git a/src/qmlmodels/qqmladaptormodelenginedata_p.h b/src/qmlmodels/qqmladaptormodelenginedata_p.h
+index 6a4a16ab3f..f9ab77aca7 100644
+--- a/src/qmlmodels/qqmladaptormodelenginedata_p.h
++++ b/src/qmlmodels/qqmladaptormodelenginedata_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2023 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ 
+ #ifndef QQMLADAPTORMODELENGINEDATA_P_H
+diff --git a/src/qmlmodels/qqmlchangeset.cpp b/src/qmlmodels/qqmlchangeset.cpp
+index 35fa95d6a8..6b616c5f55 100644
+--- a/src/qmlmodels/qqmlchangeset.cpp
++++ b/src/qmlmodels/qqmlchangeset.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qqmlchangeset_p.h"
+ 
+diff --git a/src/qmlmodels/qqmlchangeset_p.h b/src/qmlmodels/qqmlchangeset_p.h
+index 18c4e1b8e6..17c2b116f2 100644
+--- a/src/qmlmodels/qqmlchangeset_p.h
++++ b/src/qmlmodels/qqmlchangeset_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLCHANGESET_P_H
+ #define QQMLCHANGESET_P_H
+diff --git a/src/qmlmodels/qqmldelegatecomponent.cpp b/src/qmlmodels/qqmldelegatecomponent.cpp
+index 53cbde5f7e..0449308be2 100644
+--- a/src/qmlmodels/qqmldelegatecomponent.cpp
++++ b/src/qmlmodels/qqmldelegatecomponent.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qqmldelegatecomponent_p.h"
+ #include <QtQmlModels/private/qqmladaptormodel_p.h>
+diff --git a/src/qmlmodels/qqmldelegatecomponent_p.h b/src/qmlmodels/qqmldelegatecomponent_p.h
+index 8659b4af4a..0dc4648a4b 100644
+--- a/src/qmlmodels/qqmldelegatecomponent_p.h
++++ b/src/qmlmodels/qqmldelegatecomponent_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLDELEGATECOMPONENT_P_H
+ #define QQMLDELEGATECOMPONENT_P_H
+diff --git a/src/qmlmodels/qqmldelegatemodel.cpp b/src/qmlmodels/qqmldelegatemodel.cpp
+index a8a86b8572..72fd2f1b33 100644
+--- a/src/qmlmodels/qqmldelegatemodel.cpp
++++ b/src/qmlmodels/qqmldelegatemodel.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2020 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qqmldelegatemodel_p_p.h"
+ 
+diff --git a/src/qmlmodels/qqmldelegatemodel_p.h b/src/qmlmodels/qqmldelegatemodel_p.h
+index efce206625..c12161f802 100644
+--- a/src/qmlmodels/qqmldelegatemodel_p.h
++++ b/src/qmlmodels/qqmldelegatemodel_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLDATAMODEL_P_H
+ #define QQMLDATAMODEL_P_H
+diff --git a/src/qmlmodels/qqmldelegatemodel_p_p.h b/src/qmlmodels/qqmldelegatemodel_p_p.h
+index c6e19adbca..6e1ee16d9c 100644
+--- a/src/qmlmodels/qqmldelegatemodel_p_p.h
++++ b/src/qmlmodels/qqmldelegatemodel_p_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLDATAMODEL_P_P_H
+ #define QQMLDATAMODEL_P_P_H
+diff --git a/src/qmlmodels/qqmldmabstractitemmodeldata.cpp b/src/qmlmodels/qqmldmabstractitemmodeldata.cpp
+index fb213e2762..2ca8efd25f 100644
+--- a/src/qmlmodels/qqmldmabstractitemmodeldata.cpp
++++ b/src/qmlmodels/qqmldmabstractitemmodeldata.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2023 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <private/qqmldmabstractitemmodeldata_p.h>
+ 
+diff --git a/src/qmlmodels/qqmldmabstractitemmodeldata_p.h b/src/qmlmodels/qqmldmabstractitemmodeldata_p.h
+index c98b8fce6e..8901d5986d 100644
+--- a/src/qmlmodels/qqmldmabstractitemmodeldata_p.h
++++ b/src/qmlmodels/qqmldmabstractitemmodeldata_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2023 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLDMABSTRACTITEMMODELDATA_P_H
+ #define QQMLDMABSTRACTITEMMODELDATA_P_H
+diff --git a/src/qmlmodels/qqmldmlistaccessordata.cpp b/src/qmlmodels/qqmldmlistaccessordata.cpp
+index 4eedb8b772..c274ee6485 100644
+--- a/src/qmlmodels/qqmldmlistaccessordata.cpp
++++ b/src/qmlmodels/qqmldmlistaccessordata.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2023 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <private/qqmldmlistaccessordata_p.h>
+ 
+diff --git a/src/qmlmodels/qqmldmlistaccessordata_p.h b/src/qmlmodels/qqmldmlistaccessordata_p.h
+index bde5dd30cb..d1e6be74a2 100644
+--- a/src/qmlmodels/qqmldmlistaccessordata_p.h
++++ b/src/qmlmodels/qqmldmlistaccessordata_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2023 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLDMLISTACCESSORDATA_P_H
+ #define QQMLDMLISTACCESSORDATA_P_H
+diff --git a/src/qmlmodels/qqmldmobjectdata.cpp b/src/qmlmodels/qqmldmobjectdata.cpp
+index 3e6887be3e..3d57b541ea 100644
+--- a/src/qmlmodels/qqmldmobjectdata.cpp
++++ b/src/qmlmodels/qqmldmobjectdata.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2023 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <private/qqmldmobjectdata_p.h>
+ 
+diff --git a/src/qmlmodels/qqmldmobjectdata_p.h b/src/qmlmodels/qqmldmobjectdata_p.h
+index 05901cc100..7a7f0a6baf 100644
+--- a/src/qmlmodels/qqmldmobjectdata_p.h
++++ b/src/qmlmodels/qqmldmobjectdata_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2023 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLDMOBJECTDATA_P_H
+ #define QQMLDMOBJECTDATA_P_H
+diff --git a/src/qmlmodels/qqmlinstantiator.cpp b/src/qmlmodels/qqmlinstantiator.cpp
+index 3f6f45f339..4cbf4d70e1 100644
+--- a/src/qmlmodels/qqmlinstantiator.cpp
++++ b/src/qmlmodels/qqmlinstantiator.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 Research In Motion.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qqmlinstantiator_p.h"
+ #include "qqmlinstantiator_p_p.h"
+diff --git a/src/qmlmodels/qqmlinstantiator_p.h b/src/qmlmodels/qqmlinstantiator_p.h
+index da98cd5420..a74cd9c7ba 100644
+--- a/src/qmlmodels/qqmlinstantiator_p.h
++++ b/src/qmlmodels/qqmlinstantiator_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 Research In Motion.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLINSTANTIATOR_P_H
+ #define QQMLINSTANTIATOR_P_H
+diff --git a/src/qmlmodels/qqmlinstantiator_p_p.h b/src/qmlmodels/qqmlinstantiator_p_p.h
+index 53bc4a8db5..a61e9bbc16 100644
+--- a/src/qmlmodels/qqmlinstantiator_p_p.h
++++ b/src/qmlmodels/qqmlinstantiator_p_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 Research In Motion.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLINSTANTIATOR_P_P_H
+ #define QQMLINSTANTIATOR_P_P_H
+diff --git a/src/qmlmodels/qqmllistaccessor.cpp b/src/qmlmodels/qqmllistaccessor.cpp
+index 7483c07056..aac1b8bfc1 100644
+--- a/src/qmlmodels/qqmllistaccessor.cpp
++++ b/src/qmlmodels/qqmllistaccessor.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qqmllistaccessor_p.h"
+ 
+diff --git a/src/qmlmodels/qqmllistaccessor_p.h b/src/qmlmodels/qqmllistaccessor_p.h
+index 4d61e537e8..1fc2dda7e5 100644
+--- a/src/qmlmodels/qqmllistaccessor_p.h
++++ b/src/qmlmodels/qqmllistaccessor_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2021 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLLISTACCESSOR_H
+ #define QQMLLISTACCESSOR_H
+diff --git a/src/qmlmodels/qqmllistcompositor.cpp b/src/qmlmodels/qqmllistcompositor.cpp
+index de8d3b6105..836d57c735 100644
+--- a/src/qmlmodels/qqmllistcompositor.cpp
++++ b/src/qmlmodels/qqmllistcompositor.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qqmllistcompositor_p.h"
+ 
+diff --git a/src/qmlmodels/qqmllistcompositor_p.h b/src/qmlmodels/qqmllistcompositor_p.h
+index 99b9acd0e5..e62cb49eae 100644
+--- a/src/qmlmodels/qqmllistcompositor_p.h
++++ b/src/qmlmodels/qqmllistcompositor_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLLISTCOMPOSITOR_P_H
+ #define QQMLLISTCOMPOSITOR_P_H
+diff --git a/src/qmlmodels/qqmllistmodel.cpp b/src/qmlmodels/qqmllistmodel.cpp
+index ca8418a3b1..b30db8aeaf 100644
+--- a/src/qmlmodels/qqmllistmodel.cpp
++++ b/src/qmlmodels/qqmllistmodel.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qqmllistmodel_p_p.h"
+ #include "qqmllistmodelworkeragent_p.h"
+diff --git a/src/qmlmodels/qqmllistmodel_p.h b/src/qmlmodels/qqmllistmodel_p.h
+index 70f706b628..26ca6e7d13 100644
+--- a/src/qmlmodels/qqmllistmodel_p.h
++++ b/src/qmlmodels/qqmllistmodel_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLLISTMODEL_H
+ #define QQMLLISTMODEL_H
+diff --git a/src/qmlmodels/qqmllistmodel_p_p.h b/src/qmlmodels/qqmllistmodel_p_p.h
+index 28ebe218da..36c0873e41 100644
+--- a/src/qmlmodels/qqmllistmodel_p_p.h
++++ b/src/qmlmodels/qqmllistmodel_p_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2020 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLLISTMODEL_P_P_H
+ #define QQMLLISTMODEL_P_P_H
+diff --git a/src/qmlmodels/qqmllistmodelworkeragent.cpp b/src/qmlmodels/qqmllistmodelworkeragent.cpp
+index c50296b1f5..e1c7eec9c2 100644
+--- a/src/qmlmodels/qqmllistmodelworkeragent.cpp
++++ b/src/qmlmodels/qqmllistmodelworkeragent.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qqmllistmodelworkeragent_p.h"
+ #include "qqmllistmodel_p_p.h"
+diff --git a/src/qmlmodels/qqmllistmodelworkeragent_p.h b/src/qmlmodels/qqmllistmodelworkeragent_p.h
+index 647cc1b997..7c4b6af077 100644
+--- a/src/qmlmodels/qqmllistmodelworkeragent_p.h
++++ b/src/qmlmodels/qqmllistmodelworkeragent_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQUICKLISTMODELWORKERAGENT_P_H
+ #define QQUICKLISTMODELWORKERAGENT_P_H
+diff --git a/src/qmlmodels/qqmlmodelindexvaluetype.cpp b/src/qmlmodels/qqmlmodelindexvaluetype.cpp
+index 14160bd572..5334c15896 100644
+--- a/src/qmlmodels/qqmlmodelindexvaluetype.cpp
++++ b/src/qmlmodels/qqmlmodelindexvaluetype.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qqmlmodelindexvaluetype_p.h"
+ 
+diff --git a/src/qmlmodels/qqmlmodelindexvaluetype_p.h b/src/qmlmodels/qqmlmodelindexvaluetype_p.h
+index 35ebacc051..4219843c07 100644
+--- a/src/qmlmodels/qqmlmodelindexvaluetype_p.h
++++ b/src/qmlmodels/qqmlmodelindexvaluetype_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2021 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLMODELINDEXVALUETYPE_P_H
+ #define QQMLMODELINDEXVALUETYPE_P_H
+diff --git a/src/qmlmodels/qqmlmodelsmodule.cpp b/src/qmlmodels/qqmlmodelsmodule.cpp
+index 19da8fa829..a8d3fb5ba3 100644
+--- a/src/qmlmodels/qqmlmodelsmodule.cpp
++++ b/src/qmlmodels/qqmlmodelsmodule.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2022 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:insignificant
+ 
+ #include "qqmlmodelsmodule_p.h"
+ 
+diff --git a/src/qmlmodels/qqmlmodelsmodule_p.h b/src/qmlmodels/qqmlmodelsmodule_p.h
+index 653e444fb5..64e015c264 100644
+--- a/src/qmlmodels/qqmlmodelsmodule_p.h
++++ b/src/qmlmodels/qqmlmodelsmodule_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 Research In Motion.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLMODELSMODULE_H
+ #define QQMLMODELSMODULE_H
+diff --git a/src/qmlmodels/qqmlobjectmodel.cpp b/src/qmlmodels/qqmlobjectmodel.cpp
+index de8f84d220..433d4a41c9 100644
+--- a/src/qmlmodels/qqmlobjectmodel.cpp
++++ b/src/qmlmodels/qqmlobjectmodel.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qqmlobjectmodel_p.h"
+ 
+diff --git a/src/qmlmodels/qqmlobjectmodel_p.h b/src/qmlmodels/qqmlobjectmodel_p.h
+index 74b9355605..c6d50559c8 100644
+--- a/src/qmlmodels/qqmlobjectmodel_p.h
++++ b/src/qmlmodels/qqmlobjectmodel_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLINSTANCEMODEL_P_H
+ #define QQMLINSTANCEMODEL_P_H
+diff --git a/src/qmlmodels/qqmltableinstancemodel.cpp b/src/qmlmodels/qqmltableinstancemodel.cpp
+index c19bcf3138..3f2dd3fe8c 100644
+--- a/src/qmlmodels/qqmltableinstancemodel.cpp
++++ b/src/qmlmodels/qqmltableinstancemodel.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qqmltableinstancemodel_p.h"
+ #include "qqmlabstractdelegatecomponent_p.h"
+diff --git a/src/qmlmodels/qqmltableinstancemodel_p.h b/src/qmlmodels/qqmltableinstancemodel_p.h
+index bf2309dcff..326c30c04f 100644
+--- a/src/qmlmodels/qqmltableinstancemodel_p.h
++++ b/src/qmlmodels/qqmltableinstancemodel_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQMLTABLEINSTANCEMODEL_P_H
+ #define QQMLTABLEINSTANCEMODEL_P_H
+diff --git a/src/qmlmodels/qqmltreemodeltotablemodel.cpp b/src/qmlmodels/qqmltreemodeltotablemodel.cpp
+index 95d793a8c9..5adf4ffa68 100644
+--- a/src/qmlmodels/qqmltreemodeltotablemodel.cpp
++++ b/src/qmlmodels/qqmltreemodeltotablemodel.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2021 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <math.h>
+ #include <QtCore/qstack.h>
+diff --git a/src/qmlmodels/qqmltreemodeltotablemodel_p_p.h b/src/qmlmodels/qqmltreemodeltotablemodel_p_p.h
+index 2b38f3726b..f945034e92 100644
+--- a/src/qmlmodels/qqmltreemodeltotablemodel_p_p.h
++++ b/src/qmlmodels/qqmltreemodeltotablemodel_p_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2021 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQmlTreeModelToTableModel_H
+ #define QQmlTreeModelToTableModel_H
+diff --git a/src/qmlmodels/qquickpackage.cpp b/src/qmlmodels/qquickpackage.cpp
+index be86572698..dfe0ddfc44 100644
+--- a/src/qmlmodels/qquickpackage.cpp
++++ b/src/qmlmodels/qquickpackage.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qquickpackage_p.h"
+ 
+diff --git a/src/qmlmodels/qquickpackage_p.h b/src/qmlmodels/qquickpackage_p.h
+index 827d718248..7bd9e87743 100644
+--- a/src/qmlmodels/qquickpackage_p.h
++++ b/src/qmlmodels/qquickpackage_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QQUICKPACKAGE_H
+ #define QQUICKPACKAGE_H
+diff --git a/src/qmlmodels/qtqmlmodelsglobal.h b/src/qmlmodels/qtqmlmodelsglobal.h
+index 02bfb07e84..5c4f2d86c2 100644
+--- a/src/qmlmodels/qtqmlmodelsglobal.h
++++ b/src/qmlmodels/qtqmlmodelsglobal.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2019 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:insignificant
+ 
+ #ifndef QTQMLMODELSGLOBAL_H
+ #define QTQMLMODELSGLOBAL_H
+diff --git a/src/qmlmodels/qtqmlmodelsglobal_p.h b/src/qmlmodels/qtqmlmodelsglobal_p.h
+index 966836ec6b..7f777d8d05 100644
+--- a/src/qmlmodels/qtqmlmodelsglobal_p.h
++++ b/src/qmlmodels/qtqmlmodelsglobal_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2019 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:insignificant
+ 
+ #ifndef QTQMLMODELSGLOBAL_P_H
+ #define QTQMLMODELSGLOBAL_P_H
+-- 
+2.51.2
+

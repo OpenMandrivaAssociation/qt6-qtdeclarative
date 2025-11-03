@@ -1,0 +1,141 @@
+From 186271568b8dd4102711e008bf3c2523452bf9be Mon Sep 17 00:00:00 2001
+From: Sami Shalayel <sami.shalayel@qt.io>
+Date: Wed, 10 Sep 2025 13:02:37 +0200
+Subject: [PATCH 112/239] qmlformat: format list type annotations
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add sourcelocations for `<>` in list types like `list<int>` in
+AST::Type, and fix their lastSourceLocation() method to show the `>`
+location when applicable.
+
+Add the new sourcelocations to qqmldomcomments to also be able to anchor
+comments around the `<>`.
+
+Implement ScriptFormatter for list type annotations.
+
+Task-number: QTBUG-137944
+Change-Id: I73af498a9165f99fdceb69c8822ce5bb94e02ff9
+Reviewed-by: Olivier De Cannière <olivier.decanniere@qt.io>
+(cherry picked from commit 2dc479ecacef58de329d78a1b14b8fd04c03dd4d)
+---
+ src/qml/parser/qqmljs.g                         |  2 ++
+ src/qml/parser/qqmljsast_p.h                    |  6 +++++-
+ src/qmldom/qqmldomcomments.cpp                  | 13 +++++++++----
+ src/qmldom/qqmldomreformatter.cpp               |  6 +++++-
+ tests/auto/qmldom/reformatter/tst_reformatter.h |  7 +++++--
+ 5 files changed, 26 insertions(+), 8 deletions(-)
+
+diff --git a/src/qml/parser/qqmljs.g b/src/qml/parser/qqmljs.g
+index e8b283a33c..96d9dc59c9 100644
+--- a/src/qml/parser/qqmljs.g
++++ b/src/qml/parser/qqmljs.g
+@@ -1685,6 +1685,8 @@ Type: UiQualifiedId T_LT SimpleType T_GT;
+ /.
+     case $rule_number: {
+         sym(1).Type = new (pool) AST::Type(sym(1).UiQualifiedId, sym(3).Type);
++        sym(1).Type->lAngleBracketToken = loc(2);
++        sym(1).Type->rAngleBracketToken = loc(4);
+     } break;
+ ./
+ 
+diff --git a/src/qml/parser/qqmljsast_p.h b/src/qml/parser/qqmljsast_p.h
+index 54785e929b..a9bd48c8ff 100644
+--- a/src/qml/parser/qqmljsast_p.h
++++ b/src/qml/parser/qqmljsast_p.h
+@@ -375,7 +375,9 @@ public:
+     { return typeId->firstSourceLocation(); }
+ 
+     SourceLocation lastSourceLocation() const override
+-    { return typeArgument ? typeArgument->lastSourceLocation() : typeId->lastSourceLocation(); }
++    {
++        return rAngleBracketToken.isValid() ? rAngleBracketToken : typeId->lastSourceLocation();
++    }
+ 
+     QString toString() const;
+     void toString(QString *out) const;
+@@ -383,6 +385,8 @@ public:
+ // attributes
+     UiQualifiedId *typeId;
+     UiQualifiedId *typeArgument;
++    SourceLocation lAngleBracketToken;
++    SourceLocation rAngleBracketToken;
+ };
+ 
+ class QML_PARSER_EXPORT TypeAnnotation: public Node
+diff --git a/src/qmldom/qqmldomcomments.cpp b/src/qmldom/qqmldomcomments.cpp
+index 751315ac09..5b8377af64 100644
+--- a/src/qmldom/qqmldomcomments.cpp
++++ b/src/qmldom/qqmldomcomments.cpp
+@@ -465,12 +465,17 @@ public:
+ 
+     bool visit(Type *type) override
+     {
++        // list type annotations can have comments attached to their `<>` token. preVisit already
++        // handles comments before and after the type.
++        addSourceLocations(type, type->lAngleBracketToken);
++        addSourceLocations(type, type->rAngleBracketToken);
++
+         // only process UiQualifiedIds when they appear inside of types, otherwise this attaches
+         // comments to the qualified ids of bindings that are not printed out, for example.
+         QScopedValueRollback rollback(m_processUiQualifiedIds, true);
+ 
+         AST::Node::accept(type->typeId, this);
+-        // TODO: typeargument
++        AST::Node::accept(type->typeArgument, this);
+         return false;
+     }
+ 
+@@ -479,9 +484,9 @@ public:
+         if (!m_processUiQualifiedIds)
+             return true;
+ 
+-        // special case: multiple bits a,b,c and d inside an UiQualified id "a.b.c.d" all have the
+-        // same lastSourceLocation(), which breaks the comment attaching. Therefore add locations
+-        // here manually instead of in preVisit().
++        // multiple bits a,b,c and d inside an UiQualified id "a.b.c.d" all have the same
++        // lastSourceLocation(), which breaks the comment attaching. Therefore add locations here
++        // manually instead of in preVisit().
+         addSourceLocations(id, id->dotToken);
+         addSourceLocations(id, id->identifierToken);
+ 
+diff --git a/src/qmldom/qqmldomreformatter.cpp b/src/qmldom/qqmldomreformatter.cpp
+index fcc36af8d4..9b8290c1bb 100644
+--- a/src/qmldom/qqmldomreformatter.cpp
++++ b/src/qmldom/qqmldomreformatter.cpp
+@@ -545,7 +545,11 @@ bool ScriptFormatter::visit(TypeAnnotation *ast)
+ bool ScriptFormatter::visit(Type *ast)
+ {
+     accept(ast->typeId);
+-    // TODO: type argument
++    if (ast->typeArgument) {
++        outWithComments(ast->lAngleBracketToken, ast);
++        accept(ast->typeArgument);
++        outWithComments(ast->rAngleBracketToken, ast);
++    }
+     return false;
+ }
+ 
+diff --git a/tests/auto/qmldom/reformatter/tst_reformatter.h b/tests/auto/qmldom/reformatter/tst_reformatter.h
+index 358c16a682..b3e4eac677 100644
+--- a/tests/auto/qmldom/reformatter/tst_reformatter.h
++++ b/tests/auto/qmldom/reformatter/tst_reformatter.h
+@@ -457,9 +457,12 @@ private slots:
+                 << u"function* g(a:date,b:int){}"_s << u"function* g(a: date, b: int) {}"_s;
+         QTest::newRow("Generator_rhs_star")
+                 << u"function *g(a:int,b:date){}"_s << u"function* g(a: int, b: date) {}"_s;
++        QTest::newRow("list") << u"function a(a:list<date>,b:list<int>){}"_s
++                              << u"function a(a: list<date>, b: list<int>) {}"_s;
+ 
+-        QTest::newRow("comments") << u"function a(/*7*/b/*8*/:/*9*/int/*10*/){}"_s
+-                                  << u"function a(/*7*/b/*8*/: /*9*/int/*10*/) {}"_s;
++        QTest::newRow("comments")
++                << u"function a(a/*1*/:/*2*/list/*3*/</*4*/date/*5*/>/*6*/,/*7*/b/*8*/:/*9*/int/*10*/){}"_s
++                << u"function a(a/*1*/: /*2*/list/*3*/</*4*/date/*5*/>/*6*/, /*7*/b/*8*/: /*9*/int/*10*/) {}"_s;
+ 
+         QTest::newRow("comments2")
+                 << u"function a(a: Q/*10*/./*11*/W/*12*/./*13*/E/*14*/./*15*/R/*16*/){}"_s
+-- 
+2.51.2
+

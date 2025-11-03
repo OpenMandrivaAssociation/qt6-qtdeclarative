@@ -1,0 +1,42 @@
+From 2a0a6c7c92add430ffc1c7dedd3e2963b5c8ac48 Mon Sep 17 00:00:00 2001
+From: Shawn Rutledge <shawn.rutledge@qt.io>
+Date: Fri, 17 Oct 2025 12:18:39 +0200
+Subject: [PATCH 188/239] tst_HoverHandler::touchDrag: QCOMPARE(QPoint, QPoint)
+
+QCOMPARE(QPointF, QPoint) requires too much precision: it can fail by a
+fractional pixel. Amends ff4c2c311f1957ebacb66f0d35406a51da2a544e
+
+Pick-to: 6.8
+Change-Id: Icdcc895e855ea305090d1d4863b7c0f078922427
+Reviewed-by: Shawn Rutledge <shawn.rutledge@qt.io>
+(cherry picked from commit 650a0226689ce10fd3c323fcaa945aa6d28c7462)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ .../qquickhoverhandler/tst_qquickhoverhandler.cpp             | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tests/auto/quick/pointerhandlers/qquickhoverhandler/tst_qquickhoverhandler.cpp b/tests/auto/quick/pointerhandlers/qquickhoverhandler/tst_qquickhoverhandler.cpp
+index 413fa2fbac..1908e76b06 100644
+--- a/tests/auto/quick/pointerhandlers/qquickhoverhandler/tst_qquickhoverhandler.cpp
++++ b/tests/auto/quick/pointerhandlers/qquickhoverhandler/tst_qquickhoverhandler.cpp
+@@ -752,7 +752,7 @@ void tst_HoverHandler::touchDrag()
+     QTest::touchEvent(&window, touchscreen.get()).move(0, in, &window);
+     QQuickTouchUtils::flush(&window);
+     QTRY_COMPARE(handler->isHovered(), true);
+-    QCOMPARE(handler->point().scenePosition(), in);
++    QCOMPARE(handler->point().scenePosition().toPoint(), in);
+ 
+     in += {10, 10};
+     QTest::touchEvent(&window, touchscreen.get()).move(0, in, &window);
+@@ -760,7 +760,7 @@ void tst_HoverHandler::touchDrag()
+     // ensure that the color change is visible
+     QTRY_COMPARE_GE(frameSyncSpy.size(), 1);
+     QCOMPARE(handler->isHovered(), true);
+-    QCOMPARE(handler->point().scenePosition(), in);
++    QCOMPARE(handler->point().scenePosition().toPoint(), in);
+ 
+     QTest::touchEvent(&window, touchscreen.get()).move(0, out, &window);
+     QQuickTouchUtils::flush(&window);
+-- 
+2.51.2
+

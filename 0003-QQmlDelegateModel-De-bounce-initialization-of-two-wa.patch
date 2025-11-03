@@ -1,0 +1,88 @@
+From 8f02d6f0ce2785d26fe99eb884b05e5ec97a7812 Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Mon, 1 Sep 2025 16:51:12 +0200
+Subject: [PATCH 003/239] QQmlDelegateModel: De-bounce initialization of
+ two-way bindings
+
+When installing the reverse binding on a QQmlDelegateModelItem, the
+binding is evaluated right away and tries to write the model data. We
+don't want that since we know that the model data already contains the
+same value.
+
+Use a temporary filtering metaobject to block writes to this property
+while installing the reverse binding. This causes the bounced write to
+fail.
+
+Amends commit 4bd5b312795024bd5bcd698525b58caf3893c913
+
+Task-number: QTBUG-132420
+Change-Id: Ib001f669046635cc3ae830154f22d95ee1d3924c
+Reviewed-by: Sami Shalayel <sami.shalayel@qt.io>
+(cherry picked from commit c5832c09c62c29a51bc7ad965669a68ddae462cc)
+---
+ src/qmlmodels/qqmldelegatemodel.cpp                 | 13 ++++++++++++-
+ .../auto/qml/qqmlrangemodel/tst_qqmlrangemodel.cpp  | 10 ----------
+ 2 files changed, 12 insertions(+), 11 deletions(-)
+
+diff --git a/src/qmlmodels/qqmldelegatemodel.cpp b/src/qmlmodels/qqmldelegatemodel.cpp
+index 0bb0466e54..dfb72d8aac 100644
+--- a/src/qmlmodels/qqmldelegatemodel.cpp
++++ b/src/qmlmodels/qqmldelegatemodel.cpp
+@@ -1024,7 +1024,18 @@ void QQDMIncubationTask::initializeRequiredProperties(
+                         QQmlAnyBinding reverse = QQmlPropertyToPropertyBinding::create(
+                                 engine, targetProp, sourceProp);
+                         reverse.setSticky();
+-                        reverse.installOn(sourceProp);
++                        if (itemOrProxy == modelItemToIncubate) {
++                            // Temporarily take away the metaobject so that the property can't
++                            // actually be written. It shouldn't be written since we've just
++                            // synchronized it the other way when installing the "forward" binding.
++                            QQmlDelegateModelReadOnlyMetaObject readonly(modelItemToIncubate, i);
++                            reverse.installOn(sourceProp);
++                        } else {
++                            // It's only not a QQmlDelegateModelItem if the model is actually an
++                            // ObjectModel. In that case, we hope that the generic equality check
++                            // when setting a property is enough to de-bounce it.
++                            reverse.installOn(sourceProp);
++                        }
+                     }
+                 }
+             }
+diff --git a/tests/auto/qml/qqmlrangemodel/tst_qqmlrangemodel.cpp b/tests/auto/qml/qqmlrangemodel/tst_qqmlrangemodel.cpp
+index 49542b1ad2..d634f74d92 100644
+--- a/tests/auto/qml/qqmlrangemodel/tst_qqmlrangemodel.cpp
++++ b/tests/auto/qml/qqmlrangemodel/tst_qqmlrangemodel.cpp
+@@ -344,7 +344,6 @@ void tst_QQmlRangeModel::intRange()
+     QCOMPARE(currentItem->property("currentValue"), oldValue);
+ 
+     // nothing happened so far, so there shouldn't have been any calls to setData
+-    QEXPECT_FAIL("ReadWrite", "Unexpected call to setData", Continue);
+     QCOMPARE(model.setDataCalls, QList<int>{});
+     model.setDataCalls.clear();
+     model.dataCalls.clear();
+@@ -382,14 +381,6 @@ void tst_QQmlRangeModel::objectRange()
+     std::vector<Entry *> objects{entry.get()};
+     RangeModel model(&objects);
+ 
+-#ifndef QT_NO_DEBUG
+-    // with ReadWrite, spurious call to setData(RangeModelDataRole) during loading
+-    if (writeBack) {
+-        QTest::ignoreMessage(QtCriticalMsg,
+-                             QRegularExpression("Not able to assign QVariant\\(.*\\) to Entry*"));
+-    }
+-#endif
+-
+     auto view = makeView({
+         {"delegateModelAccess", delegateModelAccess},
+         {"model", QVariant::fromValue(&model)}
+@@ -404,7 +395,6 @@ void tst_QQmlRangeModel::objectRange()
+     QVERIFY(model.dataCalls.contains(Qt::RangeModelDataRole));
+     model.dataCalls.clear();
+     // there shouldn't have been any attempts to write yet
+-    QEXPECT_FAIL("ReadWrite", "Premature calls to setData()", Continue);
+     QCOMPARE(model.setDataCalls, QList<int>{});
+     model.setDataCalls.clear();
+ 
+-- 
+2.51.2
+

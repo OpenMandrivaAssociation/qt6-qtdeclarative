@@ -1,0 +1,110 @@
+From b1bbb76530c6b6715b707e27d5624e4440c76a6c Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Mon, 29 Sep 2025 12:52:52 +0200
+Subject: [PATCH 105/239] QtQml: Clear cached value type instances when
+ clearing component cache
+
+The value type instances can hold on to compilation units, thereby
+keeping parts of the type registry alive.
+
+Pick-to: 6.8
+Fixes: QTBUG-138518
+Change-Id: I490d9c7599b80c86236c29a5c009a3d75a1b6d5c
+Reviewed-by: Sami Shalayel <sami.shalayel@qt.io>
+(cherry picked from commit 7d1ee3b2df4f9911fe01ef4b331720ab6aec8b87)
+---
+ src/qml/qml/qqmlengine.cpp                    |  3 ++
+ tests/auto/qml/qqmlengine/data/MyItem.qml     |  6 ++++
+ .../data/clearGadgetPtrWrappers.qml           |  7 ++++
+ tests/auto/qml/qqmlengine/tst_qqmlengine.cpp  | 34 +++++++++++++++++++
+ 4 files changed, 50 insertions(+)
+ create mode 100644 tests/auto/qml/qqmlengine/data/MyItem.qml
+ create mode 100644 tests/auto/qml/qqmlengine/data/clearGadgetPtrWrappers.qml
+
+diff --git a/src/qml/qml/qqmlengine.cpp b/src/qml/qml/qqmlengine.cpp
+index cc13b5006d..fb60e4a2b1 100644
+--- a/src/qml/qml/qqmlengine.cpp
++++ b/src/qml/qml/qqmlengine.cpp
+@@ -614,6 +614,9 @@ void QQmlEngine::clearComponentCache()
+ {
+     Q_D(QQmlEngine);
+ 
++    // QQmlGadgetPtrWrapper can have QQmlData with various references.
++    qDeleteAll(std::exchange(d->cachedValueTypeInstances, {}));
++
+     // Contexts can hold on to CUs but live on the JS heap.
+     // Use a non-incremental GC run to get rid of those.
+     QV4::MemoryManager *mm = handle()->memoryManager;
+diff --git a/tests/auto/qml/qqmlengine/data/MyItem.qml b/tests/auto/qml/qqmlengine/data/MyItem.qml
+new file mode 100644
+index 0000000000..f920aafb15
+--- /dev/null
++++ b/tests/auto/qml/qqmlengine/data/MyItem.qml
+@@ -0,0 +1,6 @@
++import QtQml
++
++QtObject {
++    property rect rect
++    rect.x: 12
++}
+diff --git a/tests/auto/qml/qqmlengine/data/clearGadgetPtrWrappers.qml b/tests/auto/qml/qqmlengine/data/clearGadgetPtrWrappers.qml
+new file mode 100644
+index 0000000000..0c0724dd8f
+--- /dev/null
++++ b/tests/auto/qml/qqmlengine/data/clearGadgetPtrWrappers.qml
+@@ -0,0 +1,7 @@
++import QtQml
++
++Instantiator {
++    objectName: object
++    delegate: Qt.createComponent(source)
++    property url source: "MyItem.qml"
++}
+diff --git a/tests/auto/qml/qqmlengine/tst_qqmlengine.cpp b/tests/auto/qml/qqmlengine/tst_qqmlengine.cpp
+index 2878e6b476..d5d0d77ca2 100644
+--- a/tests/auto/qml/qqmlengine/tst_qqmlengine.cpp
++++ b/tests/auto/qml/qqmlengine/tst_qqmlengine.cpp
+@@ -435,6 +435,40 @@ void tst_qqmlengine::clearComponentCache()
+     // event delivery. Call sendPostedEvents() to get rid of it so that
+     // the temporary directory can be removed.
+     QCoreApplication::sendPostedEvents();
++
++    engine.clearComponentCache();
++    {
++        // Type referenced by a QQmlGadgetPtrWrapper can be removed using clearComponentCache().
++
++        QQmlComponent component(&engine, testFileUrl("clearGadgetPtrWrappers.qml"));
++        QVERIFY2(component.isReady(), qPrintable(component.errorString()));
++        std::unique_ptr<QObject> obj { component.create() };
++        QVERIFY(obj.get() != nullptr);
++
++        static const QRegularExpression re("MyItem_QMLTYPE_([0-9]+)\\(0x[0-9a-f]+\\)");
++        auto match = re.match(obj->objectName());
++        QVERIFY(match.hasMatch());
++        bool ok = false;
++        const int typeNumber = match.captured(1).toInt(&ok);
++        QVERIFY(ok);
++        QVERIFY(typeNumber >= 0);
++
++        const QUrl source = obj->property("source").value<QUrl>();
++        QVERIFY(source.isValid());
++        obj->setProperty("source", QUrl());
++
++        engine.collectGarbage();
++        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
++        QCoreApplication::processEvents();
++        engine.clearComponentCache();
++
++        obj->setProperty("source", source);
++        match = re.match(obj->objectName());
++        QVERIFY(match.hasMatch());
++        ok = false;
++        QVERIFY(match.captured(1).toInt(&ok) > typeNumber);
++        QVERIFY(ok);
++    }
+ }
+ 
+ struct ComponentCacheFunctions : public QObject, public QQmlIncubationController
+-- 
+2.51.2
+

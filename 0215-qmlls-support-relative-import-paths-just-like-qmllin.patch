@@ -1,0 +1,189 @@
+From dee5d3f4d5e6e83b036d322ee021350e9e617cc5 Mon Sep 17 00:00:00 2001
+From: Sami Shalayel <sami.shalayel@qt.io>
+Date: Fri, 17 Oct 2025 09:54:43 +0200
+Subject: [PATCH 215/239] qmlls: support relative import paths just like
+ qmllint does
+
+Support relative import paths in qmlls.build.ini and .qmlls.ini files.
+Add a helper function in QQmlToolingSettings that takes care of
+resolving paths, and use it in qmlls. A later commit will also use it
+when loading .qmllint.ini files.
+
+Changes compared to dev: adapt test to use a QQmlCodeModel and to the
+slightly different import paths.
+
+Fixes: QTBUG-141219
+Change-Id: Idc22ac07f7aa9910f7e5a6ca51115a457a909fa6
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
+(cherry picked from commit 5ab9a15ef1824a2714015f1a8e9ba56e4b1cb845)
+---
+ src/qmlls/qqmlcodemodel.cpp                   |  3 +-
+ .../qqmltoolingsettings.cpp                   | 24 +++++++++++
+ .../qqmltoolingsettings_p.h                   |  5 +++
+ .../data/FolderWithQmllsIni/.qmlls.ini        |  2 +
+ .../data/FolderWithQmllsIni/SomeType.qml      |  3 ++
+ .../qqmlcodemodel/tst_qmlls_qqmlcodemodel.cpp | 42 +++++++++++++++++++
+ .../qqmlcodemodel/tst_qmlls_qqmlcodemodel.h   |  3 ++
+ 7 files changed, 81 insertions(+), 1 deletion(-)
+ create mode 100644 tests/auto/qmlls/qqmlcodemodel/data/FolderWithQmllsIni/.qmlls.ini
+ create mode 100644 tests/auto/qmlls/qqmlcodemodel/data/FolderWithQmllsIni/SomeType.qml
+
+diff --git a/src/qmlls/qqmlcodemodel.cpp b/src/qmlls/qqmlcodemodel.cpp
+index a375052809..2c65321b7b 100644
+--- a/src/qmlls/qqmlcodemodel.cpp
++++ b/src/qmlls/qqmlcodemodel.cpp
+@@ -582,7 +582,7 @@ QStringList QQmlCodeModel::importPathsForFile(const QString &fileName)
+ 
+     const QString importPaths = u"importPaths"_s;
+     if (m_settings && m_settings->search(fileName) && m_settings->isSet(importPaths)) {
+-        result.append(m_settings->value(importPaths).toString().split(QDir::listSeparator()));
++        result.append(m_settings->valueAsAbsolutePathList(importPaths, fileName));
+     }
+ 
+     const QStringList buildPath = buildPathsForFileUrl(m_path2url[fileName]);
+@@ -830,6 +830,7 @@ QStringList QQmllsBuildInformation::importPathsFor(const QString &filePath)
+             longestMatch = matchLength;
+         }
+     }
++    QQmlToolingSettings::resolveRelativeImportPaths(filePath, &result);
+     return result;
+ }
+ 
+diff --git a/src/qmltoolingsettings/qqmltoolingsettings.cpp b/src/qmltoolingsettings/qqmltoolingsettings.cpp
+index a222ba29ef..acc4d6b9c5 100644
+--- a/src/qmltoolingsettings/qqmltoolingsettings.cpp
++++ b/src/qmltoolingsettings/qqmltoolingsettings.cpp
+@@ -137,6 +137,30 @@ QVariant QQmlToolingSettings::value(const QString &name) const
+     return m_values.value(name);
+ }
+ 
++QStringList QQmlToolingSettings::valueAsStringList(const QString &name) const
++{
++    return value(name).toString().split(QDir::listSeparator());
++}
++
++void QQmlToolingSettings::resolveRelativeImportPaths(const QString &filePath, QStringList *paths)
++{
++    // transform relative paths in absolute paths starting from filePath's directory
++    const QDir fileDir = QFileInfo(filePath).absoluteDir();
++    for (auto it = paths->begin(), end = paths->end(); it != end; ++it) {
++        if (QFileInfo(*it).isAbsolute())
++            continue;
++        *it = QDir::cleanPath(fileDir.filePath(*it));
++    }
++}
++
++QStringList QQmlToolingSettings::valueAsAbsolutePathList(const QString &name,
++                                                         const QString &baseForRelativePaths) const
++{
++    QStringList paths = valueAsStringList(name);
++    resolveRelativeImportPaths(baseForRelativePaths, &paths);
++    return paths;
++}
++
+ bool QQmlToolingSettings::isSet(const QString &name) const
+ {
+     if (!m_values.contains(name))
+diff --git a/src/qmltoolingsettings/qqmltoolingsettings_p.h b/src/qmltoolingsettings/qqmltoolingsettings_p.h
+index 2dbc67ce4f..c44169ed00 100644
+--- a/src/qmltoolingsettings/qqmltoolingsettings_p.h
++++ b/src/qmltoolingsettings/qqmltoolingsettings_p.h
+@@ -33,6 +33,11 @@ public:
+     bool search(const QString &path);
+ 
+     QVariant value(const QString &name) const;
++    QStringList valueAsStringList(const QString &name) const;
++
++    static void resolveRelativeImportPaths(const QString &filePath, QStringList *paths);
++    QStringList valueAsAbsolutePathList(const QString &name,
++                                        const QString &baseForRelativePaths) const;
+     bool isSet(const QString &name) const;
+ 
+ private:
+diff --git a/tests/auto/qmlls/qqmlcodemodel/data/FolderWithQmllsIni/.qmlls.ini b/tests/auto/qmlls/qqmlcodemodel/data/FolderWithQmllsIni/.qmlls.ini
+new file mode 100644
+index 0000000000..cba616a662
+--- /dev/null
++++ b/tests/auto/qmlls/qqmlcodemodel/data/FolderWithQmllsIni/.qmlls.ini
+@@ -0,0 +1,2 @@
++[General]
++importPaths="../twoWorkspaces"
+\ No newline at end of file
+diff --git a/tests/auto/qmlls/qqmlcodemodel/data/FolderWithQmllsIni/SomeType.qml b/tests/auto/qmlls/qqmlcodemodel/data/FolderWithQmllsIni/SomeType.qml
+new file mode 100644
+index 0000000000..7acd230a58
+--- /dev/null
++++ b/tests/auto/qmlls/qqmlcodemodel/data/FolderWithQmllsIni/SomeType.qml
+@@ -0,0 +1,3 @@
++import QtQuick
++
++Item {}
+\ No newline at end of file
+diff --git a/tests/auto/qmlls/qqmlcodemodel/tst_qmlls_qqmlcodemodel.cpp b/tests/auto/qmlls/qqmlcodemodel/tst_qmlls_qqmlcodemodel.cpp
+index 5e60756f7f..ff78bb7323 100644
+--- a/tests/auto/qmlls/qqmlcodemodel/tst_qmlls_qqmlcodemodel.cpp
++++ b/tests/auto/qmlls/qqmlcodemodel/tst_qmlls_qqmlcodemodel.cpp
+@@ -301,4 +301,46 @@ void tst_qmlls_qqmlcodemodel::reloadLotsOfFiles()
+     thread->wait();
+ }
+ 
++void tst_qmlls_qqmlcodemodel::withQmllsBuildIniRelativeImportPath()
++{
++    const QString defaultImportPath = QLibraryInfo::path(QLibraryInfo::QmlImportsPath);
++
++    QTemporaryDir buildPathA;
++    QVERIFY(buildPathA.isValid());
++
++    QDir(buildPathA.path()).mkdir(".qt"_L1);
++
++    {
++        const QString qmllsBuildIni = buildPathA.filePath(".qt/.qmlls.build.ini"_L1);
++        QFile qmllsBuildIniFile(qmllsBuildIni);
++        QVERIFY(qmllsBuildIniFile.open(QFile::WriteOnly | QFile::Text));
++
++        const QString rootA = testFile("twoWorkspaces/WorkSpaceA/"_L1);
++        qmllsBuildIniFile.write(
++                "[General]\n[%1]\nimportPaths=\"%2\"\n"_L1
++                        .arg(QString(rootA).replace("/"_L1, "<SLASH>"_L1), "../ImportPathA")
++                        .toUtf8());
++    }
++
++    QmlLsp::QQmlCodeModel codemodel;
++    codemodel.setBuildPathsForRootUrl({}, { buildPathA.path() });
++
++    const QString importPathA = testFile("twoWorkspaces/ImportPathA"_L1);
++    const QStringList expectedImportPathA{ defaultImportPath, importPathA };
++    QCOMPARE_EQ(codemodel.importPathsForFile(testFile("twoWorkspaces/WorkSpaceA/file.qml"_L1)),
++                expectedImportPathA);
++}
++
++void tst_qmlls_qqmlcodemodel::withQmllsIniRelativeImportPath()
++{
++    const QString defaultImportPath = QLibraryInfo::path(QLibraryInfo::QmlImportsPath);
++
++    QQmlToolingSettings settings("qmlls");
++    QmlLsp::QQmlCodeModel model(nullptr, &settings);
++    const QString importPathA = testFile("twoWorkspaces"_L1);
++    const QStringList expectedImportPathA = (model.importPaths() << importPathA);
++    QCOMPARE_EQ(model.importPathsForFile(testFile("FolderWithQmllsIni/SomeType.qml")),
++                expectedImportPathA);
++}
++
+ QTEST_MAIN(tst_qmlls_qqmlcodemodel)
+diff --git a/tests/auto/qmlls/qqmlcodemodel/tst_qmlls_qqmlcodemodel.h b/tests/auto/qmlls/qqmlcodemodel/tst_qmlls_qqmlcodemodel.h
+index dc51fdf031..f9c360f631 100644
+--- a/tests/auto/qmlls/qqmlcodemodel/tst_qmlls_qqmlcodemodel.h
++++ b/tests/auto/qmlls/qqmlcodemodel/tst_qmlls_qqmlcodemodel.h
+@@ -34,6 +34,9 @@ private slots:
+     void openFiles();
+     void importPathViaSettings();
+     void reloadLotsOfFiles();
++
++    void withQmllsBuildIniRelativeImportPath();
++    void withQmllsIniRelativeImportPath();
+ };
+ 
+ #endif // TST_QMLLS_QQMLCODEMODEL_H
+-- 
+2.51.2
+

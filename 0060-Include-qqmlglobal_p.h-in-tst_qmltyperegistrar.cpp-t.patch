@@ -1,0 +1,41 @@
+From 1dac1435d4c037105debec6f79c8e45f7e20e9b4 Mon Sep 17 00:00:00 2001
+From: Volker Hilsheimer <volker.hilsheimer@qt.io>
+Date: Thu, 18 Sep 2025 13:05:36 +0200
+Subject: [PATCH 060/239] Include qqmlglobal_p.h in tst_qmltyperegistrar.cpp to
+ fix build
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Fixes build error from testing for an unknown feature flag, i.e.
+
+tst_qmltyperegistrar.cpp:1439:6: error: division by zero in preprocessor
+expression
+
+As it's a private feature, include a private header.
+
+Change-Id: I6112d73ebb738a555c05211d8f6c29a053de7b39
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
+Reviewed-by: Mårten Nordheim <marten.nordheim@qt.io>
+(cherry picked from commit dec68b9e75a67270f41fdd68d13f7d1639997413)
+Reviewed-by: Volker Hilsheimer <volker.hilsheimer@qt.io>
+---
+ tests/auto/qml/qmltyperegistrar/tst_qmltyperegistrar.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/tests/auto/qml/qmltyperegistrar/tst_qmltyperegistrar.cpp b/tests/auto/qml/qmltyperegistrar/tst_qmltyperegistrar.cpp
+index 70b6898747..96b18abd2c 100644
+--- a/tests/auto/qml/qmltyperegistrar/tst_qmltyperegistrar.cpp
++++ b/tests/auto/qml/qmltyperegistrar/tst_qmltyperegistrar.cpp
+@@ -13,6 +13,8 @@
+ #include <QtQml/qqmlcomponent.h>
+ #include <QtQml/qqmlengine.h>
+ #include <QtQml/qqmlprivate.h>
++#include <QtQml/qtqmlglobal.h>
++#include <QtQml/private/qtqmlglobal_p.h>
+ 
+ #include <QtCore/qcoreapplication.h>
+ #include <QtCore/qfile.h>
+-- 
+2.51.2
+

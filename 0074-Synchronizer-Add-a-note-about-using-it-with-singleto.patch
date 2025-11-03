@@ -1,0 +1,35 @@
+From 7079e6889c908159414e4e2ad9b7a20c5966bfb3 Mon Sep 17 00:00:00 2001
+From: Fabian Kosmale <fabian.kosmale@qt.io>
+Date: Tue, 23 Sep 2025 16:52:57 +0200
+Subject: [PATCH 074/239] Synchronizer: Add a note about using it with
+ singletons
+
+Notably, that you can't use aliases.
+
+Fixes: QTBUG-139608
+Change-Id: I984dea6695419b11f777e7ad516b4c15ead6c3ed
+Reviewed-by: Ulf Hermann <ulf.hermann@qt.io>
+(cherry picked from commit 9d768789ffd69a92354fdef0c29b25f9e54b4e22)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/labs/synchronizer/qqmlsynchronizer.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/labs/synchronizer/qqmlsynchronizer.cpp b/src/labs/synchronizer/qqmlsynchronizer.cpp
+index d8246705ba..2f64161834 100644
+--- a/src/labs/synchronizer/qqmlsynchronizer.cpp
++++ b/src/labs/synchronizer/qqmlsynchronizer.cpp
+@@ -409,6 +409,10 @@ public:
+ 
+     If the properties to be synchronized are of different types, the usual
+     QML type coercions are applied.
++
++    \note It is not possible to create an alias to a property of a singleton.
++    When using Synchronizer together with singletons, use \l{sourceObject} and
++    \l{sourceProperty} and the respective target properties.
+  */
+ 
+ QQmlSynchronizer::QQmlSynchronizer(QObject *parent)
+-- 
+2.51.2
+

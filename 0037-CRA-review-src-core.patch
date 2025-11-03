@@ -1,0 +1,131 @@
+From 0b093770a25a60b5415a718ca5ee5207c5a083a8 Mon Sep 17 00:00:00 2001
+From: MohammadHossein Qanbari <mohammad.qanbari@qt.io>
+Date: Mon, 15 Sep 2025 15:32:48 +0200
+Subject: [PATCH 037/239] CRA review: src/core/
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+No data parsing or critical situation is found.
+
+QUIP: 23
+Fixes: QTBUG-136181
+Pick-to: 6.9 6.8
+Change-Id: I8fe748a6cd82d4e6f762dcda8e16967282a8403f
+Reviewed-by: Jan Arve Sæther <jan-arve.saether@qt.io>
+(cherry picked from commit 11348012d0829fb23712c7194d4045f0428fb5a0)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/core/qqmlcoreglobal_p.h        | 1 +
+ src/core/qqmlpermissions.cpp       | 1 +
+ src/core/qqmlpermissions_p.h       | 1 +
+ src/core/qqmlsettings.cpp          | 1 +
+ src/core/qqmlsettings_p.h          | 1 +
+ src/core/qqmlstandardpaths.cpp     | 1 +
+ src/core/qqmlstandardpaths_p.h     | 1 +
+ src/core/qqmlsysteminformation.cpp | 1 +
+ src/core/qqmlsysteminformation_p.h | 1 +
+ 9 files changed, 9 insertions(+)
+
+diff --git a/src/core/qqmlcoreglobal_p.h b/src/core/qqmlcoreglobal_p.h
+index 57bb5b0f93..63d656eb01 100644
+--- a/src/core/qqmlcoreglobal_p.h
++++ b/src/core/qqmlcoreglobal_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2021 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #ifndef QQMLCOREGLOBAL_P_H
+ #define QQMLCOREGLOBAL_P_H
+diff --git a/src/core/qqmlpermissions.cpp b/src/core/qqmlpermissions.cpp
+index 0405141278..752b723b61 100644
+--- a/src/core/qqmlpermissions.cpp
++++ b/src/core/qqmlpermissions.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2025 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #include "qqmlpermissions_p.h"
+ 
+diff --git a/src/core/qqmlpermissions_p.h b/src/core/qqmlpermissions_p.h
+index 6bba2d1c6a..838f85c8d6 100644
+--- a/src/core/qqmlpermissions_p.h
++++ b/src/core/qqmlpermissions_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2023 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #ifndef QQMLPERMISSIONS_P_H
+ #define QQMLPERMISSIONS_P_H
+diff --git a/src/core/qqmlsettings.cpp b/src/core/qqmlsettings.cpp
+index 680aa510c1..14601f5cec 100644
+--- a/src/core/qqmlsettings.cpp
++++ b/src/core/qqmlsettings.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2022 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #include "qqmlsettings_p.h"
+ 
+diff --git a/src/core/qqmlsettings_p.h b/src/core/qqmlsettings_p.h
+index 1a6a5be463..285b3f926b 100644
+--- a/src/core/qqmlsettings_p.h
++++ b/src/core/qqmlsettings_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2022 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #ifndef QQMLSETTINGS_P_H
+ #define QQMLSETTINGS_P_H
+diff --git a/src/core/qqmlstandardpaths.cpp b/src/core/qqmlstandardpaths.cpp
+index a06b9e3454..d2b17332d7 100644
+--- a/src/core/qqmlstandardpaths.cpp
++++ b/src/core/qqmlstandardpaths.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2021 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #include "qqmlstandardpaths_p.h"
+ 
+diff --git a/src/core/qqmlstandardpaths_p.h b/src/core/qqmlstandardpaths_p.h
+index b9e82f1656..233c89633d 100644
+--- a/src/core/qqmlstandardpaths_p.h
++++ b/src/core/qqmlstandardpaths_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2021 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #ifndef QQMLSTANDARDPATHS_P_H
+ #define QQMLSTANDARDPATHS_P_H
+diff --git a/src/core/qqmlsysteminformation.cpp b/src/core/qqmlsysteminformation.cpp
+index ce2be752e6..bb722fc90e 100644
+--- a/src/core/qqmlsysteminformation.cpp
++++ b/src/core/qqmlsysteminformation.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2022 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #include "qqmlsysteminformation_p.h"
+ #include <QtCore/qsysinfo.h>
+diff --git a/src/core/qqmlsysteminformation_p.h b/src/core/qqmlsysteminformation_p.h
+index e01a5c42c6..e527ca7d1c 100644
+--- a/src/core/qqmlsysteminformation_p.h
++++ b/src/core/qqmlsysteminformation_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2022 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #ifndef QQMLSYSTEMINFORMATION_P_H
+ #define QQMLSYSTEMINFORMATION_P_H
+-- 
+2.51.2
+

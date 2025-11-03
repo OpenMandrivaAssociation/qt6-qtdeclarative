@@ -1,0 +1,123 @@
+From 38ac6f4f6845924946bf502a94c14761d54d3d38 Mon Sep 17 00:00:00 2001
+From: Sami Shalayel <sami.shalayel@qt.io>
+Date: Fri, 17 Oct 2025 08:37:41 +0200
+Subject: [PATCH 218/239] doc: remove hints to QT_QML_GENERATE_QMLLS_INI
+
+It shouldn't be needed anymore in Qt 6.10, so remove all links and hints
+to it across the documentation. The QT_QML_GENERATE_QMLLS_INI variable
+still does stuff in 6.10, so keep the QT_QML_GENERATE_QMLLS_INI
+documentation still around.
+
+Fixes: QTBUG-141225
+Change-Id: I0312dc8beaa2417ad2621a0da5feb8a27a280865
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
+Reviewed-by: Leena Miettinen <riitta-leena.miettinen@qt.io>
+(cherry picked from commit a425ae599afa45f51c58b414efc0bfeff5e755af)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qml/doc/src/cmake/cmake-variables.qdoc     |  1 +
+ src/qml/doc/src/cmake/qt_add_qml_module.qdoc   |  3 ---
+ src/qml/doc/src/qmllint/import.qdoc            |  7 -------
+ src/qml/doc/src/tools/qtqml-tooling-qmlls.qdoc | 18 +++++++-----------
+ 4 files changed, 8 insertions(+), 21 deletions(-)
+
+diff --git a/src/qml/doc/src/cmake/cmake-variables.qdoc b/src/qml/doc/src/cmake/cmake-variables.qdoc
+index 0f46133378..0f640cabdd 100644
+--- a/src/qml/doc/src/cmake/cmake-variables.qdoc
++++ b/src/qml/doc/src/cmake/cmake-variables.qdoc
+@@ -69,6 +69,7 @@ This variable has no effect if \l{QT_QML_GENERATE_QMLLS_INI} is disabled.
+ \title QT_QML_GENERATE_QMLLS_INI
+ 
+ \brief Enables autogeneration of .qmlls.ini files for \QMLLS.
++\warning This variable is deprecated since Qt 6.10. No replacement needed.
+ \cmakevariablesince 6.7
+ 
+ \c QT_QML_GENERATE_QMLLS_INI is a boolean that describes whether
+diff --git a/src/qml/doc/src/cmake/qt_add_qml_module.qdoc b/src/qml/doc/src/cmake/qt_add_qml_module.qdoc
+index ef3a31b3a9..5a03ebd3b5 100644
+--- a/src/qml/doc/src/cmake/qt_add_qml_module.qdoc
++++ b/src/qml/doc/src/cmake/qt_add_qml_module.qdoc
+@@ -66,9 +66,6 @@ qt_add_qml_module(
+ See \l {Building a QML application} and \l {Building a reusable QML module}
+ for examples that define QML modules.
+ 
+-See \l {QT_QML_GENERATE_QMLLS_INI} for configuring your project such that information about
+-QML modules is exposed to the \l{QML Language Server}.
+-
+ \section1 Description
+ 
+ This command defines a QML module that can consist of C++ sources, \c{.qml}
+diff --git a/src/qml/doc/src/qmllint/import.qdoc b/src/qml/doc/src/qmllint/import.qdoc
+index 7594f13367..c9274b55e7 100644
+--- a/src/qml/doc/src/qmllint/import.qdoc
++++ b/src/qml/doc/src/qmllint/import.qdoc
+@@ -20,7 +20,6 @@ This can be caused, for example, by
+     \li a typo in the import statement, or
+     \li a user-defined module that was not built, or
+     \li a wrong \l{Import Statements#qml-import-path}{import path}, or
+-    \li (qmlls only) \l{QT_QML_GENERATE_QMLLS_INI} not being set, or
+     \li a missing module
+ \endlist
+ 
+@@ -62,11 +61,6 @@ Please refer to \l{Import Statements#qml-import-path}{the QML import path docume
+ \l{Debugging QML Applications#debugging-module-imports}{the debugging module import documentation}
+ for more information about import paths.
+ 
+-\section3 QT_QML_GENERATE_QMLLS_INI not being sert
+-
+-Please refer to \l{QT_QML_GENERATE_QMLLS_INI}{the QT_QML_GENERATE_QMLLS_INI documentation}
+-for more information on how to set that CMake variable.
+-
+ \section3 Missing module
+ 
+ If the previous sections did not help to find the imported module, it might be missing.
+@@ -171,4 +165,3 @@ Item {
+ \sa{Import Statements}
+ 
+ */
+-
+diff --git a/src/qml/doc/src/tools/qtqml-tooling-qmlls.qdoc b/src/qml/doc/src/tools/qtqml-tooling-qmlls.qdoc
+index d06ec9b44e..46de0f2d70 100644
+--- a/src/qml/doc/src/tools/qtqml-tooling-qmlls.qdoc
++++ b/src/qml/doc/src/tools/qtqml-tooling-qmlls.qdoc
+@@ -175,22 +175,19 @@ your editor should invoke \c{qmlls} as follows:
+ This file should be in the root source directory of the project.
+ It should be a text file in the ini-format.
+ 
+-\note \c{.qmlls.ini} files can be generated automatically via
+-\l{QT_QML_GENERATE_QMLLS_INI}.
+-
+-The configuration file should look like this:
++The configuration file can have the following entries:
+ \code
+ // .qmlls.ini
+ [General]
+-buildDir=<path/to/build-directory>
+ no-cmake-calls=<true-or-false>
+-docDir=<path/to/qt-documentation>
+-importPaths=<path/to/imports>
++
++buildDir=<path/to/build-directory> # not required in Qt 6.10 and later
++docDir=<path/to/qt-documentation>  # not required in Qt 6.10 and later
++importPaths=<path/to/imports>      # not required in Qt 6.10 and later
+ \endcode
+ 
+-Currently, the configuration file can be used to set the build
+-directory of the current project and optionally disable the automatic
+-CMake rebuild functionality for C++ defined QML types.
++To use the configuration file to disable the automatic CMake rebuild
++functionality, set \c{no-cmake-calls} to \c{true}.
+ 
+ \note \QMLLS can create default configuration files
+ using the \c{--write-defaults} option. This will overwrite an
+@@ -211,7 +208,6 @@ yet to be supported:
+     \li using QMake or imperative type registration---see \l{Port QML modules to CMake}
+     \li that were not built---\QMLLS uses the build information to find QML modules
+     \li where QML modules don't follow the guidelines in \l{Modern QML modules}
+-    \li not using \l QT_QML_GENERATE_QMLLS_INI
+ \endlist
+ 
+ */
+-- 
+2.51.2
+

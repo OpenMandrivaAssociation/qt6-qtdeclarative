@@ -1,0 +1,44 @@
+From 2f807fa22963eda556b5f7d1c9fab95b83541a6b Mon Sep 17 00:00:00 2001
+From: Mitch Curtis <mitch.curtis@qt.io>
+Date: Wed, 27 Aug 2025 10:22:44 +0800
+Subject: [PATCH 025/239] Unblacklist a few tst_QQuickPopup tests on macOS
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+These were added in 031da6519072529481b045e67d143bd55a120aef but don't
+have any test data listed in Grafana on 6.5, 6.8, 6.9, 6.10 or dev, so
+we can assume they're passing.
+
+Task-number: QTBUG-114718
+Pick-to: 6.9 6.8
+Change-Id: Ia7e6effc46b56c0e9985c00182de7436fc1ab037
+Reviewed-by: Tor Arne Vestbø <tor.arne.vestbo@qt.io>
+(cherry picked from commit f27b5464cd1dd06dc6e97c9bb9bd20730b76971a)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ tests/auto/quickcontrols/qquickpopup/BLACKLIST | 8 +-------
+ 1 file changed, 1 insertion(+), 7 deletions(-)
+
+diff --git a/tests/auto/quickcontrols/qquickpopup/BLACKLIST b/tests/auto/quickcontrols/qquickpopup/BLACKLIST
+index cc87aa3b70..9c3c544339 100644
+--- a/tests/auto/quickcontrols/qquickpopup/BLACKLIST
++++ b/tests/auto/quickcontrols/qquickpopup/BLACKLIST
+@@ -1,13 +1,7 @@
+ # See qtbase/src/testlib/qtestblacklist.cpp for format
+ 
+-# QTBUG-114718 (begin)
+-[invisibleToolTipOpen]
+-macos
+-[cursorShape]
+-macos
+ [doubleClickInMouseArea]
+-macos
+-# QTBUG-114718 (end)
++macos # QTBUG-139571
+ 
+ [popupWindowFocus]
+ offscreen # QTBUG-128321
+-- 
+2.51.2
+

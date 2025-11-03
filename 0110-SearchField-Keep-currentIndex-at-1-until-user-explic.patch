@@ -1,0 +1,223 @@
+From 3cba925cddf5ae4f2d566554895f800c8fe88384 Mon Sep 17 00:00:00 2001
+From: Dilek Akcay <dilek.akcay@qt.io>
+Date: Wed, 17 Sep 2025 09:45:19 +0200
+Subject: [PATCH 110/239] SearchField: Keep currentIndex at -1 until user
+ explicitly selects
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Until now, currentIndex was assigned to different values on different
+actions, like to 0 on model changes, or to the index of the highlighted
+index according to the arrow key actions. These caused unexpected behavior
+so the following changes were made:
+
+- Removed setting to 0 when model is set in the beginning.
+- Reset currentIndex to -1 on any user edit(typing/deleting)
+- Disabled arrow key interactions on currentIndex
+
+Now currentIndex only changes whether the user clicks an item in the
+popup or presses Enter on a highlighted item.
+
+Change-Id: Ib1a991c87a767fe436b4b025a26834871401ca4b
+Reviewed-by: Jan Arve Sæther <jan-arve.saether@qt.io>
+(cherry picked from commit 530189838a00ee15c6c824a7d07ea7a54b98ed32)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quicktemplates/qquicksearchfield.cpp      | 33 ++++++--------
+ .../controls/data/tst_searchfield.qml         | 43 ++++++++++++++++---
+ 2 files changed, 52 insertions(+), 24 deletions(-)
+
+diff --git a/src/quicktemplates/qquicksearchfield.cpp b/src/quicktemplates/qquicksearchfield.cpp
+index feddc1208f..a299df75a9 100644
+--- a/src/quicktemplates/qquicksearchfield.cpp
++++ b/src/quicktemplates/qquicksearchfield.cpp
+@@ -376,9 +376,6 @@ void QQuickSearchFieldPrivate::increaseCurrentIndex()
+     if (isPopupVisible()) {
+         if (highlightedIndex < q->suggestionCount() - 1)
+             setHighlightedIndex(highlightedIndex + 1, Highlight);
+-    } else {
+-        if (currentIndex < q->suggestionCount() - 1)
+-            setCurrentItemAtIndex(currentIndex + 1, Activate);
+     }
+ }
+ 
+@@ -387,9 +384,6 @@ void QQuickSearchFieldPrivate::decreaseCurrentIndex()
+     if (isPopupVisible()) {
+         if (highlightedIndex > 0)
+             setHighlightedIndex(highlightedIndex - 1, Highlight);
+-    } else {
+-        if (currentIndex > 0)
+-            setCurrentItemAtIndex(currentIndex - 1, Activate);
+     }
+ }
+ 
+@@ -420,7 +414,17 @@ void QQuickSearchFieldPrivate::setCurrentItemAtIndex(int index, Activation activ
+ 
+ void QQuickSearchFieldPrivate::updateHighlightedIndex()
+ {
+-    setHighlightedIndex(popup->isVisible() ? currentIndex : -1, NoHighlight);
++    Q_Q(QQuickSearchField);
++    int index = -1;
++
++    if (isPopupVisible()) {
++        if (currentIndex >= 0)
++            index = currentIndex;
++        else if (q->suggestionCount() > 0)
++            index = 0; // auto-highlight first suggestion
++    }
++
++    setHighlightedIndex(index, NoHighlight);
+ }
+ 
+ void QQuickSearchFieldPrivate::setHighlightedIndex(int index, Highlighting highlight)
+@@ -502,6 +506,9 @@ void QQuickSearchFieldPrivate::updateText()
+         q->setText(textInput);
+         emit q->textEdited();
+ 
++        setCurrentIndex(-1);
++        updateHighlightedIndex();
++
+         if (live)
+             emit q->searchTriggered();
+     }
+@@ -720,9 +727,6 @@ void QQuickSearchField::setSuggestionModel(const QVariant &model)
+     d->suggestionModel = suggestionModel;
+     d->createDelegateModel();
+     emit suggestionCountChanged();
+-    if (isComponentComplete()) {
+-        setCurrentIndex(suggestionCount() > 0 ? 0 : -1);
+-    }
+     emit suggestionModelChanged();
+ }
+ 
+@@ -1114,15 +1118,11 @@ void QQuickSearchField::keyPressEvent(QKeyEvent *event)
+         case Qt::Key_Home:
+             if (d->isPopupVisible())
+                 d->setHighlightedIndex(0, Highlight);
+-            else
+-                d->setCurrentItemAtIndex(0, Activate);
+             event->accept();
+             break;
+         case Qt::Key_End:
+             if (d->isPopupVisible())
+                 d->setHighlightedIndex(suggestionCount() - 1, Highlight);
+-            else
+-                d->setCurrentItemAtIndex(suggestionCount() - 1, Activate);
+             event->accept();
+             break;
+         default:
+@@ -1156,11 +1156,6 @@ void QQuickSearchField::componentComplete()
+ 
+     if (d->delegateModel && d->ownModel)
+         static_cast<QQmlDelegateModel *>(d->delegateModel)->componentComplete();
+-
+-    if (suggestionCount() > 0) {
+-        if (!d->hasCurrentIndex && d->currentIndex == -1)
+-            setCurrentIndex(0);
+-    }
+ }
+ 
+ void QQuickSearchField::contentItemChange(QQuickItem *newItem, QQuickItem *oldItem)
+diff --git a/tests/auto/quickcontrols/controls/data/tst_searchfield.qml b/tests/auto/quickcontrols/controls/data/tst_searchfield.qml
+index 7a2e569f7c..b51b1c7b23 100644
+--- a/tests/auto/quickcontrols/controls/data/tst_searchfield.qml
++++ b/tests/auto/quickcontrols/controls/data/tst_searchfield.qml
+@@ -151,13 +151,13 @@ TestCase {
+ 
+         textItem.text = "a"
+         compare(control.suggestionCount, 2)
+-        compare(control.currentIndex, 0)
++        compare(control.currentIndex, -1)
+         compare(control.highlightedIndex, 0)
+         compare(control.popup.visible, true)
+ 
+         textItem.text = "c"
+         compare(control.suggestionCount, 3)
+-        compare(control.currentIndex, 0)
++        compare(control.currentIndex, -1)
+         compare(control.highlightedIndex, 0)
+         compare(control.popup.visible, true)
+     }
+@@ -177,11 +177,43 @@ TestCase {
+         textItem.text = "a"
+ 
+         compare(control.text, "a")
++        compare(control.currentIndex, -1)
+         compare(textEditedSpy.count, 1)
+ 
+         compare(searchTriggeredSpy.count, 1)
+     }
+ 
++    function test_currentIndexResetsOnEdit() {
++        ignoreWarning(/Unable to assign QQmlDMAbstractItemModelData to QString/)
++        let control = createTemporaryObject(searchField, testCase)
++        verify(control)
++
++        control.forceActiveFocus()
++        verify(control.activeFocus)
++
++        control.suggestionModel = fruitModel
++        control.textRole = "name"
++
++        let textItem = control.contentItem
++        textItem.text = "a"
++
++        compare(control.popup.visible, true)
++
++        compare(control.currentIndex, -1)
++        compare(control.highlightedIndex, 0)
++
++        keyClick(Qt.Key_Down)
++        compare(control.currentIndex, -1)
++        compare(control.highlightedIndex, 1)
++
++        keyClick(Qt.Key_Enter)
++        compare(control.currentIndex, 1)
++        compare(control.popup.visible, false)
++
++        textItem.text = control.text + "x"
++        compare(control.currentIndex, -1)
++    }
++
+     function test_arrowKeys() {
+         ignoreWarning(/Unable to assign QQmlDMAbstractItemModelData to QString/)
+         let control = createTemporaryObject(searchField, testCase)
+@@ -220,7 +252,7 @@ TestCase {
+         compare(control.popup.visible, true)
+ 
+         keyClick(Qt.Key_Down)
+-        compare(control.currentIndex, 0)
++        compare(control.currentIndex, -1)
+         compare(control.highlightedIndex, 1)
+         compare(activatedSpy.count, 0)
+         compare(highlightedSpy.count, 1)
+@@ -228,7 +260,7 @@ TestCase {
+         highlightedSpy.clear()
+ 
+         keyClick(Qt.Key_Down)
+-        compare(control.currentIndex, 0)
++        compare(control.currentIndex, -1)
+         compare(control.highlightedIndex, 2)
+         compare(activatedSpy.count, 0)
+         compare(highlightedSpy.count, 1)
+@@ -236,7 +268,7 @@ TestCase {
+         highlightedSpy.clear()
+ 
+         keyClick(Qt.Key_Up)
+-        compare(control.currentIndex, 0)
++        compare(control.currentIndex, -1)
+         compare(control.highlightedIndex, 1)
+         compare(activatedSpy.count, 0)
+         compare(highlightedSpy.count, 1)
+@@ -245,6 +277,7 @@ TestCase {
+ 
+         keyClick(Qt.Key_Enter)
+         compare(control.text, "Cherry")
++        compare(control.currentIndex, 1)
+         compare(acceptedSpy.count, 1)
+         compare(searchTriggeredSpy.count, 2)
+ 
+-- 
+2.51.2
+

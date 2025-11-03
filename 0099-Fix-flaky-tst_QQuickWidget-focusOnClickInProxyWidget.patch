@@ -1,0 +1,40 @@
+From ad4a2c3b2ac24e87c1276bc9bb593e6e971f4567 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Fr=C3=A9d=C3=A9ric=20Lefebvre?= <frederic.lefebvre@qt.io>
+Date: Fri, 26 Sep 2025 13:16:43 +0200
+Subject: [PATCH 099/239] Fix flaky tst_QQuickWidget::focusOnClickInProxyWidget
+ on Ubuntu Wayland
+
+Ensure window1 is active before proceeding with mouse click.
+
+Previously, we only checked if window1 was created, which was
+insufficient for the subsequent mouse click operation. Modify a check
+condition to ensure the window is active before proceeding.
+
+Fix flakiness on Ubuntu 24.04 wayland.
+
+Fixes: QTBUG-138480
+Pick-to: 6.8 6.5
+Change-Id: I12e262d5a9d4e54a254ae6afd44f98347cc79d98
+Reviewed-by: Shawn Rutledge <shawn.rutledge@qt.io>
+(cherry picked from commit b1faaf1837b449f4a5a44cb18303d425bedfe06f)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ tests/auto/quickwidgets/qquickwidget/tst_qquickwidget.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tests/auto/quickwidgets/qquickwidget/tst_qquickwidget.cpp b/tests/auto/quickwidgets/qquickwidget/tst_qquickwidget.cpp
+index f1f69182f9..a4c03ddaa1 100644
+--- a/tests/auto/quickwidgets/qquickwidget/tst_qquickwidget.cpp
++++ b/tests/auto/quickwidgets/qquickwidget/tst_qquickwidget.cpp
+@@ -1174,7 +1174,7 @@ void tst_qquickwidget::focusOnClickInProxyWidget()
+ 
+     QVERIFY(QTest::qWaitForWindowExposed(&view2));
+     QWindow *window2 = view2.windowHandle();
+-    QVERIFY(window2);
++    QVERIFY(QTest::qWaitForWindowActive(window2));
+ 
+     QTest::mouseClick(window2, Qt::LeftButton, Qt::KeyboardModifiers(), QPoint(300, 300));
+     QTRY_VERIFY(!text1->hasActiveFocus());
+-- 
+2.51.2
+

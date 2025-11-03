@@ -1,0 +1,163 @@
+From 6174007ba195229e812f23148431e51a8945e38e Mon Sep 17 00:00:00 2001
+From: Paul Olav Tvete <paul.tvete@qt.io>
+Date: Fri, 6 Jun 2025 12:11:10 +0200
+Subject: [PATCH 158/239] QQuickShaderEffectSource: Don't cut off bottom row of
+ texture
+
+When the source height or width is not an integer number of pixels, the
+texture size will be rounded up. This could cause the bottom/right edge
+of the texture to be omitted, since the target size for the image node
+was also not in whole pixels, and the pixel coverage for those edge
+pixels could become <= 50%.
+This patch rounds up the targetRect to match the texture size, so it
+will be rendered at exactly 1:1 when the scale factor is 1. Note that
+this only fixes the issue for integer scale factors, since the target
+size is calculated in updatePaintNode, which is not called when the
+scale changes.
+
+Fixes: QTBUG-136783
+Pick-to: 6.8
+Change-Id: I0d04e4efa65d4a77f842fc3093a143ceb6666608
+Reviewed-by: Eirik Aavitsland <eirik.aavitsland@qt.io>
+(cherry picked from commit 51f24ef1209a161589eb73073ccf01a424b101f9)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quick/items/qquickshadereffectsource.cpp  |  10 +-
+ .../shaders/layer/layer-pixel-coverage.qml    | 104 ++++++++++++++++++
+ 2 files changed, 112 insertions(+), 2 deletions(-)
+ create mode 100644 tests/baseline/scenegraph/data/shaders/layer/layer-pixel-coverage.qml
+
+diff --git a/src/quick/items/qquickshadereffectsource.cpp b/src/quick/items/qquickshadereffectsource.cpp
+index 002bddf81a..1335bfb128 100644
+--- a/src/quick/items/qquickshadereffectsource.cpp
++++ b/src/quick/items/qquickshadereffectsource.cpp
+@@ -736,8 +736,14 @@ QSGNode *QQuickShaderEffectSource::updatePaintNode(QSGNode *oldNode, UpdatePaint
+     node->setFiltering(filtering);
+     node->setHorizontalWrapMode(hWrap);
+     node->setVerticalWrapMode(vWrap);
+-    node->setTargetRect(QRectF(0, 0, width(), height()));
+-    node->setInnerTargetRect(QRectF(0, 0, width(), height()));
++
++    qreal dummy;
++    qreal fx = std::modf(x(), &dummy);
++    qreal fy = std::modf(y(), &dummy);
++    QRectF targetRect(0, 0, qCeil(fx) + qCeil(width()), qCeil(fy) + qCeil(height()));
++    node->setTargetRect(targetRect);
++    node->setInnerTargetRect(targetRect);
++
+     node->update();
+ 
+     return node;
+diff --git a/tests/baseline/scenegraph/data/shaders/layer/layer-pixel-coverage.qml b/tests/baseline/scenegraph/data/shaders/layer/layer-pixel-coverage.qml
+new file mode 100644
+index 0000000000..565f1f79b0
+--- /dev/null
++++ b/tests/baseline/scenegraph/data/shaders/layer/layer-pixel-coverage.qml
+@@ -0,0 +1,104 @@
++import QtQuick
++import QtQuick.Shapes
++
++Item {
++    width: 320
++    height: 480
++
++    Rectangle {
++        x: 10
++        y: 10
++        width: 100
++        height: 100.5
++        layer.enabled: false
++        color: "cornsilk"
++        border.width: 1
++        border.color: "black"
++    }
++
++    Rectangle {
++        x: 10
++        y: 120
++        width: 100
++        height: 100.5
++        layer.enabled: true
++        color: "oldlace"
++        border.width: 1
++        border.color: "black"
++    }
++
++    Rectangle {
++        x: 10
++        y: 240
++        width: 100
++        height: 100.5
++        layer.enabled: true
++        layer.samples: 4
++        color: "linen"
++        border.width: 1
++        border.color: "black"
++    }
++
++
++    Shape {
++        layer.enabled: true
++        layer.samples: 4
++        x: 150
++        y: 100 + (0.5 / Screen.devicePixelRatio)
++
++        ShapePath {
++            strokeColor: "#FF0000"
++            strokeWidth: 1 / Screen.devicePixelRatio
++            capStyle: ShapePath.FlatCap
++            startX: 0
++            startY: 0
++            PathLine {
++                x: 100
++                y: 0
++            }
++        }
++
++        ShapePath {
++            strokeColor: "#00FF00"
++            strokeWidth: 1 / Screen.devicePixelRatio
++            capStyle: ShapePath.FlatCap
++            startX: 0
++            startY: 34
++            PathLine {
++                x: 100
++                y: 34
++            }
++        }
++    }
++
++    Shape {
++        layer.enabled: true
++        layer.samples: 4
++        x: 150
++        y: 200
++
++        ShapePath {
++            strokeColor: "#FF0000"
++            strokeWidth: 1 / Screen.devicePixelRatio
++            capStyle: ShapePath.FlatCap
++            startX: 0
++            startY: 0
++            PathLine {
++                x: 100
++                y: 0
++            }
++        }
++
++        ShapePath {
++            strokeColor: "#00FF00"
++            strokeWidth: 1 / Screen.devicePixelRatio
++            capStyle: ShapePath.FlatCap
++            startX: 0
++            startY: 34
++            PathLine {
++                x: 100
++                y: 34
++            }
++        }
++    }
++}
+-- 
+2.51.2
+

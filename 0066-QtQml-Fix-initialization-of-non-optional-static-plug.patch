@@ -1,0 +1,341 @@
+From c1eda2ead61a53b0e32ab7f373ec29a8e262e2fe Mon Sep 17 00:00:00 2001
+From: Tim Blechmann <tim.blechmann@qt.io>
+Date: Fri, 19 Sep 2025 09:08:40 +0800
+Subject: [PATCH 066/239] QtQml: Fix initialization of non-optional static
+ plugins
+
+Don't let the initialization of a non-optional, supposedly dynamic,
+plugin pass if there actually is no QPluginLoader for it. The absence of
+the QPluginLoader in this case tells us that the plugin is in fact
+static and we need to check the static plugin map.
+
+Optional static plugins are not an issue here since there is no code
+path to create instances of those. They need to be linked into the
+application and thereby have their module registration function hooked
+up in order to be reachable at all.
+
+Task-number: QTBUG-140220
+Change-Id: I82e44fba2f2880ada16a5ea60e2e33f1900b208e
+Reviewed-by: Ulf Hermann <ulf.hermann@qt.io>
+(cherry picked from commit d66cfa93eefa185aa15d42e9dc38cbcdbd0578cb)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qml/qml/qqmlpluginimporter.cpp            |  15 +-
+ tests/auto/qml/CMakeLists.txt                 |   1 +
+ .../qqmlextensionplugin_static/CMakeLists.txt |  24 +++
+ .../plugin/plugin.cpp                         |  39 ++++
+ .../tst_qqmlextensionplugin_static.cpp        | 180 ++++++++++++++++++
+ 5 files changed, 255 insertions(+), 4 deletions(-)
+ create mode 100644 tests/auto/qml/qqmlextensionplugin_static/CMakeLists.txt
+ create mode 100644 tests/auto/qml/qqmlextensionplugin_static/plugin/plugin.cpp
+ create mode 100644 tests/auto/qml/qqmlextensionplugin_static/tst_qqmlextensionplugin_static.cpp
+
+diff --git a/src/qml/qml/qqmlpluginimporter.cpp b/src/qml/qml/qqmlpluginimporter.cpp
+index 8acca4b7da..47762ac976 100644
+--- a/src/qml/qml/qqmlpluginimporter.cpp
++++ b/src/qml/qml/qqmlpluginimporter.cpp
+@@ -322,7 +322,8 @@ QTypeRevision QQmlPluginImporter::importDynamicPlugin(
+     const bool engineInitialized = typeLoader->isPluginInitialized(pluginId);
+     {
+         PluginMapPtr plugins(qmlPluginsById());
+-        bool typesRegistered = plugins->find(pluginId) != plugins->end();
++        const auto plugin = plugins->find(pluginId);
++        bool typesRegistered = plugin != plugins->end();
+ 
+         if (!engineInitialized || !typesRegistered) {
+             const QFileInfo fileInfo(filePath);
+@@ -395,9 +396,15 @@ QTypeRevision QQmlPluginImporter::importDynamicPlugin(
+                 if (!importVersion.isValid())
+                     return QTypeRevision();
+             } else {
+-                auto it = plugins->find(pluginId);
+-                if (it != plugins->end() && it->second.loader)
+-                    instance = it->second.loader->instance();
++                Q_ASSERT(plugin != plugins->end());
++                if (const auto &loader = plugin->second.loader) {
++                    instance = loader->instance();
++                } else if (!optional) {
++                    // If the plugin is not optional, we absolutely need to have a loader.
++                    // Not having a loader here can mean that the plugin was loaded statically
++                    // before. Return an invalid result to have the caller try that option.
++                    return QTypeRevision();
++                }
+             }
+ #else
+             // Here plugin is not optional and NOT QT_CONFIG(library)
+diff --git a/tests/auto/qml/CMakeLists.txt b/tests/auto/qml/CMakeLists.txt
+index 942eebb63e..f5f7a3e2e0 100644
+--- a/tests/auto/qml/CMakeLists.txt
++++ b/tests/auto/qml/CMakeLists.txt
+@@ -34,6 +34,7 @@ endif()
+ add_subdirectory(qqmlcomponent)
+ add_subdirectory(qqmlconsole)
+ add_subdirectory(qqmlengine)
++add_subdirectory(qqmlextensionplugin_static)
+ add_subdirectory(qqmlerror)
+ add_subdirectory(qqmlincubator)
+ add_subdirectory(qqmlinfo)
+diff --git a/tests/auto/qml/qqmlextensionplugin_static/CMakeLists.txt b/tests/auto/qml/qqmlextensionplugin_static/CMakeLists.txt
+new file mode 100644
+index 0000000000..31d6436647
+--- /dev/null
++++ b/tests/auto/qml/qqmlextensionplugin_static/CMakeLists.txt
+@@ -0,0 +1,24 @@
++# Copyright (C) 2025 The Qt Company Ltd.
++# SPDX-License-Identifier: BSD-3-Clause
++
++qt_internal_add_qml_module(MockExtensionPlugin
++    URI "MockExtension"
++    CLASS_NAME MockExtensionPlugin
++    PLUGIN_TARGET MockExtensionPlugin
++    NO_PLUGIN_OPTIONAL
++    NO_GENERATE_PLUGIN_SOURCE
++    STATIC
++    SOURCES
++        plugin/plugin.cpp
++    LIBRARIES
++        Qt::Qml
++)
++
++
++qt_internal_add_test(tst_qqmlextensionplugin_static
++    SOURCES
++        tst_qqmlextensionplugin_static.cpp
++    LIBRARIES
++        Qt::Qml
++        Qt::MockExtensionPlugin
++)
+diff --git a/tests/auto/qml/qqmlextensionplugin_static/plugin/plugin.cpp b/tests/auto/qml/qqmlextensionplugin_static/plugin/plugin.cpp
+new file mode 100644
+index 0000000000..c20caa6b5a
+--- /dev/null
++++ b/tests/auto/qml/qqmlextensionplugin_static/plugin/plugin.cpp
+@@ -0,0 +1,39 @@
++// Copyright (C) 2025 The Qt Company Ltd.
++// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
++
++#include <QtQml/qqmlextensionplugin.h>
++#include <QtQml/qqml.h>
++#include <QtCore/qdebug.h>
++
++class TestObject : public QObject
++{
++    Q_OBJECT
++
++public:
++    explicit TestObject(QObject *parent = nullptr) : QObject(parent)
++    {
++        qWarning() << "TestObject created";
++    }
++};
++
++class MockExtensionPlugin : public QQmlExtensionPlugin
++{
++    Q_OBJECT
++    Q_PLUGIN_METADATA(IID QQmlExtensionInterface_iid)
++
++public:
++    MockExtensionPlugin() { qWarning() << "MockExtensionPlugin instantiated"; }
++
++    void registerTypes(const char *uri) override
++    {
++        qWarning() << "MockExtension::registerTypes called with URI:" << uri;
++        qmlRegisterType<TestObject>(uri, 1, 0, "TestObject");
++    }
++
++    void initializeEngine(QQmlEngine *, const char *uri) override
++    {
++        qWarning() << "MockExtension::initializeEngine called with URI:" << uri;
++    }
++};
++
++#include "plugin.moc"
+diff --git a/tests/auto/qml/qqmlextensionplugin_static/tst_qqmlextensionplugin_static.cpp b/tests/auto/qml/qqmlextensionplugin_static/tst_qqmlextensionplugin_static.cpp
+new file mode 100644
+index 0000000000..473c3a7984
+--- /dev/null
++++ b/tests/auto/qml/qqmlextensionplugin_static/tst_qqmlextensionplugin_static.cpp
+@@ -0,0 +1,180 @@
++// Copyright (C) 2025 The Qt Company Ltd.
++// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
++
++#include <QtCore/qregularexpression.h>
++#include <QtCore/qcoreapplication.h>
++#include <QtQml/qqmlengine.h>
++#include <QtQml/qqmlextensionplugin.h>
++#include <QtQml/qqmlcomponent.h>
++
++#include <QtTest/qtest.h>
++
++Q_IMPORT_QML_PLUGIN(MockExtensionPlugin)
++
++class tst_qqmlextensionplugin_static : public QObject
++{
++    Q_OBJECT
++
++private slots:
++    void initTestCase();
++    void init();
++    void testExtensionPluginInstantiation();
++    void testExtensionPluginInstantiation_initializeEngineCalledOnSecondEngine();
++    void testExtensionPluginInstantiation_reInitializeInSecondApplication();
++};
++
++namespace {
++
++template <typename Functor>
++auto withQCoreApplication(Functor &&f)
++{
++    static int argc = 1;
++    static char *argv[] = { (char *)"test" };
++    std::unique_ptr<QCoreApplication> app = std::make_unique<QCoreApplication>(argc, argv);
++    return f();
++}
++
++using namespace Qt::Literals;
++
++auto itemWithComponent = R"(
++    import MockExtension
++    TestObject {
++        id: testObj
++    }
++)"_ba;
++
++static QRegularExpression operator""_re(const char16_t *str, size_t size) noexcept
++{
++    return QRegularExpression(operator""_s(str, qsizetype(size)));
++}
++
++void ignorePluginCtorOnce()
++{
++    static bool firstPluginCtorExpectationInitialized = false;
++    if (!firstPluginCtorExpectationInitialized) {
++        QTest::ignoreMessage(QtMsgType::QtWarningMsg, "MockExtensionPlugin instantiated");
++        firstPluginCtorExpectationInitialized = true;
++    } else {
++        QTest::failOnWarning("MockExtensionPlugin instantiated");
++    }
++}
++} // namespace
++
++void tst_qqmlextensionplugin_static::initTestCase()
++{
++    // We don't want to see the functions called more often than expected.
++    QTest::failOnWarning();
++}
++
++void tst_qqmlextensionplugin_static::init()
++{
++    // Each test needs to start with a clean slate so that we can see the registerTypes().
++    qmlClearTypeRegistrations();
++}
++
++void tst_qqmlextensionplugin_static::testExtensionPluginInstantiation()
++{
++    withQCoreApplication([] {
++        QQmlEngine engine;
++        QQmlComponent component(&engine);
++
++        ignorePluginCtorOnce();
++        QTest::ignoreMessage(QtMsgType::QtWarningMsg,
++                             u"MockExtension::registerTypes called with URI.*"_re);
++        QTest::ignoreMessage(QtMsgType::QtWarningMsg,
++                             u"MockExtension::initializeEngine called with URI.*"_re);
++        component.setData(itemWithComponent, QUrl());
++
++        QVERIFY2(component.isReady(), qPrintable(component.errorString()));
++
++        QTest::ignoreMessage(QtMsgType::QtWarningMsg, "TestObject created");
++        std::unique_ptr<QObject> obj{ component.create() };
++        QVERIFY(obj);
++    });
++}
++
++void tst_qqmlextensionplugin_static::
++        testExtensionPluginInstantiation_initializeEngineCalledOnSecondEngine()
++{
++    withQCoreApplication([] {
++        {
++            QQmlEngine engine;
++            QQmlComponent component(&engine);
++
++            ignorePluginCtorOnce();
++            QTest::ignoreMessage(QtMsgType::QtWarningMsg,
++                                 u"MockExtension::registerTypes called with URI.*"_re);
++            QTest::ignoreMessage(QtMsgType::QtWarningMsg,
++                                 u"MockExtension::initializeEngine called with URI.*"_re);
++            component.setData(itemWithComponent, QUrl());
++
++            QVERIFY2(component.isReady(), qPrintable(component.errorString()));
++
++            QTest::ignoreMessage(QtMsgType::QtWarningMsg, "TestObject created");
++            std::unique_ptr<QObject> obj{ component.create() };
++            QVERIFY(obj);
++        }
++
++        {
++            QQmlEngine engine;
++            QQmlComponent component(&engine);
++
++            // types should be registered only once
++            QTest::failOnWarning(u"MockExtension::registerTypes called with URI.*"_re);
++            QTest::ignoreMessage(QtMsgType::QtWarningMsg,
++                                 u"MockExtension::initializeEngine called with URI.*"_re);
++            component.setData(itemWithComponent, QUrl());
++
++            QVERIFY2(component.isReady(), qPrintable(component.errorString()));
++
++            QTest::ignoreMessage(QtMsgType::QtWarningMsg, "TestObject created");
++            std::unique_ptr<QObject> obj{ component.create() };
++            QVERIFY(obj);
++        }
++    });
++}
++
++void tst_qqmlextensionplugin_static::
++        testExtensionPluginInstantiation_reInitializeInSecondApplication()
++{
++    withQCoreApplication([] {
++        QQmlEngine engine;
++        QQmlComponent component(&engine);
++
++        ignorePluginCtorOnce();
++        QTest::ignoreMessage(QtMsgType::QtWarningMsg,
++                             u"MockExtension::registerTypes called with URI.*"_re);
++        QTest::ignoreMessage(QtMsgType::QtWarningMsg,
++                             u"MockExtension::initializeEngine called with URI.*"_re);
++        component.setData(itemWithComponent, QUrl());
++
++        QVERIFY2(component.isReady(), qPrintable(component.errorString()));
++
++        QTest::ignoreMessage(QtMsgType::QtWarningMsg, "TestObject created");
++        std::unique_ptr<QObject> obj{ component.create() };
++        QVERIFY(obj);
++    });
++
++    qmlClearTypeRegistrations();
++
++    withQCoreApplication([] {
++        QQmlEngine engine;
++        QQmlComponent component(&engine);
++
++        QTest::ignoreMessage(QtMsgType::QtWarningMsg,
++                             u"MockExtension::registerTypes called with URI.*"_re);
++        QTest::ignoreMessage(QtMsgType::QtWarningMsg,
++                             u"MockExtension::initializeEngine called with URI.*"_re);
++        component.setData(itemWithComponent, QUrl());
++
++        QVERIFY2(component.isReady(), qPrintable(component.errorString()));
++
++        QTest::ignoreMessage(QtMsgType::QtWarningMsg, "TestObject created");
++        std::unique_ptr<QObject> obj{ component.create() };
++        QVERIFY(obj);
++    });
++}
++
++QTEST_APPLESS_MAIN(tst_qqmlextensionplugin_static)
++
++#include "tst_qqmlextensionplugin_static.moc"
+-- 
+2.51.2
+

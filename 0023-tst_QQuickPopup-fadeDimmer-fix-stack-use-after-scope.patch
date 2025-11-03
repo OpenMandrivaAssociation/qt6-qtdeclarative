@@ -1,0 +1,106 @@
+From cc726a4a7ae6b0f97d3045f4ca3565c4865163cb Mon Sep 17 00:00:00 2001
+From: Mitch Curtis <mitch.curtis@qt.io>
+Date: Wed, 3 Sep 2025 16:42:07 +0800
+Subject: [PATCH 023/239] tst_QQuickPopup::fadeDimmer: fix
+ stack-use-after-scope
+
+Use dimmer as a context object rather than the test itself, which
+outlives it.
+
+The backtrace was:
+
+    FAIL!  : tst_QQuickPopup::Basic::fadeDimmer(modal) The computed value is expected to be greater than the baseline, but is not
+       Computed (opacityChangeCount): 2
+       Baseline (2)                 : 2
+       Loc: [/Users/mitch/dev/qt-dev2/qtdeclarative/tests/auto/quickcontrols/qquickpopup/tst_qquickpopup.cpp(2629)]
+    =================================================================
+    ==68826==ERROR: AddressSanitizer: stack-use-after-scope on address 0x00016b7f7140 at pc 0x000104743c68 bp 0x00016b7ecfd0 sp 0x00016b7ecfc8
+    READ of size 4 at 0x00016b7f7140 thread T0
+        #0 0x000104743c64 in tst_QQuickPopup::fadeDimmer()::$_0::operator()() const tst_qquickpopup.cpp:2625
+        #1 0x000104743bc0 in QtPrivate::FunctorCall<std::__1::integer_sequence<unsigned long>, QtPrivate::List<>, void, tst_QQuickPopup::fadeDimmer()::$_0>::call(tst_QQuickPopup::fadeDimmer()::$_0&, void**)::'lambda'()::operator()() const qobjectdefs_impl.h:116
+        #2 0x000104743b64 in void QtPrivate::FunctorCallBase::call_internal<void, QtPrivate::FunctorCall<std::__1::integer_sequence<unsigned long>, QtPrivate::List<>, void, tst_QQuickPopup::fadeDimmer()::$_0>::call(tst_QQuickPopup::fadeDimmer()::$_0&, void**)::'lambda'()>(void**, QtPrivate::FunctorCall<std::__1::integer_sequence<unsigned long>, QtPrivate::List<>, void, tst_QQuickPopup::fadeDimmer()::$_0>::call(tst_QQuickPopup::fadeDimmer()::$_0&, void**)::'lambda'()&&) qobjectdefs_impl.h:65
+        #3 0x000104743ab4 in QtPrivate::FunctorCall<std::__1::integer_sequence<unsigned long>, QtPrivate::List<>, void, tst_QQuickPopup::fadeDimmer()::$_0>::call(tst_QQuickPopup::fadeDimmer()::$_0&, void**) qobjectdefs_impl.h:115
+        #4 0x000104743930 in void QtPrivate::FunctorCallable<tst_QQuickPopup::fadeDimmer()::$_0>::call<QtPrivate::List<>, void>(tst_QQuickPopup::fadeDimmer()::$_0&, void*, void**) qobjectdefs_impl.h:337
+        #5 0x000104743848 in QtPrivate::QCallableObject<tst_QQuickPopup::fadeDimmer()::$_0, QtPrivate::List<>, void>::impl(int, QtPrivate::QSlotObjectBase*, QObject*, void**, bool*) qobjectdefs_impl.h:547
+        #6 0x00011694273c in QtPrivate::QSlotObjectBase::call(QObject*, void**) qobjectdefs_impl.h:461
+        #7 0x000116e49454 in void doActivate<false>(QObject*, int, void**) qobject.cpp:4284
+        #8 0x000116e467a0 in QMetaObject::activate(QObject*, QMetaObject const*, int, void**) qobject.cpp:4344
+        #9 0x00010c1462d4 in QQuickItem::opacityChanged() moc_qquickitem.cpp:1019
+        #10 0x00010c1461c8 in QQuickItem::setOpacity(double) qquickitem.cpp:6517
+        #11 0x00010c168638 in QQuickItem::qt_static_metacall(QObject*, QMetaObject::Call, int, void**) moc_qquickitem.cpp:850
+        #12 0x000113847100 in QQmlPropertyData::writeProperty(QObject*, void*, QFlags<QQmlPropertyData::WriteFlag>) const qqmlpropertydata_p.h:413
+        #13 0x000113c33468 in QQmlPropertyPrivate::write(QObject*, QQmlPropertyData const&, QVariant const&, QQmlRefPointer<QQmlContextData> const&, QFlags<QQmlPropertyData::WriteFlag>) qqmlproperty.cpp:1668
+        #14 0x000113c32638 in QQmlPropertyPrivate::writeValueProperty(QObject*, QQmlPropertyData const&, QQmlPropertyData const&, QVariant const&, QQmlRefPointer<QQmlContextData> const&, QFlags<QQmlPropertyData::WriteFlag>) qqmlproperty.cpp:1326
+        #15 0x000113c32390 in QQmlPropertyPrivate::writeValueProperty(QVariant const&, QFlags<QQmlPropertyData::WriteFlag>) qqmlproperty.cpp:1270
+        #16 0x000113c391b4 in QQmlPropertyPrivate::write(QQmlProperty const&, QVariant const&, QFlags<QQmlPropertyData::WriteFlag>) qqmlproperty.cpp:1947
+        #17 0x00010c9949ac in QQuickAnimationPropertyUpdater::setValue(double) qquickanimation.cpp:2740
+        #18 0x00010c992444 in QQuickBulkValueAnimator::updateCurrentTime(int) qquickanimation.cpp:2069
+        #19 0x000114345428 in QAbstractAnimationJob::setCurrentTime(int) qabstractanimationjob.cpp:481
+        #20 0x000114349c3c in QAbstractAnimationJob::setState(QAbstractAnimationJob::State) qabstractanimationjob.cpp:367
+        #21 0x00011434bc34 in QAbstractAnimationJob::start() qabstractanimationjob.cpp:514
+        #22 0x00010c9ff568 in QQuickBehavior::write(QVariant const&) qquickbehavior.cpp:419
+        #23 0x00010c9ff88c in non-virtual thunk to QQuickBehavior::write(QVariant const&) qquickbehavior.cpp
+        #24 0x000113f53b7c in QQmlInterceptorMetaObject::doIntercept(QMetaObject::Call, int, void**) qqmlvmemetaobject.cpp:392
+        #25 0x000113f532e4 in QQmlInterceptorMetaObject::intercept(QMetaObject::Call, int, void**) qqmlvmemetaobject_p.h:153
+        #26 0x000113f59788 in QQmlVMEMetaObject::metaCall(QObject*, QMetaObject::Call, int, void**) qqmlvmemetaobject.cpp:750
+        #27 0x0001138474d0 in void QQmlPropertyData::doMetacall<(QMetaObject::Call)2>(QObject*, int, void**) const qqmlpropertydata_p.h:395
+        #28 0x000113847128 in QQmlPropertyData::writeProperty(QObject*, void*, QFlags<QQmlPropertyData::WriteFlag>) const qqmlpropertydata_p.h:415
+        #29 0x000113c33468 in QQmlPropertyPrivate::write(QObject*, QQmlPropertyData const&, QVariant const&, QQmlRefPointer<QQmlContextData> const&, QFlags<QQmlPropertyData::WriteFlag>) qqmlproperty.cpp:1668
+        #30 0x000113c32638 in QQmlPropertyPrivate::writeValueProperty(QObject*, QQmlPropertyData const&, QQmlPropertyData const&, QVariant const&, QQmlRefPointer<QQmlContextData> const&, QFlags<QQmlPropertyData::WriteFlag>) qqmlproperty.cpp:1326
+        #31 0x000113c32390 in QQmlPropertyPrivate::writeValueProperty(QVariant const&, QFlags<QQmlPropertyData::WriteFlag>) qqmlproperty.cpp:1270
+        #32 0x000113c391b4 in QQmlPropertyPrivate::write(QQmlProperty const&, QVariant const&, QFlags<QQmlPropertyData::WriteFlag>) qqmlproperty.cpp:1947
+        #33 0x000113c38f84 in QQmlProperty::write(QVariant const&) const qqmlproperty.cpp:1863
+        #34 0x000113c39358 in QQmlProperty::write(QObject*, QString const&, QVariant const&) qqmlproperty.cpp:1880
+        #35 0x000107c1db04 in QQuickPopupPrivate::hideDimmer() qquickpopup.cpp:1290
+        #36 0x000107c16a68 in QQuickPopupPrivate::prepareExitTransition() qquickpopup.cpp:821
+        #37 0x000107c1e038 in QQuickPopupTransitionManager::transitionExit() qquickpopup.cpp:1326
+        #38 0x000107c23fd4 in QQuickPopup::setVisible(bool) qquickpopup.cpp:2496
+        #39 0x000107c104d8 in QQuickPopup::close() qquickpopup.cpp:1408
+        #40 0x000107c1ba80 in QQuickPopup::setParentItem(QQuickItem*) qquickpopup.cpp:2180
+        #41 0x000107c1b324 in QQuickPopupPrivate::itemDestroyed(QQuickItem*) qquickpopup.cpp:1063
+        #42 0x000107c1bb8c in non-virtual thunk to QQuickPopupPrivate::itemDestroyed(QQuickItem*) qquickpopup.cpp
+        #43 0x00010c117f70 in void QQuickItemPrivate::notifyChangeListeners<void (QQuickItemChangeListener::*)(QQuickItem*), QQuickItem*>(QFlags<QQuickItemPrivate::ChangeType>, void (QQuickItemChangeListener::*&&)(QQuickItem*), QQuickItem*&&) qquickitem_p.h:413
+        #44 0x00010c113d7c in QQuickItem::~QQuickItem() qquickitem.cpp:2420
+        #45 0x00010c50e3e8 in QQuickRootItem::~QQuickRootItem() qquickwindow_p.h:62
+        #46 0x00010c4ed840 in QQuickRootItem::~QQuickRootItem() qquickwindow_p.h:62
+        #47 0x00010c4ed86c in QQuickRootItem::~QQuickRootItem() qquickwindow_p.h:62
+        #48 0x00010c4da1c0 in QQuickWindow::~QQuickWindow() qquickwindow.cpp:1197
+        #49 0x00010c531f34 in QQuickWindowQmlImpl::~QQuickWindowQmlImpl() qquickwindowmodule.cpp:73
+        #50 0x00010cf2d4f4 in QQmlPrivate::QQmlElement<QQuickWindowQmlImpl>::~QQmlElement() qqmlprivate.h:104
+        #51 0x00010cf2d3e0 in QQmlPrivate::QQmlElement<QQuickWindowQmlImpl>::~QQmlElement() qqmlprivate.h:102
+        #52 0x00010cf2d40c in QQmlPrivate::QQmlElement<QQuickWindowQmlImpl>::~QQmlElement() qqmlprivate.h:102
+        #53 0x00010472efa8 in QScopedPointerDeleter<QObject>::cleanup(QObject*) qscopedpointer.h:24
+        #54 0x00010472eefc in QScopedPointer<QObject, QScopedPointerDeleter<QObject>>::~QScopedPointer() qscopedpointer.h:81
+        #55 0x00010466f0e8 in QScopedPointer<QObject, QScopedPointerDeleter<QObject>>::~QScopedPointer() qscopedpointer.h:79
+        #56 0x00010471246c in QQuickVisualTestUtils::QQuickApplicationHelper::~QQuickApplicationHelper() visualtestutils_p.h:192
+        #57 0x00010468ff88 in QQuickVisualTestUtils::QQuickApplicationHelper::~QQuickApplicationHelper() visualtestutils_p.h:192
+        #58 0x0001046a953c in tst_QQuickPopup::fadeDimmer() tst_qquickpopup.cpp:2635
+        [...]
+
+Amends ef8bde838ec708ff45ad68c5db899a86116b4e94.
+
+Pick-to: 6.9 6.8
+Change-Id: Ie5c49b7d9ecd3c74f822590d296062b516563391
+Reviewed-by: Volker Hilsheimer <volker.hilsheimer@qt.io>
+(cherry picked from commit f8742ca4b7748015c140b89c19e614b9a641b528)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ tests/auto/quickcontrols/qquickpopup/tst_qquickpopup.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tests/auto/quickcontrols/qquickpopup/tst_qquickpopup.cpp b/tests/auto/quickcontrols/qquickpopup/tst_qquickpopup.cpp
+index c587737612..5314f4a9cb 100644
+--- a/tests/auto/quickcontrols/qquickpopup/tst_qquickpopup.cpp
++++ b/tests/auto/quickcontrols/qquickpopup/tst_qquickpopup.cpp
+@@ -2613,7 +2613,7 @@ void tst_QQuickPopup::fadeDimmer()
+     auto dimmer = QQuickPopupPrivate::get(popup)->dimmer;
+     QVERIFY(dimmer);
+     int opacityChangeCount = 0;
+-    connect(dimmer, &QQuickItem::opacityChanged, this, [&opacityChangeCount]{
++    connect(dimmer, &QQuickItem::opacityChanged, dimmer, [&opacityChangeCount]{
+         ++opacityChangeCount;
+     });
+     QTRY_VERIFY(popup->isOpened());
+-- 
+2.51.2
+

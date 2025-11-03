@@ -1,0 +1,30 @@
+From cf409d769550db625e38ea4ea463ee01e2dc4273 Mon Sep 17 00:00:00 2001
+From: Santhosh Kumar <santhosh.kumar.selvaraj@qt.io>
+Date: Mon, 15 Sep 2025 17:00:59 +0200
+Subject: [PATCH 050/239] Mark security header for qt labs animation
+
+QUIP: 23
+Task-number: QTBUG-136184
+Pick-to: 6.9 6.8
+Change-Id: I2867ec1ba4faa7c03e95735504b3052fea132ff3
+Reviewed-by: MohammadHossein Qanbari <mohammad.qanbari@qt.io>
+(cherry picked from commit 5ab3da9daf5599bc80e282d9193cd6c9a3495cb3)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/labs/animation/qquickboundaryrule.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/labs/animation/qquickboundaryrule.cpp b/src/labs/animation/qquickboundaryrule.cpp
+index 1fc996925f..a6c7626db6 100644
+--- a/src/labs/animation/qquickboundaryrule.cpp
++++ b/src/labs/animation/qquickboundaryrule.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2019 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
+ 
+ #include "qquickboundaryrule_p.h"
+ 
+-- 
+2.51.2
+

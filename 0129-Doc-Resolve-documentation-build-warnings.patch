@@ -1,0 +1,78 @@
+From 67ff19dcbed6a25af57e675e37da14b3ead1a437 Mon Sep 17 00:00:00 2001
+From: Alexei Cazacov <alexei.cazacov@qt.io>
+Date: Fri, 26 Sep 2025 15:42:03 +0300
+Subject: [PATCH 129/239] Doc: Resolve documentation build warnings
+
+Change-Id: I3b0fb5f4f734d3b2a3315479655f6434e8d85b16
+Reviewed-by: Jerome Pasion <jerome.pasion@qt.io>
+(cherry picked from commit 51a753e71ca14c4c0f8af6c8dd83912fbbfd0e5d)
+---
+ src/quick/doc/src/examples.qdoc                        | 1 -
+ src/quick/doc/src/getting-started/getting-started.qdoc | 4 ++--
+ src/quick/util/qquickfontinfo.cpp                      | 2 +-
+ src/quickshapes/designhelpers/qquickrectangleshape.cpp | 2 +-
+ 4 files changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/src/quick/doc/src/examples.qdoc b/src/quick/doc/src/examples.qdoc
+index aa6bbc5fe8..14de3699e3 100644
+--- a/src/quick/doc/src/examples.qdoc
++++ b/src/quick/doc/src/examples.qdoc
+@@ -71,7 +71,6 @@ Qt Quick Applications and related modules, visit the \l{QML Applications} page.
+         \li \l{qtquick-usecase-animations.html}{Animations in QML}
+         \li \l{qtquick-usecase-text.html}{Displaying Text in QML}
+         \li \l{qtquick-usecase-layouts.html}{Layouts in QML}
+-        \li \l{qtquick-usecase-styling.html}{Style and Theme Support}
+         \li \l{qtquick-usecase-integratingjs.html}{Integrating JavaScript in QML}
+         \endlist
+     \enddiv
+diff --git a/src/quick/doc/src/getting-started/getting-started.qdoc b/src/quick/doc/src/getting-started/getting-started.qdoc
+index fd7d0f47da..28254754a2 100644
+--- a/src/quick/doc/src/getting-started/getting-started.qdoc
++++ b/src/quick/doc/src/getting-started/getting-started.qdoc
+@@ -121,7 +121,7 @@ QML code is used in applications.
+ 
+ \list
+ \li \l{Overview - QML and C++ Integration}
+-\li \l{Deploying Qt Quick applications}
++\li \l{Deploying QML Applications}
+ \li \l{Qt Quick Compiler}
+ \li \l{Best Practices for QML and Qt Quick}
+ \li \l{Performance considerations and suggestions}
+@@ -129,7 +129,7 @@ QML code is used in applications.
+ \li Testing and Debugging
+     \list
+     \li \l{qml_runtime_tool}{Prototyping with the QML Runtime Tool}
+-    \li \l{Debugging Qt Quick applications}
++    \li \l{Debugging QML Applications}
+     \li \l{Qt Quick Test}{Qt Quick Test: QML Unit Testing Framework}
+     \endlist
+ \endlist
+diff --git a/src/quick/util/qquickfontinfo.cpp b/src/quick/util/qquickfontinfo.cpp
+index cd286970cc..d6f22f585b 100644
+--- a/src/quick/util/qquickfontinfo.cpp
++++ b/src/quick/util/qquickfontinfo.cpp
+@@ -8,7 +8,7 @@ QT_BEGIN_NAMESPACE
+ 
+ /*!
+     \qmltype FontInfo
+-    \instantiates QQuickFontInfo
++    \nativetype QQuickFontInfo
+     \inqmlmodule QtQuick
+     \since 6.9
+     \ingroup qtquick-text-utility
+diff --git a/src/quickshapes/designhelpers/qquickrectangleshape.cpp b/src/quickshapes/designhelpers/qquickrectangleshape.cpp
+index 73494fbd93..415ec071ef 100644
+--- a/src/quickshapes/designhelpers/qquickrectangleshape.cpp
++++ b/src/quickshapes/designhelpers/qquickrectangleshape.cpp
+@@ -100,7 +100,7 @@ QQuickRectangleShape::QQuickRectangleShape(QQuickItem *parent)
+     can also be specified separately for each corner. Additionally, \l bevel
+     can be applied on any corner to cut it off sharply.
+ 
+-    RectangleShape's default value for \l preferredRendererType is
++    RectangleShape's default value for \l {QtQuick.Shapes::Shape::preferredRendererType} is
+     \c Shape.CurveRenderer.
+ 
+     \section1 Example Usage
+-- 
+2.51.2
+

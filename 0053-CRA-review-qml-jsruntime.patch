@@ -1,0 +1,1913 @@
+From f124a3bef4dba872358febfd7c165037a8c99049 Mon Sep 17 00:00:00 2001
+From: Fabian Kosmale <fabian.kosmale@qt.io>
+Date: Tue, 26 Aug 2025 17:35:24 +0200
+Subject: [PATCH 053/239] CRA review qml/jsruntime
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This relies heavily on the documented fact that we only support trusted
+QML/JS content, meaning most files are only significant, not critical.
+This also extends to the handling of qmlc files (as in
+compilationunitmapper), as we store them in a user owned, non-shared
+cache directory – so any vulnerability there would already mean that an
+attacker has write-priviledges on user data.
+
+An exception is ArrayBuffer, which can be used with arbitrary user data,
+and should create a valid QBA.
+
+Fixes: QTBUG-136970
+Pick-to: 6.9 6.8
+QUIP: 23
+Change-Id: I22033fe6ab4acf8362a8183e25b92331d45cb32c
+Reviewed-by: Ulf Hermann <ulf.hermann@qt.io>
+(cherry picked from commit 22df353c14800d2e9b6d57a9a0cb9c6baa337999)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qml/jsruntime/qv4argumentsobject.cpp            | 1 +
+ src/qml/jsruntime/qv4argumentsobject_p.h            | 1 +
+ src/qml/jsruntime/qv4arraybuffer.cpp                | 5 +++++
+ src/qml/jsruntime/qv4arraybuffer_p.h                | 1 +
+ src/qml/jsruntime/qv4arraydata.cpp                  | 1 +
+ src/qml/jsruntime/qv4arraydata_p.h                  | 1 +
+ src/qml/jsruntime/qv4arrayiterator.cpp              | 1 +
+ src/qml/jsruntime/qv4arrayiterator_p.h              | 1 +
+ src/qml/jsruntime/qv4arrayobject.cpp                | 1 +
+ src/qml/jsruntime/qv4arrayobject_p.h                | 1 +
+ src/qml/jsruntime/qv4atomics.cpp                    | 1 +
+ src/qml/jsruntime/qv4atomics_p.h                    | 1 +
+ src/qml/jsruntime/qv4booleanobject.cpp              | 1 +
+ src/qml/jsruntime/qv4booleanobject_p.h              | 1 +
+ src/qml/jsruntime/qv4compilationunitmapper.cpp      | 1 +
+ src/qml/jsruntime/qv4compilationunitmapper_p.h      | 1 +
+ src/qml/jsruntime/qv4compilationunitmapper_unix.cpp | 1 +
+ src/qml/jsruntime/qv4compilationunitmapper_win.cpp  | 1 +
+ src/qml/jsruntime/qv4context.cpp                    | 1 +
+ src/qml/jsruntime/qv4context_p.h                    | 1 +
+ src/qml/jsruntime/qv4dataview.cpp                   | 1 +
+ src/qml/jsruntime/qv4dataview_p.h                   | 1 +
+ src/qml/jsruntime/qv4dateobject.cpp                 | 1 +
+ src/qml/jsruntime/qv4dateobject_p.h                 | 1 +
+ src/qml/jsruntime/qv4debugging.cpp                  | 1 +
+ src/qml/jsruntime/qv4debugging_p.h                  | 1 +
+ src/qml/jsruntime/qv4domerrors.cpp                  | 1 +
+ src/qml/jsruntime/qv4domerrors_p.h                  | 1 +
+ src/qml/jsruntime/qv4engine.cpp                     | 1 +
+ src/qml/jsruntime/qv4engine_p.h                     | 1 +
+ src/qml/jsruntime/qv4enginebase_p.h                 | 1 +
+ src/qml/jsruntime/qv4errorobject.cpp                | 1 +
+ src/qml/jsruntime/qv4errorobject_p.h                | 1 +
+ src/qml/jsruntime/qv4estable.cpp                    | 1 +
+ src/qml/jsruntime/qv4estable_p.h                    | 1 +
+ src/qml/jsruntime/qv4executableallocator.cpp        | 1 +
+ src/qml/jsruntime/qv4executableallocator_p.h        | 1 +
+ src/qml/jsruntime/qv4executablecompilationunit.cpp  | 1 +
+ src/qml/jsruntime/qv4executablecompilationunit_p.h  | 1 +
+ src/qml/jsruntime/qv4function.cpp                   | 1 +
+ src/qml/jsruntime/qv4function_p.h                   | 1 +
+ src/qml/jsruntime/qv4functionobject.cpp             | 1 +
+ src/qml/jsruntime/qv4functionobject_p.h             | 1 +
+ src/qml/jsruntime/qv4functiontable_noop.cpp         | 1 +
+ src/qml/jsruntime/qv4functiontable_p.h              | 1 +
+ src/qml/jsruntime/qv4functiontable_unix.cpp         | 1 +
+ src/qml/jsruntime/qv4functiontable_win64.cpp        | 1 +
+ src/qml/jsruntime/qv4generatorobject.cpp            | 1 +
+ src/qml/jsruntime/qv4generatorobject_p.h            | 1 +
+ src/qml/jsruntime/qv4global_p.h                     | 1 +
+ src/qml/jsruntime/qv4globalobject.cpp               | 1 +
+ src/qml/jsruntime/qv4globalobject_p.h               | 1 +
+ src/qml/jsruntime/qv4identifierhash.cpp             | 1 +
+ src/qml/jsruntime/qv4identifierhash_p.h             | 1 +
+ src/qml/jsruntime/qv4identifierhashdata_p.h         | 1 +
+ src/qml/jsruntime/qv4identifiertable.cpp            | 1 +
+ src/qml/jsruntime/qv4identifiertable_p.h            | 1 +
+ src/qml/jsruntime/qv4include.cpp                    | 1 +
+ src/qml/jsruntime/qv4include_p.h                    | 1 +
+ src/qml/jsruntime/qv4internalclass.cpp              | 1 +
+ src/qml/jsruntime/qv4internalclass_p.h              | 1 +
+ src/qml/jsruntime/qv4iterator.cpp                   | 1 +
+ src/qml/jsruntime/qv4iterator_p.h                   | 1 +
+ src/qml/jsruntime/qv4jscall.cpp                     | 1 +
+ src/qml/jsruntime/qv4jscall_p.h                     | 1 +
+ src/qml/jsruntime/qv4jsonobject_p.h                 | 1 +
+ src/qml/jsruntime/qv4lookup.cpp                     | 1 +
+ src/qml/jsruntime/qv4lookup_p.h                     | 1 +
+ src/qml/jsruntime/qv4managed.cpp                    | 1 +
+ src/qml/jsruntime/qv4managed_p.h                    | 1 +
+ src/qml/jsruntime/qv4mapiterator.cpp                | 1 +
+ src/qml/jsruntime/qv4mapiterator_p.h                | 1 +
+ src/qml/jsruntime/qv4mapobject.cpp                  | 1 +
+ src/qml/jsruntime/qv4mapobject_p.h                  | 1 +
+ src/qml/jsruntime/qv4math_p.h                       | 1 +
+ src/qml/jsruntime/qv4mathobject.cpp                 | 1 +
+ src/qml/jsruntime/qv4mathobject_p.h                 | 1 +
+ src/qml/jsruntime/qv4memberdata.cpp                 | 1 +
+ src/qml/jsruntime/qv4module.cpp                     | 1 +
+ src/qml/jsruntime/qv4module_p.h                     | 1 +
+ src/qml/jsruntime/qv4numberobject.cpp               | 1 +
+ src/qml/jsruntime/qv4numberobject_p.h               | 1 +
+ src/qml/jsruntime/qv4object.cpp                     | 1 +
+ src/qml/jsruntime/qv4object_p.h                     | 1 +
+ src/qml/jsruntime/qv4objectiterator.cpp             | 1 +
+ src/qml/jsruntime/qv4objectiterator_p.h             | 1 +
+ src/qml/jsruntime/qv4objectproto.cpp                | 1 +
+ src/qml/jsruntime/qv4objectproto_p.h                | 1 +
+ src/qml/jsruntime/qv4persistent.cpp                 | 1 +
+ src/qml/jsruntime/qv4persistent_p.h                 | 1 +
+ src/qml/jsruntime/qv4profiling.cpp                  | 1 +
+ src/qml/jsruntime/qv4profiling_p.h                  | 1 +
+ src/qml/jsruntime/qv4promiseobject.cpp              | 1 +
+ src/qml/jsruntime/qv4promiseobject_p.h              | 1 +
+ src/qml/jsruntime/qv4property_p.h                   | 1 +
+ src/qml/jsruntime/qv4propertykey.cpp                | 1 +
+ src/qml/jsruntime/qv4propertykey_p.h                | 1 +
+ src/qml/jsruntime/qv4proxy.cpp                      | 1 +
+ src/qml/jsruntime/qv4proxy_p.h                      | 1 +
+ src/qml/jsruntime/qv4qmetaobjectwrapper.cpp         | 1 +
+ src/qml/jsruntime/qv4qmetaobjectwrapper_p.h         | 1 +
+ src/qml/jsruntime/qv4qmlcontext.cpp                 | 1 +
+ src/qml/jsruntime/qv4qmlcontext_p.h                 | 1 +
+ src/qml/jsruntime/qv4qobjectwrapper.cpp             | 1 +
+ src/qml/jsruntime/qv4qobjectwrapper_p.h             | 1 +
+ src/qml/jsruntime/qv4referenceobject.cpp            | 1 +
+ src/qml/jsruntime/qv4referenceobject_p.h            | 1 +
+ src/qml/jsruntime/qv4reflect.cpp                    | 1 +
+ src/qml/jsruntime/qv4reflect_p.h                    | 1 +
+ src/qml/jsruntime/qv4regexp.cpp                     | 2 ++
+ src/qml/jsruntime/qv4regexp_p.h                     | 1 +
+ src/qml/jsruntime/qv4regexpobject.cpp               | 1 +
+ src/qml/jsruntime/qv4regexpobject_p.h               | 1 +
+ src/qml/jsruntime/qv4resolvedtypereference.cpp      | 1 +
+ src/qml/jsruntime/qv4resolvedtypereference_p.h      | 1 +
+ src/qml/jsruntime/qv4runtime.cpp                    | 1 +
+ src/qml/jsruntime/qv4runtime_p.h                    | 1 +
+ src/qml/jsruntime/qv4runtimeapi_p.h                 | 1 +
+ src/qml/jsruntime/qv4runtimecodegen.cpp             | 1 +
+ src/qml/jsruntime/qv4runtimecodegen_p.h             | 1 +
+ src/qml/jsruntime/qv4scopedvalue_p.h                | 1 +
+ src/qml/jsruntime/qv4script.cpp                     | 1 +
+ src/qml/jsruntime/qv4script_p.h                     | 1 +
+ src/qml/jsruntime/qv4sequenceobject.cpp             | 1 +
+ src/qml/jsruntime/qv4sequenceobject_p.h             | 1 +
+ src/qml/jsruntime/qv4setiterator.cpp                | 1 +
+ src/qml/jsruntime/qv4setiterator_p.h                | 1 +
+ src/qml/jsruntime/qv4setobject.cpp                  | 1 +
+ src/qml/jsruntime/qv4setobject_p.h                  | 1 +
+ src/qml/jsruntime/qv4sparsearray.cpp                | 1 +
+ src/qml/jsruntime/qv4sparsearray_p.h                | 1 +
+ src/qml/jsruntime/qv4sqlerrors.cpp                  | 1 +
+ src/qml/jsruntime/qv4sqlerrors_p.h                  | 1 +
+ src/qml/jsruntime/qv4stackframe.cpp                 | 1 +
+ src/qml/jsruntime/qv4stackframe_p.h                 | 1 +
+ src/qml/jsruntime/qv4string.cpp                     | 1 +
+ src/qml/jsruntime/qv4string_p.h                     | 1 +
+ src/qml/jsruntime/qv4stringiterator.cpp             | 1 +
+ src/qml/jsruntime/qv4stringiterator_p.h             | 1 +
+ src/qml/jsruntime/qv4stringobject.cpp               | 1 +
+ src/qml/jsruntime/qv4stringobject_p.h               | 1 +
+ src/qml/jsruntime/qv4symbol.cpp                     | 1 +
+ src/qml/jsruntime/qv4symbol_p.h                     | 1 +
+ src/qml/jsruntime/qv4typedarray.cpp                 | 1 +
+ src/qml/jsruntime/qv4typedarray_p.h                 | 1 +
+ src/qml/jsruntime/qv4urlobject.cpp                  | 1 +
+ src/qml/jsruntime/qv4urlobject_p.h                  | 1 +
+ src/qml/jsruntime/qv4value.cpp                      | 1 +
+ src/qml/jsruntime/qv4value_p.h                      | 1 +
+ src/qml/jsruntime/qv4variantassociationobject.cpp   | 1 +
+ src/qml/jsruntime/qv4variantassociationobject_p.h   | 1 +
+ src/qml/jsruntime/qv4variantobject.cpp              | 1 +
+ src/qml/jsruntime/qv4variantobject_p.h              | 1 +
+ src/qml/jsruntime/qv4vme_moth.cpp                   | 1 +
+ src/qml/jsruntime/qv4vme_moth_p.h                   | 1 +
+ src/qml/jsruntime/qv4vtable_p.h                     | 1 +
+ 156 files changed, 161 insertions(+)
+
+diff --git a/src/qml/jsruntime/qv4argumentsobject.cpp b/src/qml/jsruntime/qv4argumentsobject.cpp
+index 74b79cb400..6a6fd7e607 100644
+--- a/src/qml/jsruntime/qv4argumentsobject.cpp
++++ b/src/qml/jsruntime/qv4argumentsobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4argumentsobject_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4argumentsobject_p.h b/src/qml/jsruntime/qv4argumentsobject_p.h
+index 0487bd22f8..8be96a690f 100644
+--- a/src/qml/jsruntime/qv4argumentsobject_p.h
++++ b/src/qml/jsruntime/qv4argumentsobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4ARGUMENTSOBJECTS_H
+ #define QV4ARGUMENTSOBJECTS_H
+ 
+diff --git a/src/qml/jsruntime/qv4arraybuffer.cpp b/src/qml/jsruntime/qv4arraybuffer.cpp
+index c4ef28ae49..f61513566b 100644
+--- a/src/qml/jsruntime/qv4arraybuffer.cpp
++++ b/src/qml/jsruntime/qv4arraybuffer.cpp
+@@ -1,5 +1,10 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:critical reason:data-parser
++
++// Security note: ArrayBuffer can be used with arbitrary binary data stored in QBA
++// and requires some care (we e.g. don't want to create a corrupted QBA in asByteArray)
++
+ #include "qv4arraybuffer_p.h"
+ #include "qv4typedarray_p.h"
+ #include "qv4dataview_p.h"
+diff --git a/src/qml/jsruntime/qv4arraybuffer_p.h b/src/qml/jsruntime/qv4arraybuffer_p.h
+index af1195a947..c38deb8de8 100644
+--- a/src/qml/jsruntime/qv4arraybuffer_p.h
++++ b/src/qml/jsruntime/qv4arraybuffer_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4ARRAYBUFFER_H
+ #define QV4ARRAYBUFFER_H
+ 
+diff --git a/src/qml/jsruntime/qv4arraydata.cpp b/src/qml/jsruntime/qv4arraydata.cpp
+index f691fe6beb..ed8d233578 100644
+--- a/src/qml/jsruntime/qv4arraydata.cpp
++++ b/src/qml/jsruntime/qv4arraydata.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #include "qv4arraydata_p.h"
+ #include "qv4object_p.h"
+ #include "qv4functionobject_p.h"
+diff --git a/src/qml/jsruntime/qv4arraydata_p.h b/src/qml/jsruntime/qv4arraydata_p.h
+index a7ab1f4a71..20ceddd3ab 100644
+--- a/src/qml/jsruntime/qv4arraydata_p.h
++++ b/src/qml/jsruntime/qv4arraydata_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4ARRAYDATA_H
+ #define QV4ARRAYDATA_H
+ 
+diff --git a/src/qml/jsruntime/qv4arrayiterator.cpp b/src/qml/jsruntime/qv4arrayiterator.cpp
+index 15e0bf4e4c..d8cdc173b7 100644
+--- a/src/qml/jsruntime/qv4arrayiterator.cpp
++++ b/src/qml/jsruntime/qv4arrayiterator.cpp
+@@ -1,6 +1,7 @@
+ // Copyright (C) 2017 Crimson AS <info@crimson.no>
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <private/qv4iterator_p.h>
+ #include <private/qv4arrayiterator_p.h>
+diff --git a/src/qml/jsruntime/qv4arrayiterator_p.h b/src/qml/jsruntime/qv4arrayiterator_p.h
+index 79f0898fb6..ab2f7989f9 100644
+--- a/src/qml/jsruntime/qv4arrayiterator_p.h
++++ b/src/qml/jsruntime/qv4arrayiterator_p.h
+@@ -1,6 +1,7 @@
+ // Copyright (C) 2017 Crimson AS <info@crimson.no>
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4ARRAYITERATOR_P_H
+ #define QV4ARRAYITERATOR_P_H
+diff --git a/src/qml/jsruntime/qv4arrayobject.cpp b/src/qml/jsruntime/qv4arrayobject.cpp
+index 96dc8774f2..4f01ba4c3b 100644
+--- a/src/qml/jsruntime/qv4arrayobject.cpp
++++ b/src/qml/jsruntime/qv4arrayobject.cpp
+@@ -1,6 +1,7 @@
+ // Copyright (C) 2018 Crimson AS <info@crimson.no>
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4arrayobject_p.h"
+ #include "qv4arrayiterator_p.h"
+diff --git a/src/qml/jsruntime/qv4arrayobject_p.h b/src/qml/jsruntime/qv4arrayobject_p.h
+index 6cca9055a2..7550b1f8a0 100644
+--- a/src/qml/jsruntime/qv4arrayobject_p.h
++++ b/src/qml/jsruntime/qv4arrayobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4ARRAYOBJECT_H
+ #define QV4ARRAYOBJECT_H
+ 
+diff --git a/src/qml/jsruntime/qv4atomics.cpp b/src/qml/jsruntime/qv4atomics.cpp
+index ccbdef145b..899111be27 100644
+--- a/src/qml/jsruntime/qv4atomics.cpp
++++ b/src/qml/jsruntime/qv4atomics.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #include "qv4arraybuffer_p.h"
+ #include "qv4typedarray_p.h"
+ #include "qv4atomics_p.h"
+diff --git a/src/qml/jsruntime/qv4atomics_p.h b/src/qml/jsruntime/qv4atomics_p.h
+index d55e6bb983..b58522c32b 100644
+--- a/src/qml/jsruntime/qv4atomics_p.h
++++ b/src/qml/jsruntime/qv4atomics_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4ATOMICS_H
+ #define QV4ATOMICS_H
+ 
+diff --git a/src/qml/jsruntime/qv4booleanobject.cpp b/src/qml/jsruntime/qv4booleanobject.cpp
+index 5c1d50e753..45692e8030 100644
+--- a/src/qml/jsruntime/qv4booleanobject.cpp
++++ b/src/qml/jsruntime/qv4booleanobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4booleanobject_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4booleanobject_p.h b/src/qml/jsruntime/qv4booleanobject_p.h
+index 1b2d3914ac..fcaa4d64e4 100644
+--- a/src/qml/jsruntime/qv4booleanobject_p.h
++++ b/src/qml/jsruntime/qv4booleanobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4BOOLEANOBJECT_H
+ #define QV4BOOLEANOBJECT_H
+ 
+diff --git a/src/qml/jsruntime/qv4compilationunitmapper.cpp b/src/qml/jsruntime/qv4compilationunitmapper.cpp
+index e9915c7d26..d4c35fd844 100644
+--- a/src/qml/jsruntime/qv4compilationunitmapper.cpp
++++ b/src/qml/jsruntime/qv4compilationunitmapper.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4compilationunitmapper_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4compilationunitmapper_p.h b/src/qml/jsruntime/qv4compilationunitmapper_p.h
+index c214141804..26558b28f0 100644
+--- a/src/qml/jsruntime/qv4compilationunitmapper_p.h
++++ b/src/qml/jsruntime/qv4compilationunitmapper_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4COMPILATIONUNITMAPPER_H
+ #define QV4COMPILATIONUNITMAPPER_H
+diff --git a/src/qml/jsruntime/qv4compilationunitmapper_unix.cpp b/src/qml/jsruntime/qv4compilationunitmapper_unix.cpp
+index 204e222121..9675acf8fd 100644
+--- a/src/qml/jsruntime/qv4compilationunitmapper_unix.cpp
++++ b/src/qml/jsruntime/qv4compilationunitmapper_unix.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4compilationunitmapper_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4compilationunitmapper_win.cpp b/src/qml/jsruntime/qv4compilationunitmapper_win.cpp
+index 73096207b4..3b38fc04d6 100644
+--- a/src/qml/jsruntime/qv4compilationunitmapper_win.cpp
++++ b/src/qml/jsruntime/qv4compilationunitmapper_win.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4compilationunitmapper_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4context.cpp b/src/qml/jsruntime/qv4context.cpp
+index 01f9b4adf3..3e59a2d7df 100644
+--- a/src/qml/jsruntime/qv4context.cpp
++++ b/src/qml/jsruntime/qv4context.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <QString>
+ #include <qv4context_p.h>
+diff --git a/src/qml/jsruntime/qv4context_p.h b/src/qml/jsruntime/qv4context_p.h
+index 48b6e04025..45ee61de4e 100644
+--- a/src/qml/jsruntime/qv4context_p.h
++++ b/src/qml/jsruntime/qv4context_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QMLJS_ENVIRONMENT_H
+ #define QMLJS_ENVIRONMENT_H
+ 
+diff --git a/src/qml/jsruntime/qv4dataview.cpp b/src/qml/jsruntime/qv4dataview.cpp
+index 689eb9232b..440d50e04e 100644
+--- a/src/qml/jsruntime/qv4dataview.cpp
++++ b/src/qml/jsruntime/qv4dataview.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4dataview_p.h"
+ #include "qv4arraybuffer_p.h"
+diff --git a/src/qml/jsruntime/qv4dataview_p.h b/src/qml/jsruntime/qv4dataview_p.h
+index b5fa41d964..091f7e7ba9 100644
+--- a/src/qml/jsruntime/qv4dataview_p.h
++++ b/src/qml/jsruntime/qv4dataview_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4DATAVIEW_H
+ #define QV4DATAVIEW_H
+ 
+diff --git a/src/qml/jsruntime/qv4dateobject.cpp b/src/qml/jsruntime/qv4dateobject.cpp
+index 4593c788d3..316f8707ee 100644
+--- a/src/qml/jsruntime/qv4dateobject.cpp
++++ b/src/qml/jsruntime/qv4dateobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2021 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4dateobject_p.h"
+ #include "qv4runtime_p.h"
+diff --git a/src/qml/jsruntime/qv4dateobject_p.h b/src/qml/jsruntime/qv4dateobject_p.h
+index 248c549744..6e6546bacc 100644
+--- a/src/qml/jsruntime/qv4dateobject_p.h
++++ b/src/qml/jsruntime/qv4dateobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4DATEOBJECT_P_H
+ #define QV4DATEOBJECT_P_H
+ 
+diff --git a/src/qml/jsruntime/qv4debugging.cpp b/src/qml/jsruntime/qv4debugging.cpp
+index 57ddaaa2f1..b7b7a5fd4a 100644
+--- a/src/qml/jsruntime/qv4debugging.cpp
++++ b/src/qml/jsruntime/qv4debugging.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2022 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4debugging_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4debugging_p.h b/src/qml/jsruntime/qv4debugging_p.h
+index b80567b339..25a510e720 100644
+--- a/src/qml/jsruntime/qv4debugging_p.h
++++ b/src/qml/jsruntime/qv4debugging_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4DEBUGGING_H
+ #define QV4DEBUGGING_H
+diff --git a/src/qml/jsruntime/qv4domerrors.cpp b/src/qml/jsruntime/qv4domerrors.cpp
+index cd26858aa3..6ecba4a33e 100644
+--- a/src/qml/jsruntime/qv4domerrors.cpp
++++ b/src/qml/jsruntime/qv4domerrors.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4domerrors_p.h"
+ #include "qv4object_p.h"
+diff --git a/src/qml/jsruntime/qv4domerrors_p.h b/src/qml/jsruntime/qv4domerrors_p.h
+index 2238418404..fe569f27c3 100644
+--- a/src/qml/jsruntime/qv4domerrors_p.h
++++ b/src/qml/jsruntime/qv4domerrors_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2021 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV8DOMERRORS_P_H
+ #define QV8DOMERRORS_P_H
+diff --git a/src/qml/jsruntime/qv4engine.cpp b/src/qml/jsruntime/qv4engine.cpp
+index b7a8f08b47..d7216c11d7 100644
+--- a/src/qml/jsruntime/qv4engine.cpp
++++ b/src/qml/jsruntime/qv4engine.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2021 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4engine_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4engine_p.h b/src/qml/jsruntime/qv4engine_p.h
+index bebf4a2158..ab5de81a9a 100644
+--- a/src/qml/jsruntime/qv4engine_p.h
++++ b/src/qml/jsruntime/qv4engine_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4ENGINE_H
+ #define QV4ENGINE_H
+ 
+diff --git a/src/qml/jsruntime/qv4enginebase_p.h b/src/qml/jsruntime/qv4enginebase_p.h
+index 68e906baa1..67c5953045 100644
+--- a/src/qml/jsruntime/qv4enginebase_p.h
++++ b/src/qml/jsruntime/qv4enginebase_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2017 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4ENGINEBASE_P_H
+ #define QV4ENGINEBASE_P_H
+ 
+diff --git a/src/qml/jsruntime/qv4errorobject.cpp b/src/qml/jsruntime/qv4errorobject.cpp
+index 02145a0243..adf2f30108 100644
+--- a/src/qml/jsruntime/qv4errorobject.cpp
++++ b/src/qml/jsruntime/qv4errorobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ 
+ #include "qv4errorobject_p.h"
+diff --git a/src/qml/jsruntime/qv4errorobject_p.h b/src/qml/jsruntime/qv4errorobject_p.h
+index f9adbb443b..508d7657ae 100644
+--- a/src/qml/jsruntime/qv4errorobject_p.h
++++ b/src/qml/jsruntime/qv4errorobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4ERROROBJECT_H
+ #define QV4ERROROBJECT_H
+ 
+diff --git a/src/qml/jsruntime/qv4estable.cpp b/src/qml/jsruntime/qv4estable.cpp
+index 40c62f11e4..8ec17d6066 100644
+--- a/src/qml/jsruntime/qv4estable.cpp
++++ b/src/qml/jsruntime/qv4estable.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 Crimson AS <info@crimson.no>
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4estable_p.h"
+ #include "qv4object_p.h"
+diff --git a/src/qml/jsruntime/qv4estable_p.h b/src/qml/jsruntime/qv4estable_p.h
+index 037a3689aa..32f6c1651f 100644
+--- a/src/qml/jsruntime/qv4estable_p.h
++++ b/src/qml/jsruntime/qv4estable_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 Crimson AS <info@crimson.no>
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ //
+ //  W A R N I N G
+diff --git a/src/qml/jsruntime/qv4executableallocator.cpp b/src/qml/jsruntime/qv4executableallocator.cpp
+index 71d8061d65..a534827b65 100644
+--- a/src/qml/jsruntime/qv4executableallocator.cpp
++++ b/src/qml/jsruntime/qv4executableallocator.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4executableallocator_p.h"
+ #include <QtQml/private/qv4functiontable_p.h>
+diff --git a/src/qml/jsruntime/qv4executableallocator_p.h b/src/qml/jsruntime/qv4executableallocator_p.h
+index 8181bf17ae..3c0fa0e790 100644
+--- a/src/qml/jsruntime/qv4executableallocator_p.h
++++ b/src/qml/jsruntime/qv4executableallocator_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4EXECUTABLEALLOCATOR_H
+ #define QV4EXECUTABLEALLOCATOR_H
+diff --git a/src/qml/jsruntime/qv4executablecompilationunit.cpp b/src/qml/jsruntime/qv4executablecompilationunit.cpp
+index 260ffecfbe..9ab2bb6591 100644
+--- a/src/qml/jsruntime/qv4executablecompilationunit.cpp
++++ b/src/qml/jsruntime/qv4executablecompilationunit.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2019 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qml/qqmlprivate.h"
+ #include "qv4engine_p.h"
+diff --git a/src/qml/jsruntime/qv4executablecompilationunit_p.h b/src/qml/jsruntime/qv4executablecompilationunit_p.h
+index b81a4370e2..5e05f5a7f0 100644
+--- a/src/qml/jsruntime/qv4executablecompilationunit_p.h
++++ b/src/qml/jsruntime/qv4executablecompilationunit_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2019 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4EXECUTABLECOMPILATIONUNIT_P_H
+ #define QV4EXECUTABLECOMPILATIONUNIT_P_H
+diff --git a/src/qml/jsruntime/qv4function.cpp b/src/qml/jsruntime/qv4function.cpp
+index 20dbff4cea..267e97ad95 100644
+--- a/src/qml/jsruntime/qv4function.cpp
++++ b/src/qml/jsruntime/qv4function.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4function_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4function_p.h b/src/qml/jsruntime/qv4function_p.h
+index 8161c17406..a73be5c2af 100644
+--- a/src/qml/jsruntime/qv4function_p.h
++++ b/src/qml/jsruntime/qv4function_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4FUNCTION_H
+ #define QV4FUNCTION_H
+ 
+diff --git a/src/qml/jsruntime/qv4functionobject.cpp b/src/qml/jsruntime/qv4functionobject.cpp
+index 1a812790b4..ce4a629b0a 100644
+--- a/src/qml/jsruntime/qv4functionobject.cpp
++++ b/src/qml/jsruntime/qv4functionobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4object_p.h"
+ #include "qv4function_p.h"
+diff --git a/src/qml/jsruntime/qv4functionobject_p.h b/src/qml/jsruntime/qv4functionobject_p.h
+index f4a2935b5a..e5e4c74ca1 100644
+--- a/src/qml/jsruntime/qv4functionobject_p.h
++++ b/src/qml/jsruntime/qv4functionobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4FUNCTIONOBJECT_H
+ #define QV4FUNCTIONOBJECT_H
+ 
+diff --git a/src/qml/jsruntime/qv4functiontable_noop.cpp b/src/qml/jsruntime/qv4functiontable_noop.cpp
+index 8a72fa5469..0fc98894ff 100644
+--- a/src/qml/jsruntime/qv4functiontable_noop.cpp
++++ b/src/qml/jsruntime/qv4functiontable_noop.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2017 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4functiontable_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4functiontable_p.h b/src/qml/jsruntime/qv4functiontable_p.h
+index 8937e2fe85..80b1b80b93 100644
+--- a/src/qml/jsruntime/qv4functiontable_p.h
++++ b/src/qml/jsruntime/qv4functiontable_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4FUNCTIONTABLE_P_H
+ #define QV4FUNCTIONTABLE_P_H
+diff --git a/src/qml/jsruntime/qv4functiontable_unix.cpp b/src/qml/jsruntime/qv4functiontable_unix.cpp
+index 9561917777..337700d55e 100644
+--- a/src/qml/jsruntime/qv4functiontable_unix.cpp
++++ b/src/qml/jsruntime/qv4functiontable_unix.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2017 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4functiontable_p.h"
+ #include "qv4function_p.h"
+diff --git a/src/qml/jsruntime/qv4functiontable_win64.cpp b/src/qml/jsruntime/qv4functiontable_win64.cpp
+index c21cdb790a..d2772fd9ec 100644
+--- a/src/qml/jsruntime/qv4functiontable_win64.cpp
++++ b/src/qml/jsruntime/qv4functiontable_win64.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4functiontable_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4generatorobject.cpp b/src/qml/jsruntime/qv4generatorobject.cpp
+index efe4cde76b..b294681ad2 100644
+--- a/src/qml/jsruntime/qv4generatorobject.cpp
++++ b/src/qml/jsruntime/qv4generatorobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <qv4generatorobject_p.h>
+ #include <qv4symbol_p.h>
+diff --git a/src/qml/jsruntime/qv4generatorobject_p.h b/src/qml/jsruntime/qv4generatorobject_p.h
+index a70548128b..a7525853bc 100644
+--- a/src/qml/jsruntime/qv4generatorobject_p.h
++++ b/src/qml/jsruntime/qv4generatorobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4GENERATOROBJECT_P_H
+ #define QV4GENERATOROBJECT_P_H
+diff --git a/src/qml/jsruntime/qv4global_p.h b/src/qml/jsruntime/qv4global_p.h
+index e3fc0ac1b3..b4a23af3b6 100644
+--- a/src/qml/jsruntime/qv4global_p.h
++++ b/src/qml/jsruntime/qv4global_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4GLOBAL_H
+ #define QV4GLOBAL_H
+diff --git a/src/qml/jsruntime/qv4globalobject.cpp b/src/qml/jsruntime/qv4globalobject.cpp
+index 588067fa78..65579083f4 100644
+--- a/src/qml/jsruntime/qv4globalobject.cpp
++++ b/src/qml/jsruntime/qv4globalobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4globalobject_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4globalobject_p.h b/src/qml/jsruntime/qv4globalobject_p.h
+index fd23d71332..45ca549b2b 100644
+--- a/src/qml/jsruntime/qv4globalobject_p.h
++++ b/src/qml/jsruntime/qv4globalobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4GLOBALOBJECT_H
+ #define QV4GLOBALOBJECT_H
+ 
+diff --git a/src/qml/jsruntime/qv4identifierhash.cpp b/src/qml/jsruntime/qv4identifierhash.cpp
+index 48df2283f0..a89379eb66 100644
+--- a/src/qml/jsruntime/qv4identifierhash.cpp
++++ b/src/qml/jsruntime/qv4identifierhash.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <private/qv4identifierhash_p.h>
+ #include <private/qv4identifiertable_p.h>
+diff --git a/src/qml/jsruntime/qv4identifierhash_p.h b/src/qml/jsruntime/qv4identifierhash_p.h
+index 6c77a78f85..0a723766b5 100644
+--- a/src/qml/jsruntime/qv4identifierhash_p.h
++++ b/src/qml/jsruntime/qv4identifierhash_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4IDENTIFIERHASH_P_H
+ #define QV4IDENTIFIERHASH_P_H
+ 
+diff --git a/src/qml/jsruntime/qv4identifierhashdata_p.h b/src/qml/jsruntime/qv4identifierhashdata_p.h
+index 664e8e803d..04f845d985 100644
+--- a/src/qml/jsruntime/qv4identifierhashdata_p.h
++++ b/src/qml/jsruntime/qv4identifierhashdata_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2020 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4IDENTIFIERHASHDATA_H
+ #define QV4IDENTIFIERHASHDATA_H
+ 
+diff --git a/src/qml/jsruntime/qv4identifiertable.cpp b/src/qml/jsruntime/qv4identifiertable.cpp
+index 4c915442f4..b4ffd070ee 100644
+--- a/src/qml/jsruntime/qv4identifiertable.cpp
++++ b/src/qml/jsruntime/qv4identifiertable.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #include "qv4identifiertable_p.h"
+ #include "qv4symbol_p.h"
+ #include <private/qv4identifierhashdata_p.h>
+diff --git a/src/qml/jsruntime/qv4identifiertable_p.h b/src/qml/jsruntime/qv4identifiertable_p.h
+index 2ecd4a7294..5df18396e5 100644
+--- a/src/qml/jsruntime/qv4identifiertable_p.h
++++ b/src/qml/jsruntime/qv4identifiertable_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4IDENTIFIERTABLE_H
+ #define QV4IDENTIFIERTABLE_H
+ 
+diff --git a/src/qml/jsruntime/qv4include.cpp b/src/qml/jsruntime/qv4include.cpp
+index 76545ba692..e12559a37d 100644
+--- a/src/qml/jsruntime/qv4include.cpp
++++ b/src/qml/jsruntime/qv4include.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4include_p.h"
+ #include "qv4scopedvalue_p.h"
+diff --git a/src/qml/jsruntime/qv4include_p.h b/src/qml/jsruntime/qv4include_p.h
+index c6ac98c761..88df7791ae 100644
+--- a/src/qml/jsruntime/qv4include_p.h
++++ b/src/qml/jsruntime/qv4include_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4INCLUDE_P_H
+ #define QV4INCLUDE_P_H
+diff --git a/src/qml/jsruntime/qv4internalclass.cpp b/src/qml/jsruntime/qv4internalclass.cpp
+index 5b21d5ac07..05d4e07459 100644
+--- a/src/qml/jsruntime/qv4internalclass.cpp
++++ b/src/qml/jsruntime/qv4internalclass.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <qv4internalclass_p.h>
+ #include <qv4string_p.h>
+diff --git a/src/qml/jsruntime/qv4internalclass_p.h b/src/qml/jsruntime/qv4internalclass_p.h
+index 56ce787859..23e8a46506 100644
+--- a/src/qml/jsruntime/qv4internalclass_p.h
++++ b/src/qml/jsruntime/qv4internalclass_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4INTERNALCLASS_H
+ #define QV4INTERNALCLASS_H
+ 
+diff --git a/src/qml/jsruntime/qv4iterator.cpp b/src/qml/jsruntime/qv4iterator.cpp
+index 617037ecdc..3c7045ca7b 100644
+--- a/src/qml/jsruntime/qv4iterator.cpp
++++ b/src/qml/jsruntime/qv4iterator.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #include <qv4iterator_p.h>
+ #include <qv4symbol_p.h>
+ #include <qv4engine_p.h>
+diff --git a/src/qml/jsruntime/qv4iterator_p.h b/src/qml/jsruntime/qv4iterator_p.h
+index 46e48864ed..641e93c4f1 100644
+--- a/src/qml/jsruntime/qv4iterator_p.h
++++ b/src/qml/jsruntime/qv4iterator_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4ITERATOR_P_H
+ #define QV4ITERATOR_P_H
+diff --git a/src/qml/jsruntime/qv4jscall.cpp b/src/qml/jsruntime/qv4jscall.cpp
+index 513ae59145..060f6bcd0f 100644
+--- a/src/qml/jsruntime/qv4jscall.cpp
++++ b/src/qml/jsruntime/qv4jscall.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2021 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4jscall_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4jscall_p.h b/src/qml/jsruntime/qv4jscall_p.h
+index ce52e1f509..af39fb7a85 100644
+--- a/src/qml/jsruntime/qv4jscall_p.h
++++ b/src/qml/jsruntime/qv4jscall_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2017 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4JSCALL_H
+ #define QV4JSCALL_H
+ 
+diff --git a/src/qml/jsruntime/qv4jsonobject_p.h b/src/qml/jsruntime/qv4jsonobject_p.h
+index f6f63d7eb3..038ab67ba5 100644
+--- a/src/qml/jsruntime/qv4jsonobject_p.h
++++ b/src/qml/jsruntime/qv4jsonobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4JSONOBJECT_H
+ #define QV4JSONOBJECT_H
+ 
+diff --git a/src/qml/jsruntime/qv4lookup.cpp b/src/qml/jsruntime/qv4lookup.cpp
+index beebdcad6b..e97e40be61 100644
+--- a/src/qml/jsruntime/qv4lookup.cpp
++++ b/src/qml/jsruntime/qv4lookup.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4lookup_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4lookup_p.h b/src/qml/jsruntime/qv4lookup_p.h
+index 61184df4bb..ea6839c76b 100644
+--- a/src/qml/jsruntime/qv4lookup_p.h
++++ b/src/qml/jsruntime/qv4lookup_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4LOOKUP_H
+ #define QV4LOOKUP_H
+ 
+diff --git a/src/qml/jsruntime/qv4managed.cpp b/src/qml/jsruntime/qv4managed.cpp
+index 9101d6a177..155587decc 100644
+--- a/src/qml/jsruntime/qv4managed.cpp
++++ b/src/qml/jsruntime/qv4managed.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4managed_p.h"
+ #include <private/qv4mm_p.h>
+diff --git a/src/qml/jsruntime/qv4managed_p.h b/src/qml/jsruntime/qv4managed_p.h
+index 0a5012ec6a..852a39cde7 100644
+--- a/src/qml/jsruntime/qv4managed_p.h
++++ b/src/qml/jsruntime/qv4managed_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QMLJS_MANAGED_H
+ #define QMLJS_MANAGED_H
+ 
+diff --git a/src/qml/jsruntime/qv4mapiterator.cpp b/src/qml/jsruntime/qv4mapiterator.cpp
+index 494ee94865..9d9fb128c9 100644
+--- a/src/qml/jsruntime/qv4mapiterator.cpp
++++ b/src/qml/jsruntime/qv4mapiterator.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 Crimson AS <info@crimson.no>
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <private/qv4iterator_p.h>
+ #include <private/qv4estable_p.h>
+diff --git a/src/qml/jsruntime/qv4mapiterator_p.h b/src/qml/jsruntime/qv4mapiterator_p.h
+index 97a72db85c..43a767aff6 100644
+--- a/src/qml/jsruntime/qv4mapiterator_p.h
++++ b/src/qml/jsruntime/qv4mapiterator_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 Crimson AS <info@crimson.no>
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4MAPITERATOR_P_H
+ #define QV4MAPITERATOR_P_H
+diff --git a/src/qml/jsruntime/qv4mapobject.cpp b/src/qml/jsruntime/qv4mapobject.cpp
+index 9355582906..5d31891a63 100644
+--- a/src/qml/jsruntime/qv4mapobject.cpp
++++ b/src/qml/jsruntime/qv4mapobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 Crimson AS <info@crimson.no>
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4mapobject_p.h"
+ #include "qv4mapiterator_p.h"
+diff --git a/src/qml/jsruntime/qv4mapobject_p.h b/src/qml/jsruntime/qv4mapobject_p.h
+index e7ff02c13a..6745edbde6 100644
+--- a/src/qml/jsruntime/qv4mapobject_p.h
++++ b/src/qml/jsruntime/qv4mapobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 Crimson AS <info@crimson.no>
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4MAPOBJECT_P_H
+ #define QV4MAPOBJECT_P_H
+diff --git a/src/qml/jsruntime/qv4math_p.h b/src/qml/jsruntime/qv4math_p.h
+index b12990700d..9aadf301bc 100644
+--- a/src/qml/jsruntime/qv4math_p.h
++++ b/src/qml/jsruntime/qv4math_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QMLJS_MATH_H
+ #define QMLJS_MATH_H
+ 
+diff --git a/src/qml/jsruntime/qv4mathobject.cpp b/src/qml/jsruntime/qv4mathobject.cpp
+index 71ff6ec0f8..15ea692133 100644
+--- a/src/qml/jsruntime/qv4mathobject.cpp
++++ b/src/qml/jsruntime/qv4mathobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4mathobject_p.h"
+ #include "qv4symbol_p.h"
+diff --git a/src/qml/jsruntime/qv4mathobject_p.h b/src/qml/jsruntime/qv4mathobject_p.h
+index 5547cbab61..a0ba0b53ed 100644
+--- a/src/qml/jsruntime/qv4mathobject_p.h
++++ b/src/qml/jsruntime/qv4mathobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4MATHOBJECT_H
+ #define QV4MATHOBJECT_H
+ 
+diff --git a/src/qml/jsruntime/qv4memberdata.cpp b/src/qml/jsruntime/qv4memberdata.cpp
+index 0231641609..7768045753 100644
+--- a/src/qml/jsruntime/qv4memberdata.cpp
++++ b/src/qml/jsruntime/qv4memberdata.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4memberdata_p.h"
+ #include <private/qv4mm_p.h>
+diff --git a/src/qml/jsruntime/qv4module.cpp b/src/qml/jsruntime/qv4module.cpp
+index 8e075251e4..3795a06d2f 100644
+--- a/src/qml/jsruntime/qv4module.cpp
++++ b/src/qml/jsruntime/qv4module.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ 
+ #include "qv4module_p.h"
+diff --git a/src/qml/jsruntime/qv4module_p.h b/src/qml/jsruntime/qv4module_p.h
+index 43cd995b06..be03fd98f7 100644
+--- a/src/qml/jsruntime/qv4module_p.h
++++ b/src/qml/jsruntime/qv4module_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4MODULE
+ #define QV4MODULE
+ 
+diff --git a/src/qml/jsruntime/qv4numberobject.cpp b/src/qml/jsruntime/qv4numberobject.cpp
+index 8aef0354d8..06b806485c 100644
+--- a/src/qml/jsruntime/qv4numberobject.cpp
++++ b/src/qml/jsruntime/qv4numberobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4numberobject_p.h"
+ #include "qv4runtime_p.h"
+diff --git a/src/qml/jsruntime/qv4numberobject_p.h b/src/qml/jsruntime/qv4numberobject_p.h
+index 3f0d6d9425..0235c20051 100644
+--- a/src/qml/jsruntime/qv4numberobject_p.h
++++ b/src/qml/jsruntime/qv4numberobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4NUMBEROBJECT_H
+ #define QV4NUMBEROBJECT_H
+ 
+diff --git a/src/qml/jsruntime/qv4object.cpp b/src/qml/jsruntime/qv4object.cpp
+index ffa17f5a4d..2ee9c80dbf 100644
+--- a/src/qml/jsruntime/qv4object.cpp
++++ b/src/qml/jsruntime/qv4object.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4object_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4object_p.h b/src/qml/jsruntime/qv4object_p.h
+index 77437273d4..8456a49112 100644
+--- a/src/qml/jsruntime/qv4object_p.h
++++ b/src/qml/jsruntime/qv4object_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4_OBJECT_H
+ #define QV4_OBJECT_H
+ 
+diff --git a/src/qml/jsruntime/qv4objectiterator.cpp b/src/qml/jsruntime/qv4objectiterator.cpp
+index 573f42956d..dea5f23a74 100644
+--- a/src/qml/jsruntime/qv4objectiterator.cpp
++++ b/src/qml/jsruntime/qv4objectiterator.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #include "qv4objectiterator_p.h"
+ #include "qv4object_p.h"
+ #include "qv4iterator_p.h"
+diff --git a/src/qml/jsruntime/qv4objectiterator_p.h b/src/qml/jsruntime/qv4objectiterator_p.h
+index 7f06faf9d5..2f91f9f7e9 100644
+--- a/src/qml/jsruntime/qv4objectiterator_p.h
++++ b/src/qml/jsruntime/qv4objectiterator_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4OBJECTITERATOR_H
+ #define QV4OBJECTITERATOR_H
+ 
+diff --git a/src/qml/jsruntime/qv4objectproto.cpp b/src/qml/jsruntime/qv4objectproto.cpp
+index 2a78bb4540..8009a76105 100644
+--- a/src/qml/jsruntime/qv4objectproto.cpp
++++ b/src/qml/jsruntime/qv4objectproto.cpp
+@@ -1,6 +1,7 @@
+ // Copyright (C) 2017 Crimson AS <info@crimson.no>
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ 
+ #include "qv4objectproto_p.h"
+diff --git a/src/qml/jsruntime/qv4objectproto_p.h b/src/qml/jsruntime/qv4objectproto_p.h
+index d74cd64926..5342dd2f13 100644
+--- a/src/qml/jsruntime/qv4objectproto_p.h
++++ b/src/qml/jsruntime/qv4objectproto_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4ECMAOBJECTS_P_H
+ #define QV4ECMAOBJECTS_P_H
+ 
+diff --git a/src/qml/jsruntime/qv4persistent.cpp b/src/qml/jsruntime/qv4persistent.cpp
+index 4f11d0a2ad..bd2c358503 100644
+--- a/src/qml/jsruntime/qv4persistent.cpp
++++ b/src/qml/jsruntime/qv4persistent.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4persistent_p.h"
+ #include <private/qv4mm_p.h>
+diff --git a/src/qml/jsruntime/qv4persistent_p.h b/src/qml/jsruntime/qv4persistent_p.h
+index d0e29a166e..9c9f369139 100644
+--- a/src/qml/jsruntime/qv4persistent_p.h
++++ b/src/qml/jsruntime/qv4persistent_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4PERSISTENT_H
+ #define QV4PERSISTENT_H
+ 
+diff --git a/src/qml/jsruntime/qv4profiling.cpp b/src/qml/jsruntime/qv4profiling.cpp
+index df63d4bdf7..9367445bb5 100644
+--- a/src/qml/jsruntime/qv4profiling.cpp
++++ b/src/qml/jsruntime/qv4profiling.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4profiling_p.h"
+ #include <private/qv4mm_p.h>
+diff --git a/src/qml/jsruntime/qv4profiling_p.h b/src/qml/jsruntime/qv4profiling_p.h
+index d1e8e34ba3..d28c3d5422 100644
+--- a/src/qml/jsruntime/qv4profiling_p.h
++++ b/src/qml/jsruntime/qv4profiling_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4PROFILING_H
+ #define QV4PROFILING_H
+diff --git a/src/qml/jsruntime/qv4promiseobject.cpp b/src/qml/jsruntime/qv4promiseobject.cpp
+index b8ede3e578..8141aba9cb 100644
+--- a/src/qml/jsruntime/qv4promiseobject.cpp
++++ b/src/qml/jsruntime/qv4promiseobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #include <QCoreApplication>
+ 
+ #include <private/qv4promiseobject_p.h>
+diff --git a/src/qml/jsruntime/qv4promiseobject_p.h b/src/qml/jsruntime/qv4promiseobject_p.h
+index fbde9f95e0..05afb4f249 100644
+--- a/src/qml/jsruntime/qv4promiseobject_p.h
++++ b/src/qml/jsruntime/qv4promiseobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4PROMISEOBJECT_H
+ #define QV4PROMISEOBJECT_H
+ 
+diff --git a/src/qml/jsruntime/qv4property_p.h b/src/qml/jsruntime/qv4property_p.h
+index e7ad6b58d6..563b69d748 100644
+--- a/src/qml/jsruntime/qv4property_p.h
++++ b/src/qml/jsruntime/qv4property_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4PROPERTYDESCRIPTOR_H
+ #define QV4PROPERTYDESCRIPTOR_H
+ 
+diff --git a/src/qml/jsruntime/qv4propertykey.cpp b/src/qml/jsruntime/qv4propertykey.cpp
+index 65dd7e7fc1..f2eb6175fe 100644
+--- a/src/qml/jsruntime/qv4propertykey.cpp
++++ b/src/qml/jsruntime/qv4propertykey.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4propertykey_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4propertykey_p.h b/src/qml/jsruntime/qv4propertykey_p.h
+index f3b05ee0d8..88b91d7499 100644
+--- a/src/qml/jsruntime/qv4propertykey_p.h
++++ b/src/qml/jsruntime/qv4propertykey_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4PROPERTYKEY_H
+ #define QV4PROPERTYKEY_H
+ 
+diff --git a/src/qml/jsruntime/qv4proxy.cpp b/src/qml/jsruntime/qv4proxy.cpp
+index 2ab30531e3..a435285c4e 100644
+--- a/src/qml/jsruntime/qv4proxy.cpp
++++ b/src/qml/jsruntime/qv4proxy.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ 
+ #include "qv4proxy_p.h"
+diff --git a/src/qml/jsruntime/qv4proxy_p.h b/src/qml/jsruntime/qv4proxy_p.h
+index b3ce9c7a96..b56faca2f0 100644
+--- a/src/qml/jsruntime/qv4proxy_p.h
++++ b/src/qml/jsruntime/qv4proxy_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4PROXY_P_H
+ #define QV4PROXY_P_H
+ 
+diff --git a/src/qml/jsruntime/qv4qmetaobjectwrapper.cpp b/src/qml/jsruntime/qv4qmetaobjectwrapper.cpp
+index 6521c98dbf..8396610517 100644
+--- a/src/qml/jsruntime/qv4qmetaobjectwrapper.cpp
++++ b/src/qml/jsruntime/qv4qmetaobjectwrapper.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2024 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4qmetaobjectwrapper_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4qmetaobjectwrapper_p.h b/src/qml/jsruntime/qv4qmetaobjectwrapper_p.h
+index c44b18f291..4623d2840c 100644
+--- a/src/qml/jsruntime/qv4qmetaobjectwrapper_p.h
++++ b/src/qml/jsruntime/qv4qmetaobjectwrapper_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2024 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4QMETAOBJECTWRAPPER_P_H
+ #define QV4QMETAOBJECTWRAPPER_P_H
+diff --git a/src/qml/jsruntime/qv4qmlcontext.cpp b/src/qml/jsruntime/qv4qmlcontext.cpp
+index baef0b4864..6600ceafb2 100644
+--- a/src/qml/jsruntime/qv4qmlcontext.cpp
++++ b/src/qml/jsruntime/qv4qmlcontext.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4qmlcontext_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4qmlcontext_p.h b/src/qml/jsruntime/qv4qmlcontext_p.h
+index 1b337d4c0e..8381893478 100644
+--- a/src/qml/jsruntime/qv4qmlcontext_p.h
++++ b/src/qml/jsruntime/qv4qmlcontext_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4QMLCONTEXT_P_H
+ #define QV4QMLCONTEXT_P_H
+diff --git a/src/qml/jsruntime/qv4qobjectwrapper.cpp b/src/qml/jsruntime/qv4qobjectwrapper.cpp
+index 9667f8df67..af331b0b08 100644
+--- a/src/qml/jsruntime/qv4qobjectwrapper.cpp
++++ b/src/qml/jsruntime/qv4qobjectwrapper.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4qobjectwrapper_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4qobjectwrapper_p.h b/src/qml/jsruntime/qv4qobjectwrapper_p.h
+index 397fc05d4a..cf88a2e4ef 100644
+--- a/src/qml/jsruntime/qv4qobjectwrapper_p.h
++++ b/src/qml/jsruntime/qv4qobjectwrapper_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4QOBJECTWRAPPER_P_H
+ #define QV4QOBJECTWRAPPER_P_H
+diff --git a/src/qml/jsruntime/qv4referenceobject.cpp b/src/qml/jsruntime/qv4referenceobject.cpp
+index fcad9b92dc..200897eb68 100644
+--- a/src/qml/jsruntime/qv4referenceobject.cpp
++++ b/src/qml/jsruntime/qv4referenceobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2022 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <private/qv4referenceobject_p.h>
+ 
+diff --git a/src/qml/jsruntime/qv4referenceobject_p.h b/src/qml/jsruntime/qv4referenceobject_p.h
+index 35690a7228..d30f04243c 100644
+--- a/src/qml/jsruntime/qv4referenceobject_p.h
++++ b/src/qml/jsruntime/qv4referenceobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2022 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4REFERENCEOBJECT_P_H
+ #define QV4REFERENCEOBJECT_P_H
+diff --git a/src/qml/jsruntime/qv4reflect.cpp b/src/qml/jsruntime/qv4reflect.cpp
+index dc9dbe48ae..62c64ecbdc 100644
+--- a/src/qml/jsruntime/qv4reflect.cpp
++++ b/src/qml/jsruntime/qv4reflect.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4reflect_p.h"
+ #include "qv4runtimeapi_p.h"
+diff --git a/src/qml/jsruntime/qv4reflect_p.h b/src/qml/jsruntime/qv4reflect_p.h
+index 40e1874686..3504abdc2a 100644
+--- a/src/qml/jsruntime/qv4reflect_p.h
++++ b/src/qml/jsruntime/qv4reflect_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4REFLECT_H
+ #define QV4REFLECT_H
+ 
+diff --git a/src/qml/jsruntime/qv4regexp.cpp b/src/qml/jsruntime/qv4regexp.cpp
+index 8dd14d3a43..9120d70649 100644
+--- a/src/qml/jsruntime/qv4regexp.cpp
++++ b/src/qml/jsruntime/qv4regexp.cpp
+@@ -1,5 +1,7 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
++// TODO: verifyj critical part should be in YARR
+ 
+ #include "qv4regexp_p.h"
+ #include "qv4engine_p.h"
+diff --git a/src/qml/jsruntime/qv4regexp_p.h b/src/qml/jsruntime/qv4regexp_p.h
+index 89f9515917..754c171dee 100644
+--- a/src/qml/jsruntime/qv4regexp_p.h
++++ b/src/qml/jsruntime/qv4regexp_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4REGEXP_H
+ #define QV4REGEXP_H
+ 
+diff --git a/src/qml/jsruntime/qv4regexpobject.cpp b/src/qml/jsruntime/qv4regexpobject.cpp
+index 0f5050c704..ec99e15eda 100644
+--- a/src/qml/jsruntime/qv4regexpobject.cpp
++++ b/src/qml/jsruntime/qv4regexpobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4regexpobject_p.h"
+ #include "qv4regexp_p.h"
+diff --git a/src/qml/jsruntime/qv4regexpobject_p.h b/src/qml/jsruntime/qv4regexpobject_p.h
+index 179a01fb45..3c99faa183 100644
+--- a/src/qml/jsruntime/qv4regexpobject_p.h
++++ b/src/qml/jsruntime/qv4regexpobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4REGEXPOBJECT_H
+ #define QV4REGEXPOBJECT_H
+ 
+diff --git a/src/qml/jsruntime/qv4resolvedtypereference.cpp b/src/qml/jsruntime/qv4resolvedtypereference.cpp
+index 88ab99c750..7d32608c1c 100644
+--- a/src/qml/jsruntime/qv4resolvedtypereference.cpp
++++ b/src/qml/jsruntime/qv4resolvedtypereference.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2020 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4resolvedtypereference_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4resolvedtypereference_p.h b/src/qml/jsruntime/qv4resolvedtypereference_p.h
+index 3b1b077a85..e67a495cd2 100644
+--- a/src/qml/jsruntime/qv4resolvedtypereference_p.h
++++ b/src/qml/jsruntime/qv4resolvedtypereference_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2020 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4RESOLVEDTYPEREFERNCE_P_H
+ #define QV4RESOLVEDTYPEREFERNCE_P_H
+diff --git a/src/qml/jsruntime/qv4runtime.cpp b/src/qml/jsruntime/qv4runtime.cpp
+index 4fb77146af..0d2a6e4eec 100644
+--- a/src/qml/jsruntime/qv4runtime.cpp
++++ b/src/qml/jsruntime/qv4runtime.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4runtime_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4runtime_p.h b/src/qml/jsruntime/qv4runtime_p.h
+index a012728cd9..867b1bf479 100644
+--- a/src/qml/jsruntime/qv4runtime_p.h
++++ b/src/qml/jsruntime/qv4runtime_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QMLJS_RUNTIME_H
+ #define QMLJS_RUNTIME_H
+ 
+diff --git a/src/qml/jsruntime/qv4runtimeapi_p.h b/src/qml/jsruntime/qv4runtimeapi_p.h
+index e4a8c09370..0b48b050e6 100644
+--- a/src/qml/jsruntime/qv4runtimeapi_p.h
++++ b/src/qml/jsruntime/qv4runtimeapi_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4RUNTIMEAPI_P_H
+ #define QV4RUNTIMEAPI_P_H
+ 
+diff --git a/src/qml/jsruntime/qv4runtimecodegen.cpp b/src/qml/jsruntime/qv4runtimecodegen.cpp
+index 65dc4a8c17..cabdb551c5 100644
+--- a/src/qml/jsruntime/qv4runtimecodegen.cpp
++++ b/src/qml/jsruntime/qv4runtimecodegen.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2017 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4engine_p.h"
+ #include "qv4runtimecodegen_p.h"
+diff --git a/src/qml/jsruntime/qv4runtimecodegen_p.h b/src/qml/jsruntime/qv4runtimecodegen_p.h
+index 414742eaea..99adde1167 100644
+--- a/src/qml/jsruntime/qv4runtimecodegen_p.h
++++ b/src/qml/jsruntime/qv4runtimecodegen_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2017 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4RUNTIMECODEGEN_P_H
+ #define QV4RUNTIMECODEGEN_P_H
+ 
+diff --git a/src/qml/jsruntime/qv4scopedvalue_p.h b/src/qml/jsruntime/qv4scopedvalue_p.h
+index 2a60631088..a6f36d315a 100644
+--- a/src/qml/jsruntime/qv4scopedvalue_p.h
++++ b/src/qml/jsruntime/qv4scopedvalue_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4SCOPEDVALUE_P_H
+ #define QV4SCOPEDVALUE_P_H
+ 
+diff --git a/src/qml/jsruntime/qv4script.cpp b/src/qml/jsruntime/qv4script.cpp
+index d8f6ebbf48..40a44c18d2 100644
+--- a/src/qml/jsruntime/qv4script.cpp
++++ b/src/qml/jsruntime/qv4script.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4script_p.h"
+ #include <private/qv4mm_p.h>
+diff --git a/src/qml/jsruntime/qv4script_p.h b/src/qml/jsruntime/qv4script_p.h
+index da95503c77..75679ef729 100644
+--- a/src/qml/jsruntime/qv4script_p.h
++++ b/src/qml/jsruntime/qv4script_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4SCRIPT_H
+ #define QV4SCRIPT_H
+ 
+diff --git a/src/qml/jsruntime/qv4sequenceobject.cpp b/src/qml/jsruntime/qv4sequenceobject.cpp
+index 685ceacc41..ce856cc062 100644
+--- a/src/qml/jsruntime/qv4sequenceobject.cpp
++++ b/src/qml/jsruntime/qv4sequenceobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <QtCore/qsequentialiterable.h>
+ 
+diff --git a/src/qml/jsruntime/qv4sequenceobject_p.h b/src/qml/jsruntime/qv4sequenceobject_p.h
+index 464147181c..d7b636d044 100644
+--- a/src/qml/jsruntime/qv4sequenceobject_p.h
++++ b/src/qml/jsruntime/qv4sequenceobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4SEQUENCEWRAPPER_P_H
+ #define QV4SEQUENCEWRAPPER_P_H
+diff --git a/src/qml/jsruntime/qv4setiterator.cpp b/src/qml/jsruntime/qv4setiterator.cpp
+index 0491d26352..a8f571a82a 100644
+--- a/src/qml/jsruntime/qv4setiterator.cpp
++++ b/src/qml/jsruntime/qv4setiterator.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 Crimson AS <info@crimson.no>
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <private/qv4iterator_p.h>
+ #include <private/qv4estable_p.h>
+diff --git a/src/qml/jsruntime/qv4setiterator_p.h b/src/qml/jsruntime/qv4setiterator_p.h
+index 37f912e01a..d0957ebf45 100644
+--- a/src/qml/jsruntime/qv4setiterator_p.h
++++ b/src/qml/jsruntime/qv4setiterator_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 Crimson AS <info@crimson.no>
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4SETITERATOR_P_H
+ #define QV4SETITERATOR_P_H
+diff --git a/src/qml/jsruntime/qv4setobject.cpp b/src/qml/jsruntime/qv4setobject.cpp
+index daf4893ce5..948527172c 100644
+--- a/src/qml/jsruntime/qv4setobject.cpp
++++ b/src/qml/jsruntime/qv4setobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 Crimson AS <info@crimson.no>
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ 
+ #include "qv4setobject_p.h"
+diff --git a/src/qml/jsruntime/qv4setobject_p.h b/src/qml/jsruntime/qv4setobject_p.h
+index 118cdebd5a..d3bd0ae88d 100644
+--- a/src/qml/jsruntime/qv4setobject_p.h
++++ b/src/qml/jsruntime/qv4setobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 Crimson AS <info@crimson.no>
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4SETOBJECT_P_H
+ #define QV4SETOBJECT_P_H
+diff --git a/src/qml/jsruntime/qv4sparsearray.cpp b/src/qml/jsruntime/qv4sparsearray.cpp
+index 656c496a2a..5f4b70a93b 100644
+--- a/src/qml/jsruntime/qv4sparsearray.cpp
++++ b/src/qml/jsruntime/qv4sparsearray.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4sparsearray_p.h"
+ #include <stdlib.h>
+diff --git a/src/qml/jsruntime/qv4sparsearray_p.h b/src/qml/jsruntime/qv4sparsearray_p.h
+index 7da42a4985..c58b756122 100644
+--- a/src/qml/jsruntime/qv4sparsearray_p.h
++++ b/src/qml/jsruntime/qv4sparsearray_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4SPARSEARRAY_H
+ #define QV4SPARSEARRAY_H
+diff --git a/src/qml/jsruntime/qv4sqlerrors.cpp b/src/qml/jsruntime/qv4sqlerrors.cpp
+index c942871702..8b45fe2ac1 100644
+--- a/src/qml/jsruntime/qv4sqlerrors.cpp
++++ b/src/qml/jsruntime/qv4sqlerrors.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4sqlerrors_p.h"
+ #include "private/qv4engine_p.h"
+diff --git a/src/qml/jsruntime/qv4sqlerrors_p.h b/src/qml/jsruntime/qv4sqlerrors_p.h
+index b6c5d5446d..cd1cb661c5 100644
+--- a/src/qml/jsruntime/qv4sqlerrors_p.h
++++ b/src/qml/jsruntime/qv4sqlerrors_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2021 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV8SQLERRORS_P_H
+ #define QV8SQLERRORS_P_H
+diff --git a/src/qml/jsruntime/qv4stackframe.cpp b/src/qml/jsruntime/qv4stackframe.cpp
+index 5117e745a0..0d80e1d6ef 100644
+--- a/src/qml/jsruntime/qv4stackframe.cpp
++++ b/src/qml/jsruntime/qv4stackframe.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4stackframe_p.h"
+ #include <private/qv4qobjectwrapper_p.h>
+diff --git a/src/qml/jsruntime/qv4stackframe_p.h b/src/qml/jsruntime/qv4stackframe_p.h
+index 09f17261e6..9c56b7ee1f 100644
+--- a/src/qml/jsruntime/qv4stackframe_p.h
++++ b/src/qml/jsruntime/qv4stackframe_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4STACKFRAME_H
+ #define QV4STACKFRAME_H
+ 
+diff --git a/src/qml/jsruntime/qv4string.cpp b/src/qml/jsruntime/qv4string.cpp
+index 8b5594b43b..2fb7674dea 100644
+--- a/src/qml/jsruntime/qv4string.cpp
++++ b/src/qml/jsruntime/qv4string.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4string_p.h"
+ #include "qv4value_p.h"
+diff --git a/src/qml/jsruntime/qv4string_p.h b/src/qml/jsruntime/qv4string_p.h
+index 370baadc98..de24f5874e 100644
+--- a/src/qml/jsruntime/qv4string_p.h
++++ b/src/qml/jsruntime/qv4string_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4STRING_H
+ #define QV4STRING_H
+ 
+diff --git a/src/qml/jsruntime/qv4stringiterator.cpp b/src/qml/jsruntime/qv4stringiterator.cpp
+index 9cb2711efb..c00be938e4 100644
+--- a/src/qml/jsruntime/qv4stringiterator.cpp
++++ b/src/qml/jsruntime/qv4stringiterator.cpp
+@@ -1,6 +1,7 @@
+ // Copyright (C) 2017 Crimson AS <info@crimson.no>
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <private/qv4iterator_p.h>
+ #include <private/qv4stringiterator_p.h>
+diff --git a/src/qml/jsruntime/qv4stringiterator_p.h b/src/qml/jsruntime/qv4stringiterator_p.h
+index 742b8a895d..9d0e613cea 100644
+--- a/src/qml/jsruntime/qv4stringiterator_p.h
++++ b/src/qml/jsruntime/qv4stringiterator_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4STRINGITERATOR_P_H
+ #define QV4STRINGITERATOR_P_H
+diff --git a/src/qml/jsruntime/qv4stringobject.cpp b/src/qml/jsruntime/qv4stringobject.cpp
+index bb92b0cdb5..befe2473e7 100644
+--- a/src/qml/jsruntime/qv4stringobject.cpp
++++ b/src/qml/jsruntime/qv4stringobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ 
+ #include "qv4stringobject_p.h"
+diff --git a/src/qml/jsruntime/qv4stringobject_p.h b/src/qml/jsruntime/qv4stringobject_p.h
+index 73c2bd7b34..6aeacfd3e0 100644
+--- a/src/qml/jsruntime/qv4stringobject_p.h
++++ b/src/qml/jsruntime/qv4stringobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4STRINGOBJECT_P_H
+ #define QV4STRINGOBJECT_P_H
+ 
+diff --git a/src/qml/jsruntime/qv4symbol.cpp b/src/qml/jsruntime/qv4symbol.cpp
+index 85ef57f680..64a40e6c21 100644
+--- a/src/qml/jsruntime/qv4symbol.cpp
++++ b/src/qml/jsruntime/qv4symbol.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <qv4symbol_p.h>
+ #include <qv4functionobject_p.h>
+diff --git a/src/qml/jsruntime/qv4symbol_p.h b/src/qml/jsruntime/qv4symbol_p.h
+index 29a0189b69..54ebc1c69b 100644
+--- a/src/qml/jsruntime/qv4symbol_p.h
++++ b/src/qml/jsruntime/qv4symbol_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4_SYMBOL_H
+ #define QV4_SYMBOL_H
+ 
+diff --git a/src/qml/jsruntime/qv4typedarray.cpp b/src/qml/jsruntime/qv4typedarray.cpp
+index f193eb5925..6ccccbc8d8 100644
+--- a/src/qml/jsruntime/qv4typedarray.cpp
++++ b/src/qml/jsruntime/qv4typedarray.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4typedarray_p.h"
+ #include "qv4arrayiterator_p.h"
+diff --git a/src/qml/jsruntime/qv4typedarray_p.h b/src/qml/jsruntime/qv4typedarray_p.h
+index 50db9610c7..8ebec12399 100644
+--- a/src/qml/jsruntime/qv4typedarray_p.h
++++ b/src/qml/jsruntime/qv4typedarray_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4TYPEDARRAY_H
+ #define QV4TYPEDARRAY_H
+ 
+diff --git a/src/qml/jsruntime/qv4urlobject.cpp b/src/qml/jsruntime/qv4urlobject.cpp
+index 6790d4c289..58df08f47d 100644
+--- a/src/qml/jsruntime/qv4urlobject.cpp
++++ b/src/qml/jsruntime/qv4urlobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4arrayiterator_p.h"
+ #include "qv4urlobject_p.h"
+diff --git a/src/qml/jsruntime/qv4urlobject_p.h b/src/qml/jsruntime/qv4urlobject_p.h
+index b3b76e1158..ae3e9d8351 100644
+--- a/src/qml/jsruntime/qv4urlobject_p.h
++++ b/src/qml/jsruntime/qv4urlobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4URLOBJECT_P_H
+ #define QV4URLOBJECT_P_H
+ 
+diff --git a/src/qml/jsruntime/qv4value.cpp b/src/qml/jsruntime/qv4value.cpp
+index 223a004602..ab0e8ac47f 100644
+--- a/src/qml/jsruntime/qv4value.cpp
++++ b/src/qml/jsruntime/qv4value.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include <qv4runtime_p.h>
+ #include <qv4propertykey_p.h>
+diff --git a/src/qml/jsruntime/qv4value_p.h b/src/qml/jsruntime/qv4value_p.h
+index 0f9bbd3b06..a508e297f3 100644
+--- a/src/qml/jsruntime/qv4value_p.h
++++ b/src/qml/jsruntime/qv4value_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4VALUE_P_H
+ #define QV4VALUE_P_H
+ 
+diff --git a/src/qml/jsruntime/qv4variantassociationobject.cpp b/src/qml/jsruntime/qv4variantassociationobject.cpp
+index 3cd8c2e848..2e7ea97519 100644
+--- a/src/qml/jsruntime/qv4variantassociationobject.cpp
++++ b/src/qml/jsruntime/qv4variantassociationobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2024 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4variantassociationobject_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4variantassociationobject_p.h b/src/qml/jsruntime/qv4variantassociationobject_p.h
+index 5a6093100e..fa0992c48a 100644
+--- a/src/qml/jsruntime/qv4variantassociationobject_p.h
++++ b/src/qml/jsruntime/qv4variantassociationobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2024 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4VARIANTASSOCIATIONOBJECT_P_H_
+ #define QV4VARIANTASSOCIATIONOBJECT_P_H_
+diff --git a/src/qml/jsruntime/qv4variantobject.cpp b/src/qml/jsruntime/qv4variantobject.cpp
+index 62e21a120c..9858046707 100644
+--- a/src/qml/jsruntime/qv4variantobject.cpp
++++ b/src/qml/jsruntime/qv4variantobject.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4variantobject_p.h"
+ #include "qv4functionobject_p.h"
+diff --git a/src/qml/jsruntime/qv4variantobject_p.h b/src/qml/jsruntime/qv4variantobject_p.h
+index f2394ce9a2..4fa7f2cf6f 100644
+--- a/src/qml/jsruntime/qv4variantobject_p.h
++++ b/src/qml/jsruntime/qv4variantobject_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4VARIANTOBJECT_P_H
+ #define QV4VARIANTOBJECT_P_H
+diff --git a/src/qml/jsruntime/qv4vme_moth.cpp b/src/qml/jsruntime/qv4vme_moth.cpp
+index 5290b3de6e..b68f69ea5e 100644
+--- a/src/qml/jsruntime/qv4vme_moth.cpp
++++ b/src/qml/jsruntime/qv4vme_moth.cpp
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #include "qv4vme_moth_p.h"
+ 
+diff --git a/src/qml/jsruntime/qv4vme_moth_p.h b/src/qml/jsruntime/qv4vme_moth_p.h
+index 786fc3880d..5aefe92ec7 100644
+--- a/src/qml/jsruntime/qv4vme_moth_p.h
++++ b/src/qml/jsruntime/qv4vme_moth_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2016 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ 
+ #ifndef QV4VME_MOTH_P_H
+ #define QV4VME_MOTH_P_H
+diff --git a/src/qml/jsruntime/qv4vtable_p.h b/src/qml/jsruntime/qv4vtable_p.h
+index 0532fdc32d..21324cec97 100644
+--- a/src/qml/jsruntime/qv4vtable_p.h
++++ b/src/qml/jsruntime/qv4vtable_p.h
+@@ -1,5 +1,6 @@
+ // Copyright (C) 2018 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant
+ #ifndef QV4VTABLE_P_H
+ #define QV4VTABLE_P_H
+ 
+-- 
+2.51.2
+

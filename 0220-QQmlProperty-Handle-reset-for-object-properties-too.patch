@@ -1,0 +1,94 @@
+From a2e6c6cdec6ad9fbc757be198ec69921c6ce7652 Mon Sep 17 00:00:00 2001
+From: Fabian Kosmale <fabian.kosmale@qt.io>
+Date: Mon, 13 Oct 2025 09:44:46 +0200
+Subject: [PATCH 220/239] QQmlProperty: Handle reset for object properties, too
+
+Amends d231bd6f735bd8f473bc29079d4608660aaca98e, which put the reset
+logic only into the fallback path. However, the special cases might
+return early, in which case the fallback path never gets called.
+This happened e.g. with QObject based properties. Avoid the issue by
+handling resets first.
+
+Task-number: QTBUG-138825
+Change-Id: Ie31170558c9a0a6b0c244455ee3baccdb97a7043
+Reviewed-by: Ulf Hermann <ulf.hermann@qt.io>
+(cherry picked from commit a96720a39d59d1c10459e7f9e63c4f73481bf7e0)
+Reviewed-by: Sami Shalayel <sami.shalayel@qt.io>
+---
+ src/qml/qml/qqmlproperty.cpp                  |  6 +++++
+ .../qml/qqmlcomponent/tst_qqmlcomponent.cpp   | 27 +++++++++++++++++++
+ 2 files changed, 33 insertions(+)
+
+diff --git a/src/qml/qml/qqmlproperty.cpp b/src/qml/qml/qqmlproperty.cpp
+index 7bf74d4f42..3acc8c6acd 100644
+--- a/src/qml/qml/qqmlproperty.cpp
++++ b/src/qml/qml/qqmlproperty.cpp
+@@ -1756,6 +1756,12 @@ bool QQmlPropertyPrivate::write(
+ 
+     const BindingFixer bindingFixer(object, property, flags);
+ 
++    // handle property resets here to avoid duplciating code for QObject and other properties
++    if (property.isResettable() && !value.isValid()) {
++        property.resetProperty(object, flags);
++        return true;
++    }
++
+     if (property.isEnum()) {
+         QMetaProperty prop = object->metaObject()->property(property.coreIndex());
+         QVariant v = value;
+diff --git a/tests/auto/qml/qqmlcomponent/tst_qqmlcomponent.cpp b/tests/auto/qml/qqmlcomponent/tst_qqmlcomponent.cpp
+index 57e63e87a7..11b0c48e4d 100644
+--- a/tests/auto/qml/qqmlcomponent/tst_qqmlcomponent.cpp
++++ b/tests/auto/qml/qqmlcomponent/tst_qqmlcomponent.cpp
+@@ -1028,14 +1028,25 @@ struct ComponentWithPublicSetInitial : QQmlComponent
+ 
+ class MyObject : public QObject
+ {
++public:
++    enum E { };
++    Q_ENUM(E)
+     Q_OBJECT
+     Q_PROPERTY(int resettable MEMBER m_resettable RESET resetIt NOTIFY resettableChanged)
++    Q_PROPERTY(QObject * resettableObject MEMBER m_resettableObj RESET resetObject NOTIFY resettableChanged)
++    Q_PROPERTY(MyObject::E resettableEnum MEMBER m_resettableEnum RESET resetEnum NOTIFY resettableChanged)
+     void resetIt() { resetCalled = true; }
++    void resetObject() { resetObjectCalled = true; }
++    void resetEnum() { resetEnumCalled = true; }
+ 
+ public:
+     MyObject(QObject *parent = nullptr) : QObject(parent) { }
+     int m_resettable;
++    QObject *m_resettableObj = nullptr;
++    E m_resettableEnum = {};
+     bool resetCalled = false;
++    bool resetObjectCalled = false;
++    bool resetEnumCalled = false;
+ 
+ signals:
+     void resettableChanged();
+@@ -1054,6 +1065,22 @@ void tst_qqmlcomponent::testSetInitialProperties()
+         QVERIFY(obj);
+         QVERIFY(qobject_cast<MyObject *>(obj.get())->resetCalled);
+     }
++    // reset logic - works also with object properties
++    {
++        QQmlComponent comp(&eng);
++        comp.loadFromModule("ResetTest", "MyObject");
++        std::unique_ptr<QObject>  obj {comp.createWithInitialProperties({{u"resettableObject"_s, QVariant() }}) };
++        QVERIFY(obj);
++        QVERIFY(qobject_cast<MyObject *>(obj.get())->resetObjectCalled);
++    }
++    // reset logic - works also with enums
++    {
++        QQmlComponent comp(&eng);
++        comp.loadFromModule("ResetTest", "MyObject");
++        std::unique_ptr<QObject>  obj {comp.createWithInitialProperties({{u"resettableEnum"_s, QVariant() }}) };
++        QVERIFY(obj);
++        QVERIFY(qobject_cast<MyObject *>(obj.get())->resetEnumCalled);
++    }
+     // reset logic - null != undefined
+     {
+         QQmlComponent comp(&eng);
+-- 
+2.51.2
+

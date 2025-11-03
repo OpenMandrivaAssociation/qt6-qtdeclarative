@@ -1,0 +1,39 @@
+From 536f4ac1508d8e49e0eb0adbe877655bc42107c9 Mon Sep 17 00:00:00 2001
+From: Edward Welbourne <edward.welbourne@qt.io>
+Date: Mon, 6 Oct 2025 17:48:43 +0200
+Subject: [PATCH 134/239] Be explicit about type-conversion for QString::args()
+
+Passing a quint32_le depended on a type conversion that might not be
+obvious to the reader. That's going to stop working when
+QString::arg() gets finnickier about which overloads get coerced to
+integral types, to avoid problems with types that convert fo
+floating-point but aren't recognised by the compiler *as*
+floating-point, so were otherwise being cast via integral types and
+losing precision.
+
+Task-number: QTBUG-138471
+Change-Id: I9b4df08159502c9109fa8489b2290e213bcff2b8
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
+Reviewed-by: Ulf Hermann <ulf.hermann@qt.io>
+(cherry picked from commit 53566b589768102a33d1ccf074af1b13f7bea4b7)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qml/common/qv4compileddata.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/qml/common/qv4compileddata.cpp b/src/qml/common/qv4compileddata.cpp
+index a7e7714c78..c24c055e1d 100644
+--- a/src/qml/common/qv4compileddata.cpp
++++ b/src/qml/common/qv4compileddata.cpp
+@@ -30,7 +30,7 @@ bool Unit::verifyHeader(QDateTime expectedSourceTimeStamp, QString *errorString)
+ 
+     if (version != quint32(QV4_DATA_STRUCTURE_VERSION)) {
+         *errorString = QString::fromUtf8("V4 data structure version mismatch. Found %1 expected %2")
+-                               .arg(version, 0, 16).arg(QV4_DATA_STRUCTURE_VERSION, 0, 16);
++                               .arg(quint32(version), 0, 16).arg(QV4_DATA_STRUCTURE_VERSION, 0, 16);
+         return false;
+     }
+ 
+-- 
+2.51.2
+

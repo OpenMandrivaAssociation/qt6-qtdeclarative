@@ -1,0 +1,232 @@
+From 8461b44243e497afc0fa4e99c0ec08dde8356686 Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Thu, 9 Oct 2025 10:08:20 +0200
+Subject: [PATCH 148/239] qmltc: Fix context assignment
+
+If an object is not the document root we need to set the document root's
+context as its outer context, so that IDs end up in the right place.
+However, when calling a method on an object, we need to provide the
+context the method was declared in, not the context the object was
+instantiated in. Otherwise we get the wrong set of IDs.
+
+Fixes: QTBUG-139142
+Change-Id: Iaeba89c44c955ed09a9778e5d6cc4150e86793ba
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
+Reviewed-by: Semih Yavuz <semih.yavuz@qt.io>
+(cherry picked from commit ceb49a8736bef5077c15b1154e14079e1b73e932)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qml/qml/qqmlengine.cpp                    |  4 +--
+ .../qmltc/supportlibrary/qqmlcppbinding.cpp   |  4 +--
+ .../auto/qml/qmltc/QmltcTests/CMakeLists.txt  |  3 +++
+ .../auto/qml/qmltc/QmltcTests/MyBaseItem.qml  |  3 +++
+ .../qml/qmltc/QmltcTests/MyDerivedItem.qml    |  1 +
+ .../qmltc/QmltcTests/myMatryoshkaItems.qml    |  7 ++++++
+ tests/auto/qml/qmltc/tst_qmltc.cpp            | 25 +++++++++++--------
+ tests/auto/qml/qmltc/tst_qmltc.h              |  2 ++
+ tools/qmltc/qmltccompilerpieces.h             | 18 ++++++++++---
+ 9 files changed, 49 insertions(+), 18 deletions(-)
+ create mode 100644 tests/auto/qml/qmltc/QmltcTests/MyBaseItem.qml
+ create mode 100644 tests/auto/qml/qmltc/QmltcTests/MyDerivedItem.qml
+ create mode 100644 tests/auto/qml/qmltc/QmltcTests/myMatryoshkaItems.qml
+
+diff --git a/src/qml/qml/qqmlengine.cpp b/src/qml/qml/qqmlengine.cpp
+index fb60e4a2b1..338074969b 100644
+--- a/src/qml/qml/qqmlengine.cpp
++++ b/src/qml/qml/qqmlengine.cpp
+@@ -1939,7 +1939,7 @@ void QQmlEnginePrivate::executeRuntimeFunction(const QV4::ExecutableCompilationU
+     Q_ASSERT(thisObject);
+ 
+     QQmlData *ddata = QQmlData::get(thisObject);
+-    Q_ASSERT(ddata && ddata->outerContext);
++    Q_ASSERT(ddata && ddata->context);
+ 
+     QV4::Function *function = unit->runtimeFunctions[functionIndex];
+     Q_ASSERT(function);
+@@ -1954,7 +1954,7 @@ void QQmlEnginePrivate::executeRuntimeFunction(const QV4::ExecutableCompilationU
+     QV4::Scope scope(v4);
+     QV4::ExecutionContext *ctx = v4->scriptContext();
+     QV4::Scoped<QV4::ExecutionContext> callContext(scope,
+-        QV4::QmlContext::create(ctx, ddata->outerContext, thisObject));
++        QV4::QmlContext::create(ctx, ddata->context, thisObject));
+ 
+     if (auto nested = function->nestedFunction()) {
+         // if a nested function is already known, call the closure directly
+diff --git a/src/qml/qmltc/supportlibrary/qqmlcppbinding.cpp b/src/qml/qmltc/supportlibrary/qqmlcppbinding.cpp
+index fdea993124..7e6a8a4a8a 100644
+--- a/src/qml/qmltc/supportlibrary/qqmlcppbinding.cpp
++++ b/src/qml/qmltc/supportlibrary/qqmlcppbinding.cpp
+@@ -25,8 +25,8 @@ inline decltype(auto) createBindingInScope(QObject *thisObject, CreateBinding cr
+     Q_ASSERT(v4);
+ 
+     QQmlData *ddata = QQmlData::get(thisObject);
+-    Q_ASSERT(ddata && ddata->outerContext);
+-    QQmlRefPointer<QQmlContextData> ctxtdata = QQmlRefPointer<QQmlContextData>(ddata->outerContext);
++    Q_ASSERT(ddata && ddata->context);
++    QQmlRefPointer<QQmlContextData> ctxtdata = QQmlRefPointer<QQmlContextData>(ddata->context);
+ 
+     QV4::Scope scope(v4);
+     QV4::ExecutionContext *executionCtx = v4->scriptContext();
+diff --git a/tests/auto/qml/qmltc/QmltcTests/CMakeLists.txt b/tests/auto/qml/qmltc/QmltcTests/CMakeLists.txt
+index 3bb8133e9b..df38fccb1b 100644
+--- a/tests/auto/qml/qmltc/QmltcTests/CMakeLists.txt
++++ b/tests/auto/qml/qmltc/QmltcTests/CMakeLists.txt
+@@ -117,6 +117,7 @@ set(qml_sources
+     stringToUrl.qml
+     myCheckBox.qml
+     signalConnections.qml
++    myMatryoshkaItems.qml
+ 
+     # support types:
+     DefaultPropertySingleChild.qml
+@@ -132,6 +133,8 @@ set(qml_sources
+     InlineComponentProvider.qml
+     InlineComponentReexporter.qml
+     NamespacedTypes.qml
++    MyBaseItem.qml
++    MyDerivedItem.qml
+ 
+     badFile.qml
+ 
+diff --git a/tests/auto/qml/qmltc/QmltcTests/MyBaseItem.qml b/tests/auto/qml/qmltc/QmltcTests/MyBaseItem.qml
+new file mode 100644
+index 0000000000..3052615aef
+--- /dev/null
++++ b/tests/auto/qml/qmltc/QmltcTests/MyBaseItem.qml
+@@ -0,0 +1,3 @@
++import QtQuick
++
++Item {}
+diff --git a/tests/auto/qml/qmltc/QmltcTests/MyDerivedItem.qml b/tests/auto/qml/qmltc/QmltcTests/MyDerivedItem.qml
+new file mode 100644
+index 0000000000..aedbd59366
+--- /dev/null
++++ b/tests/auto/qml/qmltc/QmltcTests/MyDerivedItem.qml
+@@ -0,0 +1 @@
++MyBaseItem {}
+diff --git a/tests/auto/qml/qmltc/QmltcTests/myMatryoshkaItems.qml b/tests/auto/qml/qmltc/QmltcTests/myMatryoshkaItems.qml
+new file mode 100644
+index 0000000000..572594ea23
+--- /dev/null
++++ b/tests/auto/qml/qmltc/QmltcTests/myMatryoshkaItems.qml
+@@ -0,0 +1,7 @@
++import QtQuick
++
++Item {
++    MyDerivedItem {
++        MyBaseItem { id: inner }
++    }
++}
+diff --git a/tests/auto/qml/qmltc/tst_qmltc.cpp b/tests/auto/qml/qmltc/tst_qmltc.cpp
+index 4274f98128..5f2c3c5bd5 100644
+--- a/tests/auto/qml/qmltc/tst_qmltc.cpp
++++ b/tests/auto/qml/qmltc/tst_qmltc.cpp
+@@ -104,6 +104,7 @@
+ #include "attachednamespacedproperty.h"
+ 
+ #include "newlinetranslation.h"
++#include "mymatryoshkaitems.h"
+ 
+ // Qt:
+ #include <QtCore/qstring.h>
+@@ -2218,18 +2219,10 @@ void tst_qmltc::contextHierarchy_childBaseIsQml()
+ 
+     QCOMPARE(rootCtx->parent(), QQmlContextData::get(e.rootContext()));
+     QCOMPARE(child1Ctx, rootCtx);
+-    QEXPECT_FAIL("",
+-                 "Inconsistent with QQmlComponent: non-root object with generated C++ base has "
+-                 "the context of that base",
+-                 Continue);
+     QCOMPARE(child2Ctx, rootCtx);
+-    QEXPECT_FAIL("",
+-                 "Inconsistent with QQmlComponent: non-root object with generated C++ base has "
+-                 "the context of that base",
+-                 Continue);
+     QCOMPARE(child2Ctx->parent(), QQmlContextData::get(e.rootContext()));
+-    // the rootCtx is actually a parent in this case
+-    QCOMPARE(child2Ctx->parent(), rootCtx);
++    // the context of child2 is certainly the root context of the document.
++    QCOMPARE(child2Ctx, rootCtx);
+ 
+     QQmlContext *rootQmlCtx = rootCtx->asQQmlContext();
+     QCOMPARE(rootQmlCtx->objectForName(u"root"_s), &created);
+@@ -3476,4 +3469,16 @@ void tst_qmltc::newLineTranslation()
+     QCOMPARE(createdByQmltc.objectName(), "Hello World \n"_L1);
+ }
+ 
++void tst_qmltc::nestedWithId()
++{
++    QQmlEngine e;
++    PREPEND_NAMESPACE(myMatryoshkaItems) createdByQmltc(&e);
++    QQmlContext *context = qmlContext(&createdByQmltc);
++    QObject *inner = context->objectForName("inner"_L1);
++    QVERIFY(inner);
++    QVERIFY(inner != &createdByQmltc);
++    QVERIFY(qobject_cast<QmltcTests::MyBaseItem *>(inner));
++    QVERIFY(!qobject_cast<QmltcTests::MyDerivedItem *>(inner));
++}
++
+ QTEST_MAIN(tst_qmltc)
+diff --git a/tests/auto/qml/qmltc/tst_qmltc.h b/tests/auto/qml/qmltc/tst_qmltc.h
+index 17a464bdb2..29504e724a 100644
+--- a/tests/auto/qml/qmltc/tst_qmltc.h
++++ b/tests/auto/qml/qmltc/tst_qmltc.h
+@@ -117,4 +117,6 @@ private slots:
+     void attachedNamespacedProperty();
+ 
+     void newLineTranslation();
++
++    void nestedWithId();
+ };
+diff --git a/tools/qmltc/qmltccompilerpieces.h b/tools/qmltc/qmltccompilerpieces.h
+index ef64938654..e5f3855c2c 100644
+--- a/tools/qmltc/qmltccompilerpieces.h
++++ b/tools/qmltc/qmltccompilerpieces.h
+@@ -223,6 +223,12 @@ inline decltype(auto) QmltcCodeGenerator::generate_initCode(QmltcType &current,
+         current.init.body
+                 << QStringLiteral("%1%2::%3(&subCreator, engine, context, /* finalize */ false);")
+                            .arg(lhs, base->internalName(), current.init.name);
++        // if not document root, set outer context
++        if (!isDocumentRoot && !isInlineComponent) {
++            current.init.body
++                    << u"QQmlEnginePrivate::setInternalContext("
++                       "this, parentContext, QQmlContextData::OrdinaryObject);"_s;
++        }
+         current.init.body << u"}"_s;
+     }
+ 
+@@ -259,15 +265,19 @@ inline decltype(auto) QmltcCodeGenerator::generate_initCode(QmltcType &current,
+     // context is this document's context. we must remember it in each type
+     current.variables.emplaceBack(u"QQmlRefPointer<QQmlContextData>"_s, u"q_qmltc_thisContext"_s,
+                                   u"nullptr"_s);
+-    current.init.body << u"%1::q_qmltc_thisContext = context;"_s.arg(type->internalName());
++
++    const QString relevantContext
++            = (isDocumentRoot || isInlineComponent) ? u"context"_s : u"parentContext"_s;
++    current.init.body
++            << u"%1::q_qmltc_thisContext = %2;"_s.arg(type->internalName(), relevantContext);
+ 
+     if (int id = visitor->runtimeId(type); id >= 0) {
+         current.init.body << u"// 3. set id since it is provided"_s;
+         QString idString = visitor->addressableScopes().id(type, type);
+         if (idString.isEmpty())
+             idString = u"<unknown>"_s;
+-        QmltcCodeGenerator::generate_setIdValue(&current.init.body, u"context"_s, id, u"this"_s,
+-                                                idString);
++        QmltcCodeGenerator::generate_setIdValue(
++                &current.init.body, relevantContext, id, u"this"_s, idString);
+     }
+ 
+     // if type has an extension, create a dynamic meta object for it
+@@ -448,7 +458,7 @@ inline void QmltcCodeGenerator::generate_endInitCode(QmltcType &current,
+             icName = u"{}"_s;
+         current.endInit.body << u"{ // defer bindings"_s;
+         current.endInit.body << u"auto ddata = QQmlData::get(this);"_s;
+-        current.endInit.body << u"auto thisContext = ddata->outerContext;"_s;
++        current.endInit.body << u"auto thisContext = ddata->context;"_s;
+         current.endInit.body << u"Q_ASSERT(thisContext);"_s;
+         current.endInit.body << QStringLiteral("ddata->deferData(%1, "
+                                                "QQmlEnginePrivate::get(engine)->"
+-- 
+2.51.2
+

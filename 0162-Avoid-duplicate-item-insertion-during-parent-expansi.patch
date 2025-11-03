@@ -1,0 +1,136 @@
+From f83eb8c4c265e66d1111524ffbe70d9c1286ba37 Mon Sep 17 00:00:00 2001
+From: Santhosh Kumar <santhosh.kumar.selvaraj@qt.io>
+Date: Wed, 1 Oct 2025 17:49:28 +0200
+Subject: [PATCH 162/239] Avoid duplicate item insertion during parent
+ expansion
+
+The tree view inserts items into their parent during expansion in
+QQmlTreeModelToTableModel::showModelChildItems. However, this causes
+a problem when a new item is inserted and the same parent (which is
+already expanded) is expanded again due to a change in its children,
+resulting in a double insertion: once during the row insertion, and
+other during expansion.
+
+This patch prevents triggering
+QQmlTreeModelToTableModel::showModelChildItems when the node was not
+previously expanded but becomes expanded during insertion (for
+example, when expand() is explicitly called due to child changes).
+
+Fixes: QTBUG-139344
+Pick-to: 6.8
+Change-Id: Id88158b2628445c1aaafeff01dd5c9ff22e3c502
+Reviewed-by: Richard Moe Gustavsen <richard.gustavsen@qt.io>
+(cherry picked from commit 5f0479f8dbbbfe38922aad11e96134d1a836e910)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qmlmodels/qqmltreemodeltotablemodel.cpp   |  6 +++-
+ .../data/expandRowInDelegate.qml              | 30 +++++++++++++++++++
+ .../qquicktreeview/tst_qquicktreeview.cpp     | 29 ++++++++++++++++++
+ 3 files changed, 64 insertions(+), 1 deletion(-)
+ create mode 100644 tests/auto/quick/qquicktreeview/data/expandRowInDelegate.qml
+
+diff --git a/src/qmlmodels/qqmltreemodeltotablemodel.cpp b/src/qmlmodels/qqmltreemodeltotablemodel.cpp
+index 5adf4ffa68..7d34caf23d 100644
+--- a/src/qmlmodels/qqmltreemodeltotablemodel.cpp
++++ b/src/qmlmodels/qqmltreemodeltotablemodel.cpp
+@@ -779,9 +779,13 @@ void QQmlTreeModelToTableModel::modelRowsInserted(const QModelIndex & parent, in
+     TreeItem item;
+     int parentRow = itemIndex(parent);
+     if (parentRow >= 0) {
++        const bool isExpanded = m_items.at(parentRow).expanded;
+         queueDataChanged(parentRow, parentRow, {HasChildrenRole});
+         item = m_items.at(parentRow);
+-        if (!item.expanded) {
++        // If the item not expanded earlier, and if expanded due to expand() triggered during
++        // new child added to the row (parentRow), then we don't want to continue with showing model
++        // child items (in showModelChildItems()) as its already expanded.
++        if ((!isExpanded && item.expanded) || !item.expanded) {
+             ASSERT_CONSISTENCY();
+             return;
+         }
+diff --git a/tests/auto/quick/qquicktreeview/data/expandRowInDelegate.qml b/tests/auto/quick/qquicktreeview/data/expandRowInDelegate.qml
+new file mode 100644
+index 0000000000..024e0452b8
+--- /dev/null
++++ b/tests/auto/quick/qquicktreeview/data/expandRowInDelegate.qml
+@@ -0,0 +1,30 @@
++// Copyright (C) 2021 The Qt Company Ltd.
++// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
++
++import QtQuick
++import QtQuick.Controls
++import TestModel
++
++Item {
++    width: 800
++    height: 600
++
++    property alias treeView: treeView
++    property int rowToExpand: -1
++
++    TreeView {
++        id: treeView
++        anchors.fill:parent
++        anchors.margins: 10
++        model: TestModel {}
++        selectionModel: ItemSelectionModel {}
++        clip: true
++        delegate: TreeViewDelegate {
++            implicitWidth: treeView.width
++            onHasChildrenChanged: {
++                if (row == rowToExpand && hasChildren)
++                   treeView.expand(row)
++            }
++        }
++    }
++}
+diff --git a/tests/auto/quick/qquicktreeview/tst_qquicktreeview.cpp b/tests/auto/quick/qquicktreeview/tst_qquicktreeview.cpp
+index fbccc382a6..433db96d61 100644
+--- a/tests/auto/quick/qquicktreeview/tst_qquicktreeview.cpp
++++ b/tests/auto/quick/qquicktreeview/tst_qquicktreeview.cpp
+@@ -65,6 +65,7 @@ private slots:
+     void expandAndCollapseRoot();
+     void toggleExpanded();
+     void expandAndCollapseChildren();
++    void expandChildDuringInsert();
+     void expandChildPendingToBeVisible();
+     void expandRecursivelyRoot_data();
+     void expandRecursivelyRoot();
+@@ -247,6 +248,34 @@ void tst_qquicktreeview::expandAndCollapseChildren()
+     QCOMPARE(treeView->rows(), 1);
+ }
+ 
++void tst_qquicktreeview::expandChildDuringInsert()
++{
++    LOAD_TREEVIEW("expandRowInDelegate.qml");
++    // Check that the view only has one row loaded so far (the root of the tree)
++    QCOMPARE(treeViewPrivate->loadedRows.count(), 1);
++
++    // Expand the root
++    treeView->expand(0);
++    WAIT_UNTIL_POLISHED;
++    // We now expect 5 rows, the root pluss it's 4 children
++    QCOMPARE(treeViewPrivate->loadedRows.count(), 5);
++
++    int rowToExpand = view->rootObject()->property("rowToExpand").toInt();
++    QCOMPARE(rowToExpand, -1);
++
++    view->rootObject()->setProperty("rowToExpand", 2);
++    rowToExpand = view->rootObject()->property("rowToExpand").toInt();
++    QCOMPARE(rowToExpand, 2);
++
++    // Add a new item to the child node and verify whether the tree has n+1 nodes (and not
++    // more than 1 as mentioned in the bug report QTBUG-139344)
++    const QModelIndex childNode = model->index(1, 0, model->index(0, 0, QModelIndex()));
++    model->insertRows(0, 1, childNode);
++    WAIT_UNTIL_POLISHED;
++
++    QCOMPARE(treeView->rows(), 6);
++}
++
+ void tst_qquicktreeview::requiredPropertiesRoot()
+ {
+     LOAD_TREEVIEW("normaltreeview.qml");
+-- 
+2.51.2
+

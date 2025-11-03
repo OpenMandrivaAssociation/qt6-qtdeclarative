@@ -1,0 +1,730 @@
+From 5580964be4741a1810cfcf880bc6e9bb3dfc184a Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Mon, 15 Sep 2025 17:10:08 +0200
+Subject: [PATCH 058/239] QmlCompiler: Properly handle uncertain component
+ status
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+In order to determine whether an ID is visible from a referrer we need
+not only determine the component boundaries of the referrer, but also
+those of the candidate elements with the respective ID. Rewrite the
+logic to have QQmlJSScopesById handle this. It has to iterate the
+respective elements anyway and can therefore easily check if one of them
+is assigned to an unknown property. It now provides low-level methods
+that output all possible candidates for an ID, while also stating the
+confidence associated with them. The plain id() and scope() methods only
+return results we are actually certain about.
+
+In places where we generate warnings or can allow for some fuzzy
+results, we use the low-level methods, since those generally produce
+more informative results.
+
+The QML DOM was passing the JavaScript global object as referrer to the
+scope() method before. This happened to work but was, of course, wrong.
+Make sure that ID elements in the DOM receive a proper QML scope to
+avoid that.
+
+Pick-to: 6.9 6.8
+Task-number: QTBUG-140041
+Change-Id: I41cf8603ae6a5d5461d3c12d74521e68b5e28ea4
+Reviewed-by: Sami Shalayel <sami.shalayel@qt.io>
+Reviewed-by: Olivier De Cannière <olivier.decanniere@qt.io>
+(cherry picked from commit ecf78f31908edfd343e9447cfe4ac0b53cbabd18)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qmlcompiler/qqmljsimportvisitor.cpp       |  23 +-
+ src/qmlcompiler/qqmljsimportvisitor_p.h       |   2 -
+ src/qmlcompiler/qqmljsscope.cpp               |  16 +-
+ src/qmlcompiler/qqmljsscopesbyid_p.h          | 238 ++++++++++++++++--
+ src/qmlcompiler/qqmljstypepropagator.cpp      |   7 +-
+ src/qmlcompiler/qqmljstyperesolver.cpp        |  40 ++-
+ src/qmlcompiler/qqmljstyperesolver_p.h        |   6 +-
+ src/qmlcompiler/qqmlsa.cpp                    |  15 +-
+ src/qmldom/qqmldomastcreator.cpp              |   6 +
+ .../qml/qmlcppcodegen/data/CMakeLists.txt     |   2 +
+ .../auto/qml/qmlcppcodegen/data/MyObject.qml  |   5 +
+ .../qml/qmlcppcodegen/data/idVsMember.qml     |  21 ++
+ .../qml/qmlcppcodegen/tst_qmlcppcodegen.cpp   |  14 ++
+ tools/qmltc/qmltcvisitor.cpp                  |  12 +-
+ 14 files changed, 332 insertions(+), 75 deletions(-)
+ create mode 100644 tests/auto/qml/qmlcppcodegen/data/MyObject.qml
+ create mode 100644 tests/auto/qml/qmlcppcodegen/data/idVsMember.qml
+
+diff --git a/src/qmlcompiler/qqmljsimportvisitor.cpp b/src/qmlcompiler/qqmljsimportvisitor.cpp
+index 2e78462800..650310ae8b 100644
+--- a/src/qmlcompiler/qqmljsimportvisitor.cpp
++++ b/src/qmlcompiler/qqmljsimportvisitor.cpp
+@@ -2385,8 +2385,15 @@ void QQmlJSImportVisitor::handleIdDeclaration(QQmlJS::AST::UiScriptBinding *scri
+         // ### TODO: find an alternative to breakInhertianceCycles here
+         // we shouldn't need to search for the current root component in any case here
+         breakInheritanceCycles(m_currentScope);
+-        if (auto otherScopeWithID = m_scopesById.scope(name, m_currentScope)) {
++        m_scopesById.possibleScopes(
++                name, m_currentScope, Default,
++                [&](const QQmlJSScope::ConstPtr &otherScopeWithID,
++                    QQmlJSScopesById::Confidence confidence) {
++            // If it's a fuzzy match, that's still warning-worthy
++            Q_UNUSED(confidence);
++
+             auto otherLocation = otherScopeWithID->sourceLocation();
++
+             // critical because subsequent analysis cannot cope with messed up ids
+             // and the file is invalid
+             m_logger->log(u"Found a duplicated id. id %1 was first declared at %2:%3"_s.arg(
+@@ -2394,7 +2401,8 @@ void QQmlJSImportVisitor::handleIdDeclaration(QQmlJS::AST::UiScriptBinding *scri
+                                   QString::number(otherLocation.startColumn)),
+                           qmlSyntaxDuplicateIds, // ??
+                           scriptBinding->firstSourceLocation());
+-        }
++            return QQmlJSScopesById::CallbackResult::ContinueSearch;
++        });
+     }
+     if (!name.isEmpty())
+         m_scopesById.insert(name, m_currentScope);
+@@ -3133,10 +3141,15 @@ void QQmlJSImportVisitor::endVisit(QQmlJS::AST::UiObjectBinding *uiob)
+ 
+         while (!childScopes.isEmpty()) {
+             const QQmlJSScope::ConstPtr scope = childScopes.takeFirst();
+-            if (!m_scopesById.id(scope, scope).isEmpty()) {
++            m_scopesById.possibleIds(
++                    scope, scope, Default,
++                    [&](const QString &id, QQmlJSScopesById::Confidence confidence) {
++                // Any ID is enough to trigger the warning, no matter how confident we are about it.
++                Q_UNUSED(id);
++                Q_UNUSED(confidence);
+                 foundIds = true;
+-                break;
+-            }
++                return QQmlJSScopesById::CallbackResult::StopSearch;
++            });
+ 
+             childScopes << scope->childScopes();
+         }
+diff --git a/src/qmlcompiler/qqmljsimportvisitor_p.h b/src/qmlcompiler/qqmljsimportvisitor_p.h
+index 8a43292fa0..a650d5c31c 100644
+--- a/src/qmlcompiler/qqmljsimportvisitor_p.h
++++ b/src/qmlcompiler/qqmljsimportvisitor_p.h
+@@ -300,8 +300,6 @@ protected:
+     void processPropertyBindingObjects();
+     void flushPendingSignalParameters();
+ 
+-    QQmlJSScope::ConstPtr scopeById(const QString &id, const QQmlJSScope::ConstPtr &current);
+-
+     void breakInheritanceCycles(const QQmlJSScope::Ptr &scope);
+     void checkDeprecation(const QQmlJSScope::ConstPtr &scope);
+     void checkGroupedAndAttachedScopes(QQmlJSScope::ConstPtr scope);
+diff --git a/src/qmlcompiler/qqmljsscope.cpp b/src/qmlcompiler/qqmljsscope.cpp
+index c03c90956f..46e4446b48 100644
+--- a/src/qmlcompiler/qqmljsscope.cpp
++++ b/src/qmlcompiler/qqmljsscope.cpp
+@@ -271,20 +271,26 @@ QString QQmlJSScope::prettyName(QAnyStringView name)
+ 
+ /*!
+     \internal
+-    Returns \c Yes if the scope is the outermost element of a separate Component
+-    Either because it has been implicitly wrapped, e.g. due to an assignment to
+-    a Component property, or because it is the first (and only) child of a
+-    Component.
++
++    Returns \c Yes if the scope is the outermost element of a separate Component. Either:
++    a, It is the root element of a QML document
++    b, It is an inline component
++    c, It has been implicitly wrapped, e.g. due to an assignment to a Component property
++    d, It is the first (and only) child of a Component
++
+     Returns \c No if we can clearly determine that this is not the case.
+     Returns \c Maybe if the scope is assigned to an unknown property. This may
+     or may not be a Component.
++
+     For visitors: This method should only be called after implicit components
+     are detected, that is, after QQmlJSImportVisitor::endVisit(UiProgram *)
+     was called.
+  */
+ QQmlJSScope::IsComponentRoot QQmlJSScope::componentRootStatus() const {
+-    if (m_flags.testFlag(WrappedInImplicitComponent))
++    if (m_flags.testAnyFlags(
++                Flags(WrappedInImplicitComponent | FileRootComponent | InlineComponent))) {
+         return IsComponentRoot::Yes;
++    }
+ 
+     // If the object is assigned to an unknown property, assume it's Component.
+     if (m_flags.testFlag(AssignedToUnknownProperty))
+diff --git a/src/qmlcompiler/qqmljsscopesbyid_p.h b/src/qmlcompiler/qqmljsscopesbyid_p.h
+index fdf7a9e94c..2f17f0c95d 100644
+--- a/src/qmlcompiler/qqmljsscopesbyid_p.h
++++ b/src/qmlcompiler/qqmljsscopesbyid_p.h
+@@ -32,6 +32,43 @@ Q_DECLARE_FLAGS(QQmlJSScopesByIdOptions, QQmlJSScopesByIdOption);
+ class QQmlJSScopesById
+ {
+ public:
++    enum class Confidence: quint8 { Certain, Possible };
++    enum class CallbackResult: bool { StopSearch = false, ContinueSearch = true };
++    enum class Success: bool { No = false, Yes = true };
++
++    template<typename T>
++    struct CertainCallback
++    {
++        CallbackResult operator() (const T &candidate, Confidence confidence) {
++            // Here, we only accept certain results, and abort the search otherwise.
++            switch (confidence) {
++            case Confidence::Certain:
++                result = candidate;
++                return CallbackResult::ContinueSearch;
++            case Confidence::Possible:
++                break;
++            }
++            return CallbackResult::StopSearch;
++        }
++
++        T result = {};
++    };
++
++    template<typename T>
++    struct MostLikelyCallback
++    {
++        CallbackResult operator() (const T &candidate, Confidence confidence) {
++            // The last one in a chain of candidates is the one that's definitely a component,
++            // by virtue of either being the file root component or a recognized inline component,
++            // or QQmlComponent property.
++            Q_UNUSED(confidence);
++            result = candidate;
++            return CallbackResult::ContinueSearch;
++        }
++
++        T result = {};
++    };
++
+     bool componentsAreBound() const { return m_componentsAreBound; }
+     void setComponentsAreBound(bool bound) { m_componentsAreBound = bound; }
+ 
+@@ -41,37 +78,160 @@ public:
+     void setValueTypesAreAddressable(bool addressable) { m_valueTypesAreAddressable = addressable; }
+     bool valueTypesAreAddressable() const { return m_valueTypesAreAddressable; }
+ 
++    /*!
++        \internal
++        Find the possible IDs for \a scope as seen by \a referrer. There can be at most one
++        ID for a scope. Depending on whether we can determine the component boundaries of the
++        \a scope and the \a referrer we may or may not be able to tell whether it's visible.
++
++        We can generally determine the relevant component boundaries for each scope. However,
++        if the scope or any of its parents is assigned to a property of which we cannot see the
++        type, we don't know whether the type of that property happens to be Component. In that
++        case, we can't say.
++
++        Returns \c Success::Yes if either no ID was found or the \a callback returned
++        \c CallbackResult::ContinueSearch for the ID found. Returns \c Success::No if the
++        \a callback returned \c CallbackResult::StopSearch.
++     */
++    template<typename F>
++    Success possibleIds(
++            const QQmlJSScope::ConstPtr &scope, const QQmlJSScope::ConstPtr &referrer,
++            QQmlJSScopesByIdOptions options, F &&callback) const
++    {
++        Q_ASSERT(!scope.isNull());
++
++        // A scope can only have one ID.
++        const QString key = m_scopesById.key(scope);
++        if (key.isEmpty())
++            return Success::Yes;
++
++        Success result = Success::Yes;
++        possibleComponentRoots(
++                referrer, [&](const QQmlJSScope::ConstPtr &referrerRoot,
++                              QQmlJSScope::IsComponentRoot referrerConfidence) {
++            return possibleComponentRoots(
++                            scope, [&](const QQmlJSScope::ConstPtr &referredRoot,
++                                       QQmlJSScope::IsComponentRoot referredConfidence) {
++                if (isComponentVisible(referredRoot, referrerRoot, options)) {
++                    // The key won't change and our confidence won't change either. No need to
++                    // call this again for each combination of scopes.
++                    if (callback(key, confidence(referrerConfidence, referredConfidence))
++                            == CallbackResult::StopSearch) {
++                        result = Success::No;
++                    }
++
++                    return CallbackResult::StopSearch;
++                }
++                return CallbackResult::ContinueSearch;
++            });
++        });
++
++        return result;
++    }
++
++    /*!
++        \internal
++        Returns the id of \a scope in the component to which \a referrer belongs to.
++        If \a scope is not visible from \a referrer or has no ID, an empty string is returned.
++        An empty string is also returned if we can't determine the component boundaries for either
++        \a scope or \a referrer.
++     */
+     QString id(const QQmlJSScope::ConstPtr &scope, const QQmlJSScope::ConstPtr &referrer,
+                QQmlJSScopesByIdOptions options = Default) const
+     {
+-        const QQmlJSScope::ConstPtr referrerRoot = componentRoot(referrer);
+-        for (auto it = m_scopesById.begin(), end = m_scopesById.end(); it != end; ++it) {
+-            if (*it == scope && isComponentVisible(componentRoot(*it), referrerRoot, options))
+-                return it.key();
++        CertainCallback<QString> result;
++        const Success isCertain = possibleIds(scope, referrer, options, result);
++
++        // The default callback only assigns the result if it's certain.
++        // We can't have "possible" results after a certain one.
++        Q_ASSERT(isCertain == Success::Yes || result.result.isEmpty());
++
++        return result.result;
++    }
++
++    /*!
++        \internal
++        Find all possible scopes for \a id as seen by \a referrer. There can be multiple
++        possibilities if we cannot determine component boundaries for any candidate or the
++        referrer.
++
++        We can generally determine the relevant component boundaries for each scope. However,
++        if the scope or any of its parents is assigned to a property of which we cannot see the
++        type, we don't know whether the type of that property happens to be Component. In that
++        case, we can't say.
++
++        Returns \c Success::Yes if either no suitable scope was found or the \a callback returned
++        \c CallbackResult::ContinueSearch for all scopes found. Returns \c Success::No if the
++        \a callback returns \c CallbackResult::StopSearch for any scope found. It also stops the
++        search at that point.
++     */
++    template<typename F>
++    Success possibleScopes(
++            const QString &id, const QQmlJSScope::ConstPtr &referrer,
++            QQmlJSScopesByIdOptions options, F &&callback) const
++    {
++        Q_ASSERT(!id.isEmpty());
++        Success result = Success::Yes;
++
++        const auto range =  m_scopesById.equal_range(id);
++        for (auto it = range.first; it != range.second; ++it) {
++            possibleComponentRoots(
++                    *it, [&](const QQmlJSScope::ConstPtr &referredRoot,
++                             QQmlJSScope::IsComponentRoot referredConfidence) {
++
++                possibleComponentRoots(
++                    referrer, [&](const QQmlJSScope::ConstPtr &referrerRoot,
++                                  QQmlJSScope::IsComponentRoot referrerConfidence) {
++
++                    if (!isComponentVisible(referredRoot, referrerRoot, options))
++                        return CallbackResult::ContinueSearch;
++
++                    if (callback(*it, confidence(referrerConfidence, referredConfidence))
++                            == CallbackResult::StopSearch) {
++                        // Propagate the negative result from the callback.
++                        result = Success::No;
++                    }
++
++                    // Once we've reported *it, we don't care about the other possible referrerRoots
++                    // anymore. They are not reported after all. The confidence can't change
++                    // anymore, either.
++                    return CallbackResult::StopSearch;
++                });
++
++                // If nothing matched or the callback was successful, consider the next candidate.
++                // If the callback failed, stop here.
++                return result == Success::Yes
++                        ? CallbackResult::ContinueSearch
++                        : CallbackResult::StopSearch;
++            });
++
++            // If the callback failed, return right away.
++            if (result == Success::No)
++                return result;
+         }
+-        return QString();
++
++        Q_ASSERT(result == Success::Yes);
++        return Success::Yes;
+     }
+ 
+     /*!
+         \internal
+         Returns the scope that has id \a id in the component to which \a referrer belongs to.
+         If no such scope exists, a null scope is returned.
++        A null scope is also returned if we cannot determine the component boundaries for any
++        candidate or the \a referrer.
+      */
+     QQmlJSScope::ConstPtr scope(const QString &id, const QQmlJSScope::ConstPtr &referrer,
+                                 QQmlJSScopesByIdOptions options = Default) const
+     {
+-        Q_ASSERT(!id.isEmpty());
+-        const auto range =  m_scopesById.equal_range(id);
+-        if (range.first == range.second)
+-            return QQmlJSScope::ConstPtr();
+-        const QQmlJSScope::ConstPtr referrerRoot = componentRoot(referrer);
++        CertainCallback<QQmlJSScope::ConstPtr> result;
++        const Success isCertain = possibleScopes(id, referrer, options, result);
+ 
+-        for (auto it = range.first; it != range.second; ++it) {
+-            if (isComponentVisible(componentRoot(*it), referrerRoot, options))
+-                return *it;
+-        }
++        // The default callback only assigns the result if it's certain.
++        // We can't have "possible" results after a certain one.
++        Q_ASSERT(isCertain == Success::Yes || result.result.isNull());
+ 
+-        return QQmlJSScope::ConstPtr();
++        return result.result;
+     }
+ 
+     void insert(const QString &id, const QQmlJSScope::ConstPtr &scope)
+@@ -92,18 +252,48 @@ public:
+     bool existsAnywhereInDocument(const QString &id) const { return m_scopesById.contains(id); }
+ 
+ private:
+-    static QQmlJSScope::ConstPtr componentRoot(const QQmlJSScope::ConstPtr &inner)
++    template<typename F>
++    static CallbackResult possibleComponentRoots(const QQmlJSScope::ConstPtr &inner, F &&callback)
+     {
+         QQmlJSScope::ConstPtr scope = inner;
+-        while (scope
+-                && scope->componentRootStatus() == QQmlJSScope::IsComponentRoot::No
+-                && !scope->isInlineComponent()) {
+-            if (QQmlJSScope::ConstPtr parent = scope->parentScope())
+-                scope = parent;
+-            else
+-                break;
++        QQmlJSScope::IsComponentRoot maxConfidence = QQmlJSScope::IsComponentRoot::Yes;
++        while (scope) {
++            switch (scope->componentRootStatus()) {
++            case QQmlJSScope::IsComponentRoot::Maybe:
++                if (callback(scope, QQmlJSScope::IsComponentRoot::Maybe)
++                        == CallbackResult::StopSearch) {
++                    return CallbackResult::StopSearch;
++                }
++                // If we've seen one "maybe", then there is no certainty anymore.
++                // The "maybe" ones are always processed first since the properties of unknown
++                // type are inside the elements they belong to.
++                maxConfidence = QQmlJSScope::IsComponentRoot::Maybe;
++                Q_FALLTHROUGH();
++            case QQmlJSScope::IsComponentRoot::No:
++                scope = scope->parentScope();
++                continue;
++            case QQmlJSScope::IsComponentRoot::Yes:
++                return callback(scope, maxConfidence);
++            }
+         }
+-        return scope;
++
++        return CallbackResult::ContinueSearch;
++    }
++
++    static Confidence confidence(
++            QQmlJSScope::IsComponentRoot a, QQmlJSScope::IsComponentRoot b) {
++        switch (a) {
++        case QQmlJSScope::IsComponentRoot::Yes:
++            return b == QQmlJSScope::IsComponentRoot::Yes
++                    ? Confidence::Certain
++                    : Confidence::Possible;
++        case QQmlJSScope::IsComponentRoot::Maybe:
++            return Confidence::Possible;
++        default:
++            break;
++        }
++
++        Q_UNREACHABLE_RETURN(Confidence::Certain);
+     }
+ 
+     bool isComponentVisible(const QQmlJSScope::ConstPtr &observed,
+diff --git a/src/qmlcompiler/qqmljstypepropagator.cpp b/src/qmlcompiler/qqmljstypepropagator.cpp
+index 84e4872a79..de44549fdb 100644
+--- a/src/qmlcompiler/qqmljstypepropagator.cpp
++++ b/src/qmlcompiler/qqmljstypepropagator.cpp
+@@ -386,7 +386,8 @@ void QQmlJSTypePropagator::handleUnqualifiedAccess(const QString &name, bool isM
+     if (!suggestion.has_value()) {
+         for (QQmlJSScope::ConstPtr scope = qmlScope; !scope.isNull(); scope = scope->parentScope()) {
+             if (scope->hasProperty(name)) {
+-                const QString id = m_function->addressableScopes.id(scope, qmlScope);
++                QQmlJSScopesById::MostLikelyCallback<QString> id;
++                m_function->addressableScopes.possibleIds(scope, qmlScope, Default, id);
+ 
+                 QQmlJS::SourceLocation fixLocation = location;
+                 fixLocation.length = 0;
+@@ -394,10 +395,10 @@ void QQmlJSTypePropagator::handleUnqualifiedAccess(const QString &name, bool isM
+                     name
+                             + " is a member of a parent element.\n      You can qualify the access "
+                               "with its id to avoid this warning.\n"_L1,
+-                    fixLocation, (id.isEmpty() ? u"<id>."_s : (id + u'.'))
++                    fixLocation, (id.result.isEmpty() ? u"<id>."_s : (id.result + u'.'))
+                 };
+ 
+-                if (id.isEmpty())
++                if (id.result.isEmpty())
+                     suggestion->setHint("You first have to give the element an id"_L1);
+                 else
+                     suggestion->setAutoApplicable();
+diff --git a/src/qmlcompiler/qqmljstyperesolver.cpp b/src/qmlcompiler/qqmljstyperesolver.cpp
+index fa6713f78a..555eecc9e0 100644
+--- a/src/qmlcompiler/qqmljstyperesolver.cpp
++++ b/src/qmlcompiler/qqmljstyperesolver.cpp
+@@ -1048,22 +1048,6 @@ QQmlJSScope::ConstPtr QQmlJSTypeResolver::resolveParentProperty(
+     return propType;
+ }
+ 
+-/*!
+- * \internal
+- * We can generally determine the relevant component boundaries for each scope. However,
+- * if the scope or any of its parents is assigned to a property of which we cannot see the
+- * type, we don't know whether the type of that property happens to be Component. In that
+- * case, we can't say.
+- */
+-bool QQmlJSTypeResolver::canFindComponentBoundaries(const QQmlJSScope::ConstPtr &scope) const
+-{
+-    for (QQmlJSScope::ConstPtr parent = scope; parent; parent = parent->parentScope()) {
+-        if (parent->isAssignedToUnknownProperty())
+-            return false;
+-    }
+-    return true;
+-}
+-
+ /*!
+  * \internal
+  *
+@@ -1098,11 +1082,17 @@ QQmlJSScope::ConstPtr QQmlJSTypeResolver::scopedType(
+         const QQmlJSScope::ConstPtr &scope, const QString &name,
+         QQmlJSScopesByIdOptions options) const
+ {
+-    if (!canFindComponentBoundaries(scope))
++    QQmlJSScopesById::CertainCallback<QQmlJSScope::ConstPtr> identified;
++    if (m_objectsById.possibleScopes(name, scope, options, identified)
++            != QQmlJSScopesById::Success::Yes) {
++        // Could not determine component boundaries
+         return {};
++    }
+ 
+-    if (QQmlJSScope::ConstPtr identified = m_objectsById.scope(name, scope, options))
+-        return identified;
++    if (identified.result) {
++        // Found a definite match
++        return identified.result;
++    }
+ 
+     if (QQmlJSScope::ConstPtr base = QQmlJSScope::findCurrentQMLScope(scope)) {
+         QQmlJSScope::ConstPtr result;
+@@ -1160,12 +1150,18 @@ QQmlJSRegisterContent QQmlJSTypeResolver::scopedType(QQmlJSRegisterContent scope
+                                                      QQmlJSScopesByIdOptions options) const
+ {
+     const QQmlJSScope::ConstPtr contained = scope.containedType();
+-    if (!canFindComponentBoundaries(contained))
++
++    QQmlJSScopesById::CertainCallback<QQmlJSScope::ConstPtr> identified;
++    if (m_objectsById.possibleScopes(name, contained, options, identified)
++            != QQmlJSScopesById::Success::Yes) {
++        // Could not determine component boundaries
+         return {};
++    }
+ 
+-    if (QQmlJSScope::ConstPtr identified = m_objectsById.scope(name, contained, options)) {
++    if (identified.result) {
++        // Found a definite match
+         return m_pool->createType(
+-                identified, lookupIndex, QQmlJSRegisterContent::ObjectById, scope);
++                identified.result, lookupIndex, QQmlJSRegisterContent::ObjectById, scope);
+     }
+ 
+     if (QQmlJSScope::ConstPtr base = QQmlJSScope::findCurrentQMLScope(contained)) {
+diff --git a/src/qmlcompiler/qqmljstyperesolver_p.h b/src/qmlcompiler/qqmljstyperesolver_p.h
+index 81dd239685..0521b8ce9d 100644
+--- a/src/qmlcompiler/qqmljstyperesolver_p.h
++++ b/src/qmlcompiler/qqmljstyperesolver_p.h
+@@ -140,9 +140,7 @@ public:
+             const QQmlJSScope::ConstPtr &scope, const QString &name,
+             QQmlJSScopesByIdOptions options = Default) const
+     {
+-        return canFindComponentBoundaries(scope)
+-                ? m_objectsById.scope(name, scope, options)
+-                : QQmlJSScope::ConstPtr();
++        return m_objectsById.scope(name, scope, options);
+     }
+ 
+     const QQmlJSScopesById &objectsById() const { return m_objectsById; }
+@@ -302,8 +300,6 @@ protected:
+             const QString &name, const QQmlJSScope::ConstPtr &base,
+             const QQmlJSScope::ConstPtr &propType) const;
+ 
+-    bool canFindComponentBoundaries(const QQmlJSScope::ConstPtr &scope) const;
+-
+     std::unique_ptr<QQmlJSRegisterContentPool> m_pool;
+ 
+     QQmlJSScope::ConstPtr m_voidType;
+diff --git a/src/qmlcompiler/qqmlsa.cpp b/src/qmlcompiler/qqmlsa.cpp
+index f9edb9415f..751689c840 100644
+--- a/src/qmlcompiler/qqmlsa.cpp
++++ b/src/qmlcompiler/qqmlsa.cpp
+@@ -1372,10 +1372,10 @@ Element GenericPass::resolveLiteralType(const QQmlSA::Binding &binding)
+ Element GenericPass::resolveIdToElement(QAnyStringView id, const Element &context)
+ {
+     Q_D(const GenericPass);
+-    const auto scope = PassManagerPrivate::visitor(*d->m_manager)
+-                               ->addressableScopes()
+-                               .scope(id.toString(), QQmlJSScope::scope(context));
+-    return QQmlJSScope::createQQmlSAElement(scope);
++    QQmlJSScopesById::MostLikelyCallback<QQmlJSScope::ConstPtr> result;
++    PassManagerPrivate::visitor(*d->m_manager)->addressableScopes().possibleScopes(
++            id.toString(), QQmlJSScope::scope(context), Default, result);
++    return QQmlJSScope::createQQmlSAElement(result.result);
+ }
+ 
+ /*!
+@@ -1384,9 +1384,10 @@ Element GenericPass::resolveIdToElement(QAnyStringView id, const Element &contex
+ QString GenericPass::resolveElementToId(const Element &element, const Element &context)
+ {
+     Q_D(const GenericPass);
+-    return PassManagerPrivate::visitor(*d->m_manager)
+-            ->addressableScopes()
+-            .id(QQmlJSScope::scope(element), QQmlJSScope::scope(context));
++    QQmlJSScopesById::MostLikelyCallback<QString> result;
++    PassManagerPrivate::visitor(*d->m_manager)->addressableScopes().possibleIds(
++            QQmlJSScope::scope(element), QQmlJSScope::scope(context), Default, result);
++    return result.result;
+ }
+ 
+ /*!
+diff --git a/src/qmldom/qqmldomastcreator.cpp b/src/qmldom/qqmldomastcreator.cpp
+index 04a99044ba..a7729fbccc 100644
+--- a/src/qmldom/qqmldomastcreator.cpp
++++ b/src/qmldom/qqmldomastcreator.cpp
+@@ -3283,6 +3283,12 @@ void QQmlDomAstCreatorWithQQmlJSScope::setScopeInDomAfterEndvisit()
+     if (!m_domCreator.scriptNodeStack.isEmpty()) {
+         auto topOfStack = m_domCreator.currentScriptNodeEl();
+         switch (topOfStack.kind) {
++        case DomType::ScriptIdentifierExpression: {
++            // A ScriptIdentifierExpression in a QML scope is an actual ID.
++            if (scope->scopeType() == QQmlJSScope::ScopeType::QMLScope)
++                m_domCreator.currentScriptNodeEl().setSemanticScope(scope);
++            break;
++        }
+         case DomType::ScriptBlockStatement:
+         case DomType::ScriptForStatement:
+         case DomType::ScriptForEachStatement:
+diff --git a/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt b/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
+index 29b272c440..d0a511bb00 100644
+--- a/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
++++ b/tests/auto/qml/qmlcppcodegen/data/CMakeLists.txt
+@@ -71,6 +71,7 @@ set(qml_files
+     GetOptionalLookupOnQJSValueNonStrict.qml
+     GetOptionalLookupShadowed.qml
+     Loopy.qml
++    MyObject.qml
+     NotificationItem.qml
+     NotificationsUtils.js
+     OkType.qml
+@@ -188,6 +189,7 @@ set(qml_files
+     getOptionalLookup.qml
+     globals.qml
+     idAccess.qml
++    idVsMember.qml
+     ignoredFunctionReturn.qml
+     immediateQuit.qml
+     imports/QmlBench/Globals.qml
+diff --git a/tests/auto/qml/qmlcppcodegen/data/MyObject.qml b/tests/auto/qml/qmlcppcodegen/data/MyObject.qml
+new file mode 100644
+index 0000000000..c865a613ff
+--- /dev/null
++++ b/tests/auto/qml/qmlcppcodegen/data/MyObject.qml
+@@ -0,0 +1,5 @@
++import QtQuick
++
++QtObject {
++    property var foo: "bla"
++}
+diff --git a/tests/auto/qml/qmlcppcodegen/data/idVsMember.qml b/tests/auto/qml/qmlcppcodegen/data/idVsMember.qml
+new file mode 100644
+index 0000000000..7629d97227
+--- /dev/null
++++ b/tests/auto/qml/qmlcppcodegen/data/idVsMember.qml
+@@ -0,0 +1,21 @@
++import QtQuick
++import QtQuick.Controls
++
++Control {
++    anchors.fill: parent
++    objectName: contentItem.text
++
++    MyObject {
++        id: my
++        foo: foo
++    }
++
++    property Item myprop: Item {
++        objectName: "blub"
++        id: foo
++    }
++
++    contentItem: Text {
++        text: my.foo + ""
++    }
++}
+diff --git a/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp b/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
+index 5780862b47..10047ec11f 100644
+--- a/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
++++ b/tests/auto/qml/qmlcppcodegen/tst_qmlcppcodegen.cpp
+@@ -146,6 +146,7 @@ private slots:
+     void getOptionalLookupShadowed();
+     void globals();
+     void idAccess();
++    void idVsMember();
+     void ignoredFunctionReturn();
+     void importsFromImportPath();
+     void inPlaceDecrement();
+@@ -2715,6 +2716,19 @@ void tst_QmlCppCodegen::idAccess()
+     QCOMPARE(ttt->objectName(), u"context"_s);
+ }
+ 
++void tst_QmlCppCodegen::idVsMember()
++{
++    QQmlEngine engine;
++    QQmlComponent component(&engine, QUrl(u"qrc:/qt/qml/TestTypes/idVsMember.qml"_s));
++    QVERIFY2(!component.isError(), component.errorString().toUtf8());
++    QScopedPointer<QObject> object(component.create());
++    QVERIFY(!object.isNull());
++
++    QVERIFY(QRegularExpression(u"QQuickItem\\(0x[0-9a-f]+, \"blub\"\\)"_s)
++            .match(object->objectName()).hasMatch());
++
++}
++
+ void tst_QmlCppCodegen::ignoredFunctionReturn()
+ {
+     QQmlEngine engine;
+diff --git a/tools/qmltc/qmltcvisitor.cpp b/tools/qmltc/qmltcvisitor.cpp
+index 2d1c61bc19..63ccc55a2a 100644
+--- a/tools/qmltc/qmltcvisitor.cpp
++++ b/tools/qmltc/qmltcvisitor.cpp
+@@ -45,8 +45,10 @@ static bool isExplicitComponent(const QQmlJSScope::ConstPtr &type)
+  */
+ static bool isImplicitComponent(const QQmlJSScope::ConstPtr &type)
+ {
+-    if (!type->isComposite())
++    // root components and inline components are explicitly components.
++    if (!type->isComposite() || type->isFileRootComponent() || type->isInlineComponent())
+         return false;
++
+     const auto cppBase = QQmlJSScope::nonCompositeBaseType(type);
+     const bool isComponentBased = (cppBase && cppBase->internalName() == u"QQmlComponent");
+     return type->componentRootStatus() != QQmlJSScope::IsComponentRoot::No && !isComponentBased;
+@@ -580,7 +582,13 @@ void QmltcVisitor::postVisitResolve(
+     const auto setRuntimeId = [&](const QQmlJSScope::ConstPtr &type) {
+         // any type wrapped in an implicit component shouldn't be processed
+         // here. even if it has id, it doesn't need to be set by qmltc
+-        if (type->componentRootStatus() != QQmlJSScope::IsComponentRoot::No) {
++        if (type->isInlineComponent()) {
++            // explicit inline component
++        } else if (type->isFileRootComponent()) {
++            // explicit root component
++        } else if (type->componentRootStatus() != QQmlJSScope::IsComponentRoot::No) {
++            // Wrapped in implicit component, assigned to unknown property, or child of scope
++            // called "QQmlComponent". We consider this an "implicit component".
+             return true;
+         }
+ 
+-- 
+2.51.2
+

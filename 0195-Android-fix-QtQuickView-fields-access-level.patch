@@ -1,0 +1,90 @@
+From 808c47f46829f9f60ddd3d78af691f590f453bf6 Mon Sep 17 00:00:00 2001
+From: Assam Boudjelthia <assam.boudjelthia@qt.io>
+Date: Mon, 6 Oct 2025 14:29:46 +0300
+Subject: [PATCH 195/239] Android: fix QtQuickView fields access level
+
+Some fields under QtView and thus under QtQuickView are marked
+as protected which ends up shown in javadoc. These fields are
+internal and shouldn't be treated as public, so instead, make
+them private and provide package-private getters/setters for
+QtQuickView to access those fields internally.
+
+Pick's manually: 380ff714e58e699acd7ada8596aa0836cb25abab
+
+Task-number: QTBUG-141365
+Pick-to: 6.8
+Change-Id: Ibefd262412a07b323ff9c40bcf57f5da21b53975
+Reviewed-by: Jani Heikkinen <jani.heikkinen@qt.io>
+---
+ .../org/qtproject/qt/android/QtQuickView.java    | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/src/quick/platform/android/jar/src/org/qtproject/qt/android/QtQuickView.java b/src/quick/platform/android/jar/src/org/qtproject/qt/android/QtQuickView.java
+index bbcaa0a3ff..023cd8b87b 100644
+--- a/src/quick/platform/android/jar/src/org/qtproject/qt/android/QtQuickView.java
++++ b/src/quick/platform/android/jar/src/org/qtproject/qt/android/QtQuickView.java
+@@ -140,13 +140,13 @@ public class QtQuickView extends QtView {
+         qmlContent.detachView();
+         qmlContent.attachView(this);
+         // The first QQuickView creation happen after first libs loading
+-        // and windowReference() returns a reference to native QQuickView
++        // and getWindowReference() returns a reference to native QQuickView
+         // instance, after that. We don't load library again if the view
+         // exists.
+-        if (windowReference() == 0) {
++        if (getWindowReference() == 0) {
+             loadQtLibraries(libName);
+         } else {
+-            createQuickView(m_qmlUri, getWidth(), getHeight(), 0, windowReference(),
++            createQuickView(m_qmlUri, getWidth(), getHeight(), 0, getWindowReference(),
+                             m_qmlImportPaths);
+         }
+     }
+@@ -167,7 +167,7 @@ public class QtQuickView extends QtView {
+ 
+     @Override
+     protected void createWindow(long parentWindowReference) {
+-        createQuickView(m_qmlUri, getWidth(), getHeight(), parentWindowReference, windowReference(),
++        createQuickView(m_qmlUri, getWidth(), getHeight(), parentWindowReference, getWindowReference(),
+                         m_qmlImportPaths);
+     }
+ 
+@@ -188,7 +188,7 @@ public class QtQuickView extends QtView {
+      **/
+     public void setProperty(String propertyName, Object value)
+     {
+-        setRootObjectProperty(windowReference(), propertyName, value);
++        setRootObjectProperty(getWindowReference(), propertyName, value);
+     }
+ 
+     /**
+@@ -211,7 +211,7 @@ public class QtQuickView extends QtView {
+     @SuppressWarnings("unchecked")
+     public <T> T getProperty(String propertyName)
+     {
+-        return (T)getRootObjectProperty(windowReference(), propertyName);
++        return (T)getRootObjectProperty(getWindowReference(), propertyName);
+     }
+ 
+     /**
+@@ -243,7 +243,7 @@ public class QtQuickView extends QtView {
+     public int connectSignalListener(String signalName, Class<?>[] argTypes, Object listener)
+     {
+         int signalListenerId =
+-                addRootObjectSignalListener(windowReference(), signalName, argTypes, listener);
++                addRootObjectSignalListener(getWindowReference(), signalName, argTypes, listener);
+         if (signalListenerId < 0) {
+             Log.w(TAG, "The signal " + signalName + " does not exist in the root object "
+                                      + "or the arguments do not match with the listener.");
+@@ -263,7 +263,7 @@ public class QtQuickView extends QtView {
+      **/
+     public boolean disconnectSignalListener(int signalListenerId)
+     {
+-        return removeRootObjectSignalListener(windowReference(), signalListenerId);
++        return removeRootObjectSignalListener(getWindowReference(), signalListenerId);
+     }
+ 
+     /**
+-- 
+2.51.2
+

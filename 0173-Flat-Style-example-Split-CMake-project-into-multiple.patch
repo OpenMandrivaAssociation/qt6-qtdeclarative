@@ -1,0 +1,185 @@
+From dbbd4d1a294ed8d2f1ce43972035af432fba51d8 Mon Sep 17 00:00:00 2001
+From: Sze Howe Koh <szehowe.koh@gmail.com>
+Date: Tue, 26 Aug 2025 22:16:37 +0800
+Subject: [PATCH 173/239] Flat Style example: Split CMake project into multiple
+ QML modules
+
+Let the CMake structure reflect the existing module structure while
+making use of the auto-generated qmldir files. The qmake project and
+Qt Design Studio project are unaffected as they continue using the
+manually-written qmldir files.
+
+Drive-by edits:
+* Renamed the (unused) URI of top-level module to disambiguate it from
+  the module that contains the actual styling code:
+  "flatstyle" -> "FlatStyleApp"
+* Updated the docs to talk about QML modules instead of plugins
+
+Task-number: QTBUG-132922
+Change-Id: I163a6c6a86a4eaf210a18433e6e5ea1f1fc67dd2
+Pick-to: 6.8
+Reviewed-by: Mitch Curtis <mitch.curtis@qt.io>
+Reviewed-by: Ulf Hermann <ulf.hermann@qt.io>
+(cherry picked from commit ad65c8d89fd67cc11f04d8d3019149e98466c9fc)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ .../quickcontrols/flatstyle/CMakeLists.txt    | 18 ++++++++-------
+ .../doc/src/qtquickcontrols-flatstyle.qdoc    | 23 +++++++++----------
+ .../flatstyle/imports/Flat/CMakeLists.txt     | 11 +++++++++
+ .../flatstyle/imports/Theme/CMakeLists.txt    | 13 +++++++++++
+ 4 files changed, 45 insertions(+), 20 deletions(-)
+ create mode 100644 examples/quickcontrols/flatstyle/imports/Flat/CMakeLists.txt
+ create mode 100644 examples/quickcontrols/flatstyle/imports/Theme/CMakeLists.txt
+
+diff --git a/examples/quickcontrols/flatstyle/CMakeLists.txt b/examples/quickcontrols/flatstyle/CMakeLists.txt
+index 93fb0c3e15..8dd442c4ca 100644
+--- a/examples/quickcontrols/flatstyle/CMakeLists.txt
++++ b/examples/quickcontrols/flatstyle/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-# Copyright (C) 2022 The Qt Company Ltd.
++# Copyright (C) 2025 The Qt Company Ltd.
+ # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
+ 
+ cmake_minimum_required(VERSION 3.16)
+@@ -8,24 +8,24 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Widgets)
+ 
+ qt_standard_project_setup(REQUIRES 6.8)
+ 
++add_subdirectory(imports/Theme)
++add_subdirectory(imports/Flat)
++
+ qt_add_executable(flatstyleexample WIN32 MACOSX_BUNDLE
+     main.cpp
+ )
+ 
+ qt_add_qml_module(flatstyleexample
+-    URI flatstyle
++    URI FlatStyleApp
+     NO_RESOURCE_TARGET_PATH
+     QML_FILES
+         "MainForm.ui.qml"
+         "flatstyle.qml"
+-        "imports/Flat/Button.qml"
+-        "imports/Flat/CheckBox.qml"
+-        "imports/Flat/Switch.qml"
+-        "imports/Theme/Theme.qml"
+     RESOURCES
+-        "imports/Flat/qmldir"
+-        "imports/Theme/qmldir"
+         "qtquickcontrols2.conf"
++    DEPENDENCIES
++        TARGET Flat
++        TARGET FlatTheme
+ )
+ 
+ target_link_libraries(flatstyleexample PUBLIC
+@@ -34,6 +34,8 @@ target_link_libraries(flatstyleexample PUBLIC
+     Qt6::Quick
+     Qt6::QuickControls2
+     Qt6::Widgets
++    Flatplugin
++    FlatThemeplugin
+ )
+ 
+ install(TARGETS flatstyleexample
+diff --git a/examples/quickcontrols/flatstyle/doc/src/qtquickcontrols-flatstyle.qdoc b/examples/quickcontrols/flatstyle/doc/src/qtquickcontrols-flatstyle.qdoc
+index eeb63b7084..8066295c30 100644
+--- a/examples/quickcontrols/flatstyle/doc/src/qtquickcontrols-flatstyle.qdoc
++++ b/examples/quickcontrols/flatstyle/doc/src/qtquickcontrols-flatstyle.qdoc
+@@ -1,4 +1,4 @@
+-// Copyright (C) 2017 The Qt Company Ltd.
++// Copyright (C) 2025 The Qt Company Ltd.
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GFDL-1.3-no-invariants-only
+ 
+ /*!
+@@ -8,22 +8,21 @@
+     \keyword Qt Quick Controls 2 - Flat Style
+     \ingroup qtquickcontrols-examples
+     \examplecategory {Graphics}
+-    \brief A QML app using Qt Quick Controls and a QML plugin
++    \brief A QML app using Qt Quick Controls and QML modules
+     with customized controls.
+ 
+     \e Flat Style shows how to integrate customized controls into Qt Quick Designer.
+-    The example uses a pure QML plugin to define constants in a singleton. For the
++    The example uses a pure QML module to define constants in a singleton. For the
+     declarative parts of the UI, \c .ui.qml files are used. These can be edited
+     visually in Qt Quick Designer.
+ 
+     \borderedimage qtquickcontrols-flatstyle.png
+ 
+-    \section1 QML Plugin
++    \section1 QML Module for Theming
+ 
+-    The example contains a plugin called Theme. The plugin consists of a QML file
+-    \c Theme.qml and a \c qmldir file. The plugin is located in the imports subdirectory
+-    and added as a resource.
+-    To ensure the plugin is found by QML, we add the import directory to the import
++    The example contains a QML module called \c Theme, which consists of a QML
++    singleton with the same name.
++    To ensure the module is found by QML, we add the import directory to the import
+     paths of the engine in \c main.cpp.
+ 
+     \code
+@@ -32,7 +31,7 @@
+     ...
+     \endcode
+ 
+-    To ensure the code model and Qt Quick Designer can find the plugin, we add the following
++    To ensure the code model and Qt Quick Designer can find the module, we add the following
+     line to \e flatstyle.pro.
+ 
+     \code
+@@ -48,10 +47,10 @@
+     Defining these attribute values in a singleton makes it easy to maintain and change them.
+     This pattern makes it easy to implement theming.
+ 
+-    \section1 Implementing Custom Controls
++    \section1 QML Module for Custom Controls
+ 
+-    The plugin also contains a style for a couple of controls that implement a custom look and feel.
+-    This style is located in \c Flat and is set as the style for the application in \c qtquickcontrols2.conf.
++    The \c Flat module contains a style for a couple of controls that implement a custom look and feel.
++    This style is set as the style for the application in \c qtquickcontrols2.conf.
+ 
+     The example uses the states of a Qt Quick Item to implement the different states of a control.
+     This has the advantage that we can define the custom look in Qt Quick Designer and we can easily
+diff --git a/examples/quickcontrols/flatstyle/imports/Flat/CMakeLists.txt b/examples/quickcontrols/flatstyle/imports/Flat/CMakeLists.txt
+new file mode 100644
+index 0000000000..3245479e2d
+--- /dev/null
++++ b/examples/quickcontrols/flatstyle/imports/Flat/CMakeLists.txt
+@@ -0,0 +1,11 @@
++# Copyright (C) 2025 The Qt Company Ltd.
++# SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
++
++qt_add_qml_module(Flat
++    STATIC
++    URI Flat
++    QML_FILES
++        Button.qml
++        CheckBox.qml
++        Switch.qml
++)
+diff --git a/examples/quickcontrols/flatstyle/imports/Theme/CMakeLists.txt b/examples/quickcontrols/flatstyle/imports/Theme/CMakeLists.txt
+new file mode 100644
+index 0000000000..514e91e2e9
+--- /dev/null
++++ b/examples/quickcontrols/flatstyle/imports/Theme/CMakeLists.txt
+@@ -0,0 +1,13 @@
++# Copyright (C) 2025 The Qt Company Ltd.
++# SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
++
++set_source_files_properties(Theme.qml PROPERTIES
++    QT_QML_SINGLETON_TYPE TRUE
++)
++
++qt_add_qml_module(FlatTheme
++    STATIC
++    URI Theme
++    QML_FILES
++        Theme.qml
++)
+-- 
+2.51.2
+

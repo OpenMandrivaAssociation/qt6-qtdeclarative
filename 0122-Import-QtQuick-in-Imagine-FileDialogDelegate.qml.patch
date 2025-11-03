@@ -1,0 +1,32 @@
+From dddd1ef9efe50a59a7ff3a9bd0515ca9eb35ae6c Mon Sep 17 00:00:00 2001
+From: Oliver Eftevaag <oliver.eftevaag@qt.io>
+Date: Fri, 3 Oct 2025 18:12:54 +0200
+Subject: [PATCH 122/239] Import QtQuick in +Imagine/FileDialogDelegate.qml
+
+It's needed for the Accessible attached object, which we started using
+in ab83b2d2d34095bd56ca0e9e044374d314277321.
+
+Pick-to: 6.8
+Change-Id: I3fe69b98e183d57b3595429d5247f18b09e46465
+Reviewed-by: Mitch Curtis <mitch.curtis@qt.io>
+(cherry picked from commit 89fdea5e341346a9f17d24f22290412762f933c7)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ .../quickdialogsquickimpl/qml/+Imagine/FileDialogDelegate.qml    | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/quickdialogs/quickdialogsquickimpl/qml/+Imagine/FileDialogDelegate.qml b/src/quickdialogs/quickdialogsquickimpl/qml/+Imagine/FileDialogDelegate.qml
+index 67ca4f7c43..e222778ba1 100644
+--- a/src/quickdialogs/quickdialogsquickimpl/qml/+Imagine/FileDialogDelegate.qml
++++ b/src/quickdialogs/quickdialogsquickimpl/qml/+Imagine/FileDialogDelegate.qml
+@@ -2,6 +2,7 @@
+ // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+ // Qt-Security score:significant reason:default
+ 
++import QtQuick
+ import QtQuick.Controls
+ import QtQuick.Controls.Imagine
+ import QtQuick.Controls.Imagine.impl
+-- 
+2.51.2
+

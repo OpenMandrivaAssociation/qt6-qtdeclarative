@@ -1,0 +1,352 @@
+From 221a09dc411cedcdf128e4fe07ebe6f54889e18c Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Wed, 10 Sep 2025 12:13:12 +0200
+Subject: [PATCH 031/239] Properly wire up DelegateModel's modelChanged signal
+
+If the model contents change we need to notify. This enables the signal
+propagation for Instantiator, Repeater, ListView, and GridView.
+
+Task-number: QTBUG-139941
+Change-Id: I384dcd296068ca7abfd1cad9fe662ae6e8938338
+Reviewed-by: Fabian Kosmale <fabian.kosmale@qt.io>
+(cherry picked from commit 6803e9c90862f650cb016dc5554efdcc66978e6b)
+Reviewed-by: Sami Shalayel <sami.shalayel@qt.io>
+---
+ src/qmlmodels/qqmldelegatemodel.cpp           | 11 ++++++++--
+ src/qmlmodels/qqmldelegatemodel_p.h           |  3 ++-
+ src/qmlmodels/qqmldmlistaccessordata.cpp      |  2 ++
+ src/qmlmodels/qqmlinstantiator.cpp            | 10 +++++++++
+ src/quick/items/qquickitemview.cpp            |  8 +++++++
+ src/quick/items/qquickrepeater.cpp            |  8 +++++++
+ .../qqmlinstantiator/tst_qqmlinstantiator.cpp | 21 +++++++++++++++++--
+ .../qquicklistview2/tst_qquicklistview2.cpp   | 21 +++++++++++++++++--
+ .../qquickrepeater/tst_qquickrepeater.cpp     | 21 +++++++++++++++++--
+ 9 files changed, 96 insertions(+), 9 deletions(-)
+
+diff --git a/src/qmlmodels/qqmldelegatemodel.cpp b/src/qmlmodels/qqmldelegatemodel.cpp
+index dfb72d8aac..77156f2fcc 100644
+--- a/src/qmlmodels/qqmldelegatemodel.cpp
++++ b/src/qmlmodels/qqmldelegatemodel.cpp
+@@ -390,6 +390,9 @@ void QQmlDelegateModel::setModel(const QVariant &model)
+ {
+     Q_D(QQmlDelegateModel);
+ 
++    if (d->m_adaptorModel.model() == model)
++        return;
++
+     if (d->m_complete)
+         _q_itemsRemoved(0, d->m_count);
+ 
+@@ -422,6 +425,8 @@ void QQmlDelegateModel::setModel(const QVariant &model)
+         if (aimPrivate->resetting)
+             QObject::connect(aim, &QAbstractItemModel::modelReset, this, &QQmlDelegateModel::handleModelReset, Qt::SingleShotConnection);
+     }
++
++    emit modelChanged();
+ }
+ 
+ /*!
+@@ -1981,8 +1986,10 @@ void QQmlDelegateModel::_q_modelAboutToBeReset()
+             // to throw away all the setup that we did
+             handleModelReset();
+         } else {
+-            // If they did change, we give up and just start from scratch via setMode
+-            setModel(QVariant::fromValue(model()));
++            // If they did change, we give up and just start from scratch via setModel
++            QVariant m = model();
++            setModel(QVariant());
++            setModel(m);
+             // but we still have to call handleModelReset, otherwise views will
+             // not refresh
+             handleModelReset();
+diff --git a/src/qmlmodels/qqmldelegatemodel_p.h b/src/qmlmodels/qqmldelegatemodel_p.h
+index 0e3db4dc91..efce206625 100644
+--- a/src/qmlmodels/qqmldelegatemodel_p.h
++++ b/src/qmlmodels/qqmldelegatemodel_p.h
+@@ -39,7 +39,7 @@ class Q_QMLMODELS_EXPORT QQmlDelegateModel : public QQmlInstanceModel, public QQ
+     Q_OBJECT
+     Q_DECLARE_PRIVATE(QQmlDelegateModel)
+ 
+-    Q_PROPERTY(QVariant model READ model WRITE setModel)
++    Q_PROPERTY(QVariant model READ model WRITE setModel NOTIFY modelChanged)
+     Q_PROPERTY(QQmlComponent *delegate READ delegate WRITE setDelegate NOTIFY delegateChanged)
+     Q_PROPERTY(QString filterOnGroup READ filterGroup WRITE setFilterGroup NOTIFY filterGroupChanged RESET resetFilterGroup)
+     Q_PROPERTY(QQmlDelegateModelGroup *items READ items CONSTANT) //TODO : worth renaming?
+@@ -154,6 +154,7 @@ Q_SIGNALS:
+     void rootIndexChanged();
+     void delegateChanged();
+     Q_REVISION(6, 10) void delegateModelAccessChanged();
++    Q_REVISION(6, 10) void modelChanged();
+ 
+ private Q_SLOTS:
+     void _q_itemsChanged(int index, int count, const QVector<int> &roles);
+diff --git a/src/qmlmodels/qqmldmlistaccessordata.cpp b/src/qmlmodels/qqmldmlistaccessordata.cpp
+index d64e87e1f6..99e1612f80 100644
+--- a/src/qmlmodels/qqmldmlistaccessordata.cpp
++++ b/src/qmlmodels/qqmldmlistaccessordata.cpp
+@@ -99,6 +99,8 @@ int VDMListDelegateDataType::metaCall(
+             accessor->cachedDataClean = false;
+         } else {
+             model->list.set(accessor->index, data);
++            if (QQmlDelegateModel *delegateModel = accessor->metaType->model)
++                emit delegateModel->modelChanged();
+         }
+         QMetaObject::activate(accessor, this, id - propertyOffset, nullptr);
+         emit accessor->modelDataChanged();
+diff --git a/src/qmlmodels/qqmlinstantiator.cpp b/src/qmlmodels/qqmlinstantiator.cpp
+index c228fe3be4..3f6f45f339 100644
+--- a/src/qmlmodels/qqmlinstantiator.cpp
++++ b/src/qmlmodels/qqmlinstantiator.cpp
+@@ -417,6 +417,7 @@ void QQmlInstantiator::setModel(const QVariant &v)
+                     this, SLOT(_q_modelUpdated(QQmlChangeSet,bool)));
+             disconnect(prevModel, SIGNAL(createdItem(int,QObject*)), this, SLOT(_q_createdItem(int,QObject*)));
+             //disconnect(prevModel, SIGNAL(initItem(int,QObject*)), this, SLOT(initItem(int,QObject*)));
++            // If it was our own model before, we've deleted it. No need to disconnect anything
+         }
+ 
+         if (d->instanceModel) {
+@@ -424,6 +425,15 @@ void QQmlInstantiator::setModel(const QVariant &v)
+                     this, SLOT(_q_modelUpdated(QQmlChangeSet,bool)));
+             connect(d->instanceModel, SIGNAL(createdItem(int,QObject*)), this, SLOT(_q_createdItem(int,QObject*)));
+             //connect(d->instanceModel, SIGNAL(initItem(int,QObject*)), this, SLOT(initItem(int,QObject*)));
++
++            if (d->ownModel) {
++                QObject::connect(
++                        static_cast<QQmlDelegateModel *>(d->instanceModel),
++                        &QQmlDelegateModel::modelChanged, this, [this, d]() {
++                    if (!d->effectiveReset)
++                        emit modelChanged();
++                });
++            }
+         }
+     }
+ 
+diff --git a/src/quick/items/qquickitemview.cpp b/src/quick/items/qquickitemview.cpp
+index 1c4d9312ac..08de143238 100644
+--- a/src/quick/items/qquickitemview.cpp
++++ b/src/quick/items/qquickitemview.cpp
+@@ -1160,6 +1160,10 @@ void QQuickItemViewPrivate::connectModel(QQuickItemView *q, QQmlDelegateModelPoi
+         QObjectPrivate::connect(
+                 dataModel, &QQmlDelegateModel::delegateModelAccessChanged,
+                 this, &QQuickItemViewPrivate::applyDelegateModelAccessChange);
++        if (ownModel) {
++            QObject::connect(dataModel, &QQmlDelegateModel::modelChanged,
++                             q, &QQuickItemView::modelChanged);
++        }
+     }
+ 
+     emitCountChanged();
+@@ -1191,6 +1195,10 @@ void QQuickItemViewPrivate::disconnectModel(QQuickItemView *q, QQmlDelegateModel
+         QObjectPrivate::disconnect(
+                 delegateModel, &QQmlDelegateModel::delegateModelAccessChanged,
+                 this, &QQuickItemViewPrivate::applyDelegateModelAccessChange);
++        if (ownModel) {
++            QObject::disconnect(delegateModel, &QQmlDelegateModel::modelChanged,
++                                q, &QQuickItemView::modelChanged);
++        }
+     }
+ }
+ 
+diff --git a/src/quick/items/qquickrepeater.cpp b/src/quick/items/qquickrepeater.cpp
+index c84de58c5b..8f056341c4 100644
+--- a/src/quick/items/qquickrepeater.cpp
++++ b/src/quick/items/qquickrepeater.cpp
+@@ -470,6 +470,10 @@ void QQuickRepeaterPrivate::connectModel(QQuickRepeater *q, QQmlDelegateModelPoi
+         QObjectPrivate::connect(
+                 dataModel, &QQmlDelegateModel::delegateModelAccessChanged,
+                 this, &QQuickRepeaterPrivate::applyDelegateModelAccessChange);
++        if (ownModel) {
++            QObject::connect(dataModel, &QQmlDelegateModel::modelChanged,
++                             q, &QQuickRepeater::modelChanged);
++        }
+     }
+     q->regenerate();
+ }
+@@ -493,6 +497,10 @@ void QQuickRepeaterPrivate::disconnectModel(QQuickRepeater *q, QQmlDelegateModel
+         QObjectPrivate::disconnect(
+                 delegateModel, &QQmlDelegateModel::delegateModelAccessChanged,
+                 this, &QQuickRepeaterPrivate::applyDelegateModelAccessChange);
++        if (ownModel) {
++            QObject::disconnect(delegateModel, &QQmlDelegateModel::modelChanged,
++                                q, &QQuickRepeater::modelChanged);
++        }
+     }
+ }
+ 
+diff --git a/tests/auto/qml/qqmlinstantiator/tst_qqmlinstantiator.cpp b/tests/auto/qml/qqmlinstantiator/tst_qqmlinstantiator.cpp
+index 4f3e0deb31..7e1fee2957 100644
+--- a/tests/auto/qml/qqmlinstantiator/tst_qqmlinstantiator.cpp
++++ b/tests/auto/qml/qqmlinstantiator/tst_qqmlinstantiator.cpp
+@@ -456,6 +456,8 @@ void tst_qqmlinstantiator::delegateModelAccess()
+     QQmlInstantiator *instantiator = qobject_cast<QQmlInstantiator *>(object.data());
+     QVERIFY(instantiator);
+ 
++    QSignalSpy modelChangedSpy(instantiator, &QQmlInstantiator::modelChanged);
++
+     if (delegateKind == Delegate::Untyped && modelKind == Model::Array)
+         QSKIP("Properties of objects in arrays are not exposed as context properties");
+ 
+@@ -479,20 +481,34 @@ void tst_qqmlinstantiator::delegateModelAccess()
+             ? access != QQmlDelegateModel::ReadOnly
+             : access == QQmlDelegateModel::ReadWrite;
+ 
++    // Only the array is actually updated itself. The other models are pointers
++    const bool writeShouldSignal = modelKind == Model::Kind::Array;
++
+     double expected = 11;
+ 
++    // Initial setting of the model, signals one update
++    int expectedModelUpdates = 1;
++    QCOMPARE(modelChangedSpy.count(), expectedModelUpdates);
++
+     QCOMPARE(delegate->property("immediateX").toDouble(), expected);
+     QCOMPARE(delegate->property("modelX").toDouble(), expected);
+ 
+-    if (modelWritable)
++    if (modelWritable) {
+         expected = 3;
++        if (writeShouldSignal)
++            ++expectedModelUpdates;
++    }
+ 
+     QMetaObject::invokeMethod(delegate, "writeThroughModel");
+     QCOMPARE(delegate->property("immediateX").toDouble(), expected);
+     QCOMPARE(delegate->property("modelX").toDouble(), expected);
++    QCOMPARE(modelChangedSpy.count(), expectedModelUpdates);
+ 
+-    if (immediateWritable)
++    if (immediateWritable) {
+         expected = 1;
++        if (writeShouldSignal)
++            ++expectedModelUpdates;
++    }
+ 
+     QMetaObject::invokeMethod(delegate, "writeImmediate");
+ 
+@@ -501,6 +517,7 @@ void tst_qqmlinstantiator::delegateModelAccess()
+              delegateKind == Delegate::Untyped ? expected : 1);
+ 
+     QCOMPARE(delegate->property("modelX").toDouble(), expected);
++    QCOMPARE(modelChangedSpy.count(), expectedModelUpdates);
+ }
+ 
+ QTEST_MAIN(tst_qqmlinstantiator)
+diff --git a/tests/auto/quick/qquicklistview2/tst_qquicklistview2.cpp b/tests/auto/quick/qquicklistview2/tst_qquicklistview2.cpp
+index 94feee92f3..04b2fd90ae 100644
+--- a/tests/auto/quick/qquicklistview2/tst_qquicklistview2.cpp
++++ b/tests/auto/quick/qquicklistview2/tst_qquicklistview2.cpp
+@@ -1435,6 +1435,8 @@ void tst_QQuickListView2::delegateModelAccess()
+     QQuickListView *listView = qobject_cast<QQuickListView *>(object.data());
+     QVERIFY(listView);
+ 
++    QSignalSpy modelChangedSpy(listView, &QQuickItemView::modelChanged);
++
+     if (delegateKind == Delegate::Untyped && modelKind == Model::Array)
+         QSKIP("Properties of objects in arrays are not exposed as context properties");
+ 
+@@ -1459,20 +1461,34 @@ void tst_QQuickListView2::delegateModelAccess()
+             ? access != QQmlDelegateModel::ReadOnly
+             : access == QQmlDelegateModel::ReadWrite;
+ 
++    // Only the array is actually updated itself. The other models are pointers
++    const bool writeShouldSignal = modelKind == Model::Kind::Array;
++
+     double expected = 11;
+ 
++    // Initial setting of the model, signals one update
++    int expectedModelUpdates = 1;
++    QCOMPARE(modelChangedSpy.count(), expectedModelUpdates);
++
+     QCOMPARE(delegate->property("immediateX").toDouble(), expected);
+     QCOMPARE(delegate->property("modelX").toDouble(), expected);
+ 
+-    if (modelWritable)
++    if (modelWritable) {
+         expected = 3;
++        if (writeShouldSignal)
++            ++expectedModelUpdates;
++    }
+ 
+     QMetaObject::invokeMethod(delegate, "writeThroughModel");
+     QCOMPARE(delegate->property("immediateX").toDouble(), expected);
+     QCOMPARE(delegate->property("modelX").toDouble(), expected);
++    QCOMPARE(modelChangedSpy.count(), expectedModelUpdates);
+ 
+-    if (immediateWritable)
++    if (immediateWritable) {
+         expected = 1;
++        if (writeShouldSignal)
++            ++expectedModelUpdates;
++    }
+ 
+     QMetaObject::invokeMethod(delegate, "writeImmediate");
+ 
+@@ -1481,6 +1497,7 @@ void tst_QQuickListView2::delegateModelAccess()
+              delegateKind == Delegate::Untyped ? expected : 1);
+ 
+     QCOMPARE(delegate->property("modelX").toDouble(), expected);
++    QCOMPARE(modelChangedSpy.count(), expectedModelUpdates);
+ }
+ 
+ enum RemovalPolicy {
+diff --git a/tests/auto/quick/qquickrepeater/tst_qquickrepeater.cpp b/tests/auto/quick/qquickrepeater/tst_qquickrepeater.cpp
+index f1fa5fdff9..023d5432e2 100644
+--- a/tests/auto/quick/qquickrepeater/tst_qquickrepeater.cpp
++++ b/tests/auto/quick/qquickrepeater/tst_qquickrepeater.cpp
+@@ -1290,6 +1290,8 @@ void tst_QQuickRepeater::delegateModelAccess()
+     QQuickRepeater *repeater = qvariant_cast<QQuickRepeater *>(object->property("repeater"));
+     QVERIFY(repeater);
+ 
++    QSignalSpy modelChangedSpy(repeater, &QQuickRepeater::modelChanged);
++
+     if (delegateKind == Delegate::Untyped && modelKind == Model::Array)
+         QSKIP("Properties of objects in arrays are not exposed as context properties");
+ 
+@@ -1314,20 +1316,34 @@ void tst_QQuickRepeater::delegateModelAccess()
+             ? access != QQmlDelegateModel::ReadOnly
+             : access == QQmlDelegateModel::ReadWrite;
+ 
++    // Only the array is actually updated itself. The other models are pointers
++    const bool writeShouldSignal = modelKind == Model::Kind::Array;
++
+     double expected = 11;
+ 
++    // Initial setting of the model, signals one update
++    int expectedModelUpdates = 1;
++    QCOMPARE(modelChangedSpy.count(), expectedModelUpdates);
++
+     QCOMPARE(delegate->property("immediateX").toDouble(), expected);
+     QCOMPARE(delegate->property("modelX").toDouble(), expected);
+ 
+-    if (modelWritable)
++    if (modelWritable) {
+         expected = 3;
++        if (writeShouldSignal)
++            ++expectedModelUpdates;
++    }
+ 
+     QMetaObject::invokeMethod(delegate, "writeThroughModel");
+     QCOMPARE(delegate->property("immediateX").toDouble(), expected);
+     QCOMPARE(delegate->property("modelX").toDouble(), expected);
++    QCOMPARE(modelChangedSpy.count(), expectedModelUpdates);
+ 
+-    if (immediateWritable)
++    if (immediateWritable) {
+         expected = 1;
++        if (writeShouldSignal)
++            ++expectedModelUpdates;
++    }
+ 
+     QMetaObject::invokeMethod(delegate, "writeImmediate");
+ 
+@@ -1336,6 +1352,7 @@ void tst_QQuickRepeater::delegateModelAccess()
+              delegateKind == Delegate::Untyped ? expected : 1);
+ 
+     QCOMPARE(delegate->property("modelX").toDouble(), expected);
++    QCOMPARE(modelChangedSpy.count(), expectedModelUpdates);
+ }
+ 
+ QTEST_MAIN(tst_QQuickRepeater)
+-- 
+2.51.2
+

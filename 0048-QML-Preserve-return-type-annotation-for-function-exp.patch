@@ -1,0 +1,158 @@
+From ae21568a709df534ce508df92818e6c4ab069d55 Mon Sep 17 00:00:00 2001
+From: Luca Di Sera <luca.disera@qt.io>
+Date: Wed, 10 Sep 2025 15:04:59 +0200
+Subject: [PATCH 048/239] QML: Preserve return type annotation for function
+ expressions
+
+The parser for QML allows the specification of type hints on a series of
+callable elements; such as functions defined as part of a QML type.
+
+It is possible, for example, to provide an hint for the return type of a
+function expression, anonymous or not, such as:
+
+```
+import QtQml
+
+QtObject {
+    property var: function (lhs: int, rhs: int)): int { return lhs + rhs; }
+}
+```
+
+While this parses correctly, the return type annotation is currently
+discarded as part of the parsing process, such that in turn it is
+invisible to the engine when managing the function.
+
+Hence, ensure that the return type annotation for function expressions
+is preserved during the parsing process so that it can later be visible
+to the engine.
+
+In particular, the AST node that represents this kind of element can
+already store a type annotation that refers to its return type and later
+down the line, the code generation phase is already able to take into
+account the annotation when it builds its representation of the function.
+
+Nonetheless, that storage is currently purposefully not used in the
+cases we are interested into, albeit it is in other cases that might be
+considered more common.
+This is most probably, albeit nowhere near certainly, due to simple
+historical reasons and partial implementations related to type hints.
+
+Thus, ensure that the return type annotation is correctly preserved and
+stored for `FunctionExpression` rules during the parsing process, such
+that it can later be recognized and used by the engine.
+
+A few test cases related to the return type annotation were added.
+
+Task-number: QTBUG-137944
+Change-Id: I6133bb286a916d0687ff5d5542b9aa769cfd493b
+Reviewed-by: Ulf Hermann <ulf.hermann@qt.io>
+Reviewed-by: Sami Shalayel <sami.shalayel@qt.io>
+(cherry picked from commit cf572e2b0303d681beb00596135f3331e7f03718)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qml/parser/qqmljs.g                       |  4 +--
+ ...unctionReturnTypeAnnotationIsPreserved.qml |  5 +++
+ ...unctionExpressionReturnTypeIsPreserved.qml |  5 +++
+ .../qml/qqmlecmascript/tst_qqmlecmascript.cpp | 33 +++++++++++++++++++
+ 4 files changed, 45 insertions(+), 2 deletions(-)
+ create mode 100644 tests/auto/qml/qqmlecmascript/data/anonymousFunctionReturnTypeAnnotationIsPreserved.qml
+ create mode 100644 tests/auto/qml/qqmlecmascript/data/namedFunctionExpressionReturnTypeIsPreserved.qml
+
+diff --git a/src/qml/parser/qqmljs.g b/src/qml/parser/qqmljs.g
+index ccf43ca0e1..1c75a695a0 100644
+--- a/src/qml/parser/qqmljs.g
++++ b/src/qml/parser/qqmljs.g
+@@ -4023,7 +4023,7 @@ FunctionExpression: T_FUNCTION BindingIdentifier T_LPAREN FormalParameters T_RPA
+         if (!ensureNoFunctionTypeAnnotations(sym(6).TypeAnnotation, sym(4).FormalParameterList))
+             return false;
+         AST::FunctionExpression *node = new (pool) AST::FunctionExpression(stringRef(2), sym(4).FormalParameterList, sym(8).StatementList,
+-                                                                           /*type annotation*/nullptr);
++                                                                           sym(6).TypeAnnotation);
+         node->functionToken = loc(1);
+         if (! stringRef(2).isNull())
+           node->identifierToken = loc(2);
+@@ -4041,7 +4041,7 @@ FunctionExpression: T_FUNCTION T_LPAREN FormalParameters T_RPAREN TypeAnnotation
+         if (!ensureNoFunctionTypeAnnotations(sym(5).TypeAnnotation, sym(3).FormalParameterList))
+             return false;
+         AST::FunctionExpression *node = new (pool) AST::FunctionExpression(QStringView(), sym(3).FormalParameterList, sym(7).StatementList,
+-                                                                           /*type annotation*/nullptr);
++                                                                           sym(5).TypeAnnotation);
+         node->functionToken = loc(1);
+         node->lparenToken = loc(2);
+         node->rparenToken = loc(4);
+diff --git a/tests/auto/qml/qqmlecmascript/data/anonymousFunctionReturnTypeAnnotationIsPreserved.qml b/tests/auto/qml/qqmlecmascript/data/anonymousFunctionReturnTypeAnnotationIsPreserved.qml
+new file mode 100644
+index 0000000000..5ad8ebd4e8
+--- /dev/null
++++ b/tests/auto/qml/qqmlecmascript/data/anonymousFunctionReturnTypeAnnotationIsPreserved.qml
+@@ -0,0 +1,5 @@
++import QtQml
++
++QtObject {
++    property var func: function (): int { return 0; }
++}
+diff --git a/tests/auto/qml/qqmlecmascript/data/namedFunctionExpressionReturnTypeIsPreserved.qml b/tests/auto/qml/qqmlecmascript/data/namedFunctionExpressionReturnTypeIsPreserved.qml
+new file mode 100644
+index 0000000000..91121d6861
+--- /dev/null
++++ b/tests/auto/qml/qqmlecmascript/data/namedFunctionExpressionReturnTypeIsPreserved.qml
+@@ -0,0 +1,5 @@
++import QtQml
++
++QtObject {
++    property var func: function foo(): int { return 0; }
++}
+diff --git a/tests/auto/qml/qqmlecmascript/tst_qqmlecmascript.cpp b/tests/auto/qml/qqmlecmascript/tst_qqmlecmascript.cpp
+index 189d491640..54994ff5e7 100644
+--- a/tests/auto/qml/qqmlecmascript/tst_qqmlecmascript.cpp
++++ b/tests/auto/qml/qqmlecmascript/tst_qqmlecmascript.cpp
+@@ -440,6 +440,9 @@ private slots:
+ 
+     void jittedJavaScriptExpressionDoesNotCrashOnExceptionBeingThrown();
+ 
++    void anonymousFunctionReturnTypeAnnotationIsPreserved();
++    void namedFunctionExpressionReturnTypeIsPreserved();
++
+ private:
+ //    static void propertyVarWeakRefCallback(v8::Persistent<v8::Value> object, void* parameter);
+     static void verifyContextLifetime(const QQmlRefPointer<QQmlContextData> &ctxt);
+@@ -10754,6 +10757,36 @@ void tst_qqmlecmascript::jittedJavaScriptExpressionDoesNotCrashOnExceptionBeingT
+     QTRY_VERIFY(!timer->isRunning());
+ }
+ 
++void tst_qqmlecmascript::anonymousFunctionReturnTypeAnnotationIsPreserved() {
++    QQmlEngine engine;
++
++    QQmlComponent c(&engine, testFileUrl("anonymousFunctionReturnTypeAnnotationIsPreserved.qml"));
++    QVERIFY2(c.isReady(), qPrintable(c.errorString()));
++    QScopedPointer<QObject> o(c.create());
++    QVERIFY2(o, qPrintable(c.errorString()));
++
++    QJSValue func = o->property("func").value<QJSValue>();
++    auto signature = QJSValuePrivate::asManagedType<QV4::JavaScriptFunctionObject>(&func)->d()->function->jsTypedFunction.types;
++
++    QVERIFY(!signature.empty());
++    QCOMPARE(signature.first(), QQmlMetaType::qmlType(QMetaType::fromType<int>()));
++}
++
++void tst_qqmlecmascript::namedFunctionExpressionReturnTypeIsPreserved() {
++    QQmlEngine engine;
++
++    QQmlComponent c(&engine, testFileUrl("namedFunctionExpressionReturnTypeIsPreserved.qml"));
++    QVERIFY2(c.isReady(), qPrintable(c.errorString()));
++    QScopedPointer<QObject> o(c.create());
++    QVERIFY2(o, qPrintable(c.errorString()));
++
++    QJSValue func = o->property("func").value<QJSValue>();
++    auto signature = QJSValuePrivate::asManagedType<QV4::JavaScriptFunctionObject>(&func)->d()->function->jsTypedFunction.types;
++
++    QVERIFY(!signature.empty());
++    QCOMPARE(signature.first(), QQmlMetaType::qmlType(QMetaType::fromType<int>()));
++}
++
+ QTEST_MAIN(tst_qqmlecmascript)
+ 
+ #include "tst_qqmlecmascript.moc"
+-- 
+2.51.2
+

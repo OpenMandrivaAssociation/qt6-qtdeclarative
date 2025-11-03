@@ -1,0 +1,29 @@
+From d94b27b6b119c8b4ee90170af8323f3267141080 Mon Sep 17 00:00:00 2001
+From: Alexei Cazacov <alexei.cazacov@qt.io>
+Date: Thu, 25 Sep 2025 09:39:46 +0300
+Subject: [PATCH 126/239] Doc: Remove a duplicate item from TOC
+
+Pick-to: 6.10.0
+Change-Id: I8233f33b9555f8fa0b3ec694aaa7e85162edc0b8
+Reviewed-by: Paul Wicking <paul.wicking@qt.io>
+(cherry picked from commit 36024b451ee379882d4cd58c7f4b5d4323a15eab)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qml/doc/src/qtqml-toc.qdoc | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/src/qml/doc/src/qtqml-toc.qdoc b/src/qml/doc/src/qtqml-toc.qdoc
+index e5809ed424..fd5565c37b 100644
+--- a/src/qml/doc/src/qtqml-toc.qdoc
++++ b/src/qml/doc/src/qtqml-toc.qdoc
+@@ -44,7 +44,6 @@
+     \li \l{The QML Disk Cache}
+     \li \l{Overview - QML and C++ Integration}{QML and C++ Integration}
+         \list
+-            \li \l{Exposing Attributes of C++ Types to QML}
+             \li \l{Defining QML Types from C++}
+             \li \l{Embedding C++ Objects into QML with Context Properties}
+             \li \l{Data Type Conversion Between QML and C++}
+-- 
+2.51.2
+

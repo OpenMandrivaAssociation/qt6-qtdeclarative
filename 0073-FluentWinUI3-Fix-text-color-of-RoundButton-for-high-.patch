@@ -1,0 +1,43 @@
+From 4def5114fde73f7911561e74f5f77e8824919032 Mon Sep 17 00:00:00 2001
+From: Oliver Eftevaag <oliver.eftevaag@qt.io>
+Date: Wed, 27 Aug 2025 14:58:38 +0200
+Subject: [PATCH 073/239] FluentWinUI3: Fix text color of RoundButton for high
+ contrast themes
+
+The RoundButton was overlooked in
+34c542aba10113440b84dca05994987e27cb8bcf when we originally fixed Button
+and DelayButton. It makes sense that RoundButton gets the same
+treatment.
+
+Fixes: QTBUG-129088
+Change-Id: I55110440794ac229cbc755e8fc00373097fdf058
+Reviewed-by: Benedikte Holm <benedikte.holm@qt.io>
+Reviewed-by: Oliver Eftevaag <oliver.eftevaag@qt.io>
+(cherry picked from commit bf891bdf15a091ad5526fc3d4d0c6f874f9ad8c1)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quickcontrols/fluentwinui3/RoundButton.qml | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/src/quickcontrols/fluentwinui3/RoundButton.qml b/src/quickcontrols/fluentwinui3/RoundButton.qml
+index 39400f59bc..029e5305bb 100644
+--- a/src/quickcontrols/fluentwinui3/RoundButton.qml
++++ b/src/quickcontrols/fluentwinui3/RoundButton.qml
+@@ -26,6 +26,14 @@ T.RoundButton {
+     icon.color: __buttonText
+ 
+     readonly property color __buttonText: {
++        if (Application.styleHints.accessibility.contrastPreference === Qt.HighContrast) {
++            return (control.enabled && ((control.flat && (control.down || control.hovered))
++                || ((control.highlighted || control.checked) && !control.down)))
++                ? control.palette.button
++                : control.enabled && (control.hovered || control.down)
++                ? control.palette.highlight
++                : control.palette.buttonText
++        }
+         if (control.down) {
+             return (control.checked || control.highlighted)
+                 ? Application.styleHints.colorScheme == Qt.Light
+-- 
+2.51.2
+

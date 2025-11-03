@@ -1,0 +1,39 @@
+From 6a428409b2c305406099c1304aa40d09d2cb2564 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?M=C3=A5rten=20Nordheim?= <marten.nordheim@qt.io>
+Date: Mon, 13 Oct 2025 11:21:43 +0200
+Subject: [PATCH 152/239] testhttpserver: support upper-case and lower-case
+ header names
+
+Because it's not important to the server what case the headers names
+has.
+
+Task-number: QTBUG-137203
+Pick-to: 6.9
+Change-Id: I4e030ec3a7f051d6d063f0bbc040d2d56b51fbea
+Reviewed-by: Ulf Hermann <ulf.hermann@qt.io>
+Reviewed-by: Edward Welbourne <edward.welbourne@qt.io>
+(cherry picked from commit 797a0ffc7d0acbde053e72f417afa4447ecfe9a8)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/quicktestutils/qml/testhttpserver.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/quicktestutils/qml/testhttpserver.cpp b/src/quicktestutils/qml/testhttpserver.cpp
+index 9e24e860d4..3feaf56f39 100644
+--- a/src/quicktestutils/qml/testhttpserver.cpp
++++ b/src/quicktestutils/qml/testhttpserver.cpp
+@@ -249,6 +249,11 @@ void TestHTTPServer::readyRead()
+                 m_data += socket->readAll();
+                 break;
+             } else {
++                qsizetype prefixIndex = line.indexOf(':');
++                if (prefixIndex > 0) {
++                    const QByteArray prefix = line.left(prefixIndex);
++                    line = std::move(line).replace(prefix, prefix.toLower());
++                }
+                 bool prefixFound = false;
+                 for (const QByteArray &prefix : m_waitData.headerPrefixes) {
+                     if (line.startsWith(prefix)) {
+-- 
+2.51.2
+

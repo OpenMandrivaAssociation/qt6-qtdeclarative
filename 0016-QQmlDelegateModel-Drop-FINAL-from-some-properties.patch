@@ -1,0 +1,55 @@
+From edd434aa3a1cddb16c69d606758f923b9513db52 Mon Sep 17 00:00:00 2001
+From: Ulf Hermann <ulf.hermann@qt.io>
+Date: Fri, 5 Sep 2025 16:10:04 +0200
+Subject: [PATCH 016/239] QQmlDelegateModel: Drop FINAL from some properties
+
+The dynamic metaobject of QQmlDelegateModelAttached likes to override
+them, which produces warnings.
+
+Amends commit 9355b7173c10045f7908bf16a97ba693967517e1.
+
+Pick-to: 6.9 6.8
+Change-Id: Iaf0d6627fe6c373177f7f28a750fa2baf5fa2a7e
+Reviewed-by: Sami Shalayel <sami.shalayel@qt.io>
+(cherry picked from commit a97083d5977874f66bd5abf2b1aaa1a73d2be9a3)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/qmlmodels/qqmldelegatemodel_p.h                       | 8 ++++----
+ .../qquickvisualdatamodel/tst_qquickvisualdatamodel.cpp   | 2 ++
+ 2 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/src/qmlmodels/qqmldelegatemodel_p.h b/src/qmlmodels/qqmldelegatemodel_p.h
+index d6884bb13d..0e3db4dc91 100644
+--- a/src/qmlmodels/qqmldelegatemodel_p.h
++++ b/src/qmlmodels/qqmldelegatemodel_p.h
+@@ -229,10 +229,10 @@ class QQmlDelegateModelAttached : public QObject
+     Q_PROPERTY(QQmlDelegateModel *model READ model CONSTANT FINAL)
+     Q_PROPERTY(QStringList groups READ groups WRITE setGroups NOTIFY groupsChanged FINAL)
+     Q_PROPERTY(bool isUnresolved READ isUnresolved NOTIFY unresolvedChanged FINAL)
+-    Q_PROPERTY(bool inPersistedItems READ inPersistedItems WRITE setInPersistedItems NOTIFY groupsChanged FINAL)
+-    Q_PROPERTY(bool inItems READ inItems WRITE setInItems NOTIFY groupsChanged FINAL)
+-    Q_PROPERTY(int persistedItemsIndex READ persistedItemsIndex NOTIFY groupsChanged FINAL)
+-    Q_PROPERTY(int itemsIndex READ itemsIndex NOTIFY groupsChanged FINAL)
++    Q_PROPERTY(bool inPersistedItems READ inPersistedItems WRITE setInPersistedItems NOTIFY groupsChanged)
++    Q_PROPERTY(bool inItems READ inItems WRITE setInItems NOTIFY groupsChanged)
++    Q_PROPERTY(int persistedItemsIndex READ persistedItemsIndex NOTIFY groupsChanged)
++    Q_PROPERTY(int itemsIndex READ itemsIndex NOTIFY groupsChanged)
+ 
+ public:
+     QQmlDelegateModelAttached(QObject *parent);
+diff --git a/tests/auto/quick/qquickvisualdatamodel/tst_qquickvisualdatamodel.cpp b/tests/auto/quick/qquickvisualdatamodel/tst_qquickvisualdatamodel.cpp
+index 3cbf402f01..1482fc8868 100644
+--- a/tests/auto/quick/qquickvisualdatamodel/tst_qquickvisualdatamodel.cpp
++++ b/tests/auto/quick/qquickvisualdatamodel/tst_qquickvisualdatamodel.cpp
+@@ -3959,6 +3959,8 @@ void tst_qquickvisualdatamodel::invalidAttachment()
+ 
+ void tst_qquickvisualdatamodel::declarativeAssignViaAttached()
+ {
++    QTest::failOnWarning();
++
+     QQmlComponent component(&engine);
+     component.loadUrl(testFileUrl("attachedDeclarativelySet.qml"));
+ 
+-- 
+2.51.2
+
