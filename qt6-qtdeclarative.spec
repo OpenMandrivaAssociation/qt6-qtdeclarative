@@ -2,7 +2,7 @@
 
 Name:		qt6-qtdeclarative
 Version:	6.10.0
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}2
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}3
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -43,11 +43,11 @@ BuildRequires:	rpm-provreq-qml
 License:	LGPLv3/GPLv3/GPLv2
 
 %patchlist
-# This is a workaround for the disk cache breaking Plasma badly.
-# See e.g. https://www.reddit.com/r/kde/comments/18n3bfb/comment/keja252/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
-# This is fixed, but let's leave the patch here for reference, this may happen again
-# when the on-disk format changes
-#qtdeclarative-disable-disk-cache.patch
+# Disabling disk cache slows some things down (but not a lot),
+# but seems to make everything a lot more stable (crashes last
+# observed by ben with 6.10.0/Plasma 6.5.2)
+# #6  0x00007f8e59b6625f _ZN21QmlCacheGeneratedCode57_qt_qml_org_kde_plasma_workspace_calendar_DayDelegate_qml4$_228__invokeEPKN11QQmlPrivate18AOTCompiledContextEPPv (libcalendarplugin.so + 0x7c25f)
+qtdeclarative-disable-disk-cache.patch
 
 # From upstream
 0002-QmlModels-De-bounce-model-data-if-DelegateModelAcces.patch
