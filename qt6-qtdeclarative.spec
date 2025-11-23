@@ -122,6 +122,7 @@ Requires:	cmake(Qt%{qtmajor}Network) \
 %{_qtdir}/qml/Qt/test
 
 %define extra_devel_reqprov_Quick \
+Requires:	cmake(Qt%{qtmajor}QmlMeta) \
 Requires:	cmake(Qt%{qtmajor}QmlModels) \
 Requires:	cmake(Qt%{qtmajor}OpenGL) \
 Requires:	cmake(Qt%{qtmajor}Qml)
