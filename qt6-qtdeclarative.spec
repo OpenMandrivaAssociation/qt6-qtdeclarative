@@ -2,7 +2,7 @@
 
 Name:		qt6-qtdeclarative
 Version:	6.10.1
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}2
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}3
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -51,6 +51,9 @@ qtdeclarative-disable-disk-cache.patch
 # https://codereview.qt-project.org/c/qt/qtdeclarative/+/696524
 # https://bugs.kde.org/show_bug.cgi?id=512754
 9c6b2b7.diff
+# https://codereview.qt-project.org/c/qt/qtdeclarative/+/704031
+# https://bugs.kde.org/show_bug.cgi?id=513527
+https://codereview.qt-project.org/changes/qt%2Fqtdeclarative~704031/revisions/4/patch?download&raw#/dc2358e.diff
 
 %description
 Version %{qtmajor} of the Qt Quick framework
