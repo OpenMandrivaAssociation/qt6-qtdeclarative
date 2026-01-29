@@ -1,8 +1,8 @@
 #define beta rc
 
 Name:		qt6-qtdeclarative
-Version:	6.10.1
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}3
+Version:	6.10.2
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -48,9 +48,6 @@ License:	LGPLv3/GPLv3/GPLv2
 # observed by ben with 6.10.0/Plasma 6.5.2)
 # #6  0x00007f8e59b6625f _ZN21QmlCacheGeneratedCode57_qt_qml_org_kde_plasma_workspace_calendar_DayDelegate_qml4$_228__invokeEPKN11QQmlPrivate18AOTCompiledContextEPPv (libcalendarplugin.so + 0x7c25f)
 qtdeclarative-disable-disk-cache.patch
-# https://codereview.qt-project.org/c/qt/qtdeclarative/+/696524
-# https://bugs.kde.org/show_bug.cgi?id=512754
-9c6b2b7.diff
 # https://codereview.qt-project.org/c/qt/qtdeclarative/+/704031
 # https://bugs.kde.org/show_bug.cgi?id=513527
 https://codereview.qt-project.org/changes/qt%2Fqtdeclarative~704031/revisions/4/patch?download&raw#/dc2358e.diff
