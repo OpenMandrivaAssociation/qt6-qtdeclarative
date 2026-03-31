@@ -1,7 +1,7 @@
 #define beta rc
 
 Name:		qt6-qtdeclarative
-Version:	6.10.2
+Version:	6.11.0
 Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
@@ -48,9 +48,6 @@ License:	LGPLv3/GPLv3/GPLv2
 # observed by ben with 6.10.0/Plasma 6.5.2)
 # #6  0x00007f8e59b6625f _ZN21QmlCacheGeneratedCode57_qt_qml_org_kde_plasma_workspace_calendar_DayDelegate_qml4$_228__invokeEPKN11QQmlPrivate18AOTCompiledContextEPPv (libcalendarplugin.so + 0x7c25f)
 qtdeclarative-disable-disk-cache.patch
-# https://codereview.qt-project.org/c/qt/qtdeclarative/+/704031
-# https://bugs.kde.org/show_bug.cgi?id=513527
-https://codereview.qt-project.org/changes/qt%2Fqtdeclarative~704031/revisions/4/patch?download&raw#/dc2358e.diff
 
 %description
 Version %{qtmajor} of the Qt Quick framework
@@ -82,6 +79,7 @@ Version %{qtmajor} of the Qt Quick framework
 %{_qtdir}/plugins/qmltooling/libqmldbg_nativedebugger.so \
 %{_qtdir}/plugins/qmltooling/libqmldbg_preview.so \
 %{_qtdir}/plugins/qmltooling/libqmldbg_profiler.so \
+%{_qtdir}/plugins/qmltooling/libqmldbg_quickeventreplay.so \
 %{_qtdir}/plugins/qmltooling/libqmldbg_quickprofiler.so \
 %{_qtdir}/plugins/qmltooling/libqmldbg_server.so \
 %{_qtdir}/plugins/qmltooling/libqmldbg_tcp.so \
@@ -116,7 +114,8 @@ Requires:	cmake(Qt%{qtmajor}Network) \
 %{_qtdir}/qml/QtQuick \
 %{_qtdir}/qml/jsroot.qmltypes \
 %{_qtdir}/qml/QtQml \
-%{_qtdir}/bin/qmlls
+%{_qtdir}/bin/qmlls \
+%{_qtdir}/bin/qmlcontextpropertydump
 
 %define extra_devel_files_QmlCore \
 %{_qtdir}/libexec/qmljsrootgen
@@ -149,15 +148,14 @@ Requires:	cmake(Qt%{qtmajor}QuickTemplates2)
 %define extra_devel_reqprov_QmlCore \
 Requires:	%{name} = %{EVRD}
 
-%define extra_devel_files_QmlAssetDownloader \
-%{_libdir}/pkgconfig/Qt6QmlAssetDownloader.pc \
-%{_qtdir}/qml/Qt/labs/assetdownloader
-
 %define extra_files_LabsSynchronizer \
 %{_qtdir}/qml/Qt/labs/synchronizer/
 
-%qt6libs LabsAnimation LabsFolderListModel LabsPlatform LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlMeta QmlXmlListModel QmlCompiler QuickEffects QmlNetwork QuickControls2BasicStyleImpl QuickControls2FluentWinUI3StyleImpl QuickControls2FusionStyleImpl QuickControls2ImagineStyleImpl QuickControls2MaterialStyleImpl QuickControls2UniversalStyleImpl QuickControls2Basic QuickControls2Fusion QuickControls2Imagine QuickControls2Material QuickControls2Universal QuickVectorImage QuickVectorImageGenerator LabsSynchronizer QuickVectorImageHelpers QuickShapesDesignHelpers
-%qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar QmlLS QmlToolingSettings QmlFormat QmlAssetDownloader
+%define extra_files_LabsStyleKit \
+%{_qtdir}/qml/Qt/labs/StyleKit
+
+%qt6libs LabsAnimation LabsFolderListModel LabsPlatform LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlMeta QmlXmlListModel QmlCompiler QuickEffects QmlNetwork QuickControls2BasicStyleImpl QuickControls2FluentWinUI3StyleImpl QuickControls2FusionStyleImpl QuickControls2ImagineStyleImpl QuickControls2MaterialStyleImpl QuickControls2UniversalStyleImpl QuickControls2Basic QuickControls2Fusion QuickControls2Imagine QuickControls2Material QuickControls2Universal QuickVectorImage QuickVectorImageGenerator LabsSynchronizer QuickVectorImageHelpers QuickShapesDesignHelpers LabsStyleKit LabsStyleKitImpl
+%qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar QmlLS QmlToolingSettings QmlFormat
 
 %package examples
 Summary: Example applications for Qt Declarative %{qtmajor}
