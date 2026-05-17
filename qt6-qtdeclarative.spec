@@ -1,7 +1,7 @@
 #define beta rc
 
 Name:		qt6-qtdeclarative
-Version:	6.11.0
+Version:	6.11.1
 Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
@@ -46,6 +46,9 @@ License:	LGPLv3/GPLv3/GPLv2
 # observed by ben with 6.10.0/Plasma 6.5.2)
 # #6  0x00007f8e59b6625f _ZN21QmlCacheGeneratedCode57_qt_qml_org_kde_plasma_workspace_calendar_DayDelegate_qml4$_228__invokeEPKN11QQmlPrivate18AOTCompiledContextEPPv (libcalendarplugin.so + 0x7c25f)
 qtdeclarative-disable-disk-cache.patch
+# Disable the wearable example, because it requires QtPositioning
+# (which in turn requires QtDeclarative first)
+qtdeclarative-bootstrap.patch
 
 %description
 Version %{qtmajor} of the Qt Quick framework
@@ -98,7 +101,8 @@ Version %{qtmajor} of the Qt Quick framework
 
 %define extra_reqprov_Qml \
 Requires:	rpm-provreq-qml \
-Requires:	%mklibname Qt%{qtmajor}QmlCore
+Requires:	%mklibname Qt%{qtmajor}QmlCore \
+Provides:	cmake(Qt%{qtmajor}QmlIntegrationPrivate) = %{EVRD}
 
 %define extra_devel_reqprov_Qml \
 Requires:	%{name} = %{EVRD} \
@@ -113,7 +117,8 @@ Requires:	cmake(Qt%{qtmajor}Network) \
 %{_qtdir}/qml/jsroot.qmltypes \
 %{_qtdir}/qml/QtQml \
 %{_qtdir}/bin/qmlls \
-%{_qtdir}/bin/qmlcontextpropertydump
+%{_qtdir}/bin/qmlcontextpropertydump \
+%{_qtdir}/plugins/qmlls
 
 %define extra_devel_files_QmlCore \
 %{_qtdir}/libexec/qmljsrootgen
@@ -151,6 +156,42 @@ Requires:	%{name} = %{EVRD}
 
 %define extra_files_LabsStyleKit \
 %{_qtdir}/qml/Qt/labs/StyleKit
+
+%define extra_devel_reqprov_PacketProtocol \
+Provides: cmake(Qt6PacketProtocolPrivatePrivate) = %{EVRD}
+
+%define extra_devel_reqprov_QmlDebug \
+Provides: cmake(Qt6QmlDebugPrivatePrivate) = %{EVRD}
+
+%define extra_devel_reqprov_QmlDom \
+Provides: cmake(Qt6QmlDomPrivatePrivate) = %{EVRD}
+
+%define extra_devel_reqprov_QmlFormat \
+Provides: cmake(Qt6QmlFormatPrivatePrivate) = %{EVRD}
+
+%define extra_devel_reqprov_QmlTypeRegistrar \
+Provides: cmake(Qt6QmlTypeRegistrarPrivatePrivate) = %{EVRD}
+
+%define extra_devel_reqprov_QmlToolingSettings \
+Provides: cmake(Qt6QmlToolingSettingsPrivatePrivate) = %{EVRD}
+
+%define extra_devel_reqprov_QuickControls2ImagineStyleImpl \
+Provides: cmake(Qt6QuickControls2ImagineStyleImplPrivate) = %{EVRD}
+
+%define extra_devel_reqprov_QuickControlsTestUtils \
+Provides: cmake(Qt6QuickControlsTestUtilsPrivatePrivate) = %{EVRD}
+
+%define extra_devel_reqprov_QuickParticles \
+Provides: cmake(Qt6QuickParticlesPrivatePrivate) = %{EVRD}
+
+%define extra_devel_reqprov_QuickShapesDesignHelpers \
+Provides: cmake(Qt6QuickShapesDesignHelpersPrivatePrivate) = %{EVRD}
+
+%define extra_devel_reqprov_QuickTestUtils \
+Provides: cmake(Qt6QuickTestUtilsPrivatePrivate) = %{EVRD}
+
+%define extra_devel_reqprov_QuickVectorImageGenerator \
+Provides: cmake(Qt6QuickVectorImageGeneratorPrivatePrivate) = %{EVRD}
 
 %qt6libs LabsAnimation LabsFolderListModel LabsPlatform LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlMeta QmlXmlListModel QmlCompiler QuickEffects QmlNetwork QuickControls2BasicStyleImpl QuickControls2FluentWinUI3StyleImpl QuickControls2FusionStyleImpl QuickControls2ImagineStyleImpl QuickControls2MaterialStyleImpl QuickControls2UniversalStyleImpl QuickControls2Basic QuickControls2Fusion QuickControls2Imagine QuickControls2Material QuickControls2Universal QuickVectorImage QuickVectorImageGenerator LabsSynchronizer QuickVectorImageHelpers QuickShapesDesignHelpers LabsStyleKit LabsStyleKitImpl
 %qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar QmlLS QmlToolingSettings QmlFormat
@@ -210,6 +251,5 @@ rm -rf %{buildroot}%{_qtdir}/lib/objects-RelWithDebInfo
 %{_qtdir}/libexec/qmlcachegen
 %{_qtdir}/libexec/qmlimportscanner
 %{_qtdir}/libexec/qmltyperegistrar
-%{_qtdir}/plugins/qmlls
 %{_qtdir}/plugins/qmllint
 %{_qtdir}/qml/QML

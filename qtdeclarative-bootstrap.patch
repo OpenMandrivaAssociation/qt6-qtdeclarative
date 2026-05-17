@@ -1,0 +1,12 @@
+diff -up qtdeclarative-everywhere-src-6.11.1/examples/quickcontrols/CMakeLists.txt.omv~ qtdeclarative-everywhere-src-6.11.1/examples/quickcontrols/CMakeLists.txt
+--- qtdeclarative-everywhere-src-6.11.1/examples/quickcontrols/CMakeLists.txt.omv~	2026-05-17 18:56:10.589166747 +0200
++++ qtdeclarative-everywhere-src-6.11.1/examples/quickcontrols/CMakeLists.txt	2026-05-17 18:56:14.991472872 +0200
+@@ -15,7 +15,7 @@ if(QT_FEATURE_qml_labs)
+     qt_internal_add_example(texteditor)
+ endif()
+ qt_internal_add_example(contactlist)
+-qt_internal_add_example(wearable)
++#qt_internal_add_example(wearable)
+ qt_internal_add_example(imagine/automotive)
+ if(TARGET Qt6::Svg AND NOT ANDROID AND NOT IOS)
+     qt_internal_add_example(filesystemexplorer)
