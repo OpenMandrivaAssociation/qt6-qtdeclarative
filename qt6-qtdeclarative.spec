@@ -2,7 +2,7 @@
 
 Name:		qt6-qtdeclarative
 Version:	6.11.2
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}2
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -214,6 +214,10 @@ Example applications for Qt Declarative %{qtmajor}
 
 %prep
 %autosetup -p1 -n qtdeclarative%{!?snapshot:-everywhere-src-%{version}%{?beta:-%{beta}}}
+
+# Out-of-tree so %%pgo can wipe only this dir between passes.
+%conf
+export CMAKE_BUILD_DIR=_OMV_rpm_build
 %cmake -G Ninja \
 	-DQT_MKSPECS_DIR:FILEPATH=%{_qtdir}/mkspecs \
 	-DCMAKE_INSTALL_PREFIX=%{_qtdir} \
@@ -226,11 +230,243 @@ Example applications for Qt Declarative %{qtmajor}
 	-DBUILD_WITH_PCH:BOOL=OFF
 
 %build
-export LD_LIBRARY_PATH="$(pwd)/build/lib:${LD_LIBRARY_PATH}"
-%ninja_build -C build
+export LD_LIBRARY_PATH="$(pwd)/_OMV_rpm_build/lib:${LD_LIBRARY_PATH}"
+export LLVM_PROFILE_FILE="%{_pgo_profile_dir}/qtdeclarative-%%m-%%p.profraw"
+%ninja_build -C _OMV_rpm_build
+
+# Training uses in-tree material only (no extra Source, no QT_BUILD_TESTS):
+# tests/benchmarks/qml/deltablue (Qt's QML/JS constraint solver),
+# tools/qmltime (item creation / loader / layout), examples, and the
+# qmlformat/qmllint/qmlcachegen tools. Auto-tests stay off: they are
+# huge and do not run reliably uninstalled/headless.
+%pgo
+set +e
+export LLVM_PROFILE_FILE="%{_pgo_profile_dir}/qtdeclarative-%%m-%%p.profraw"
+
+TOP="$PWD"
+B="$TOP/_OMV_rpm_build"
+QML="$B/bin/qml"
+QMLFORMAT="$B/bin/qmlformat"
+QMLLINT="$B/bin/qmllint"
+QMLTIME="$B/bin/qmltime"
+QMLCACHEGEN="$B/libexec/qmlcachegen"
+QMLIMPORTSCANNER="$B/libexec/qmlimportscanner"
+QMLDOM="$B/bin/qmldom"
+
+if [ ! -x "$QML" ]; then
+	echo "PGO: instrumented qml binary missing"
+	exit 1
+fi
+
+export PATH="$B/bin:$B/libexec:$PATH"
+export LD_LIBRARY_PATH="$B/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export QML2_IMPORT_PATH="$B/qml"
+export QML_IMPORT_PATH="$B/qml"
+export QT_PLUGIN_PATH="$B/plugins:${QT_PLUGIN_PATH:-%{_qtdir}/plugins}"
+export QT_QPA_PLATFORM=offscreen
+export QT_QUICK_BACKEND=software
+export LIBGL_ALWAYS_SOFTWARE=1
+# Disk cache is patched off; keep compilation on the hot path.
+export QML_DISABLE_DISK_CACHE=1
+
+try() {
+	"$@"
+	rc=$?
+	if [ $rc -ne 0 ]; then
+		echo "PGO: skipped (exit $rc): $*"
+	fi
+	return 0
+}
+
+WORKDIR="$TOP/pgo-train"
+rm -rf "$WORKDIR"
+mkdir -p "$WORKDIR"
+
+# --- QML/JS engine: official DeltaBlue + extra JS (no GUI) ---
+cat >"$WORKDIR/pgo-js.qml" <<'EOF'
+import QtQml
+import "deltablue.js" as DeltaBlue
+
+QtObject {
+	function fib(n) {
+		if (n < 2)
+			return n
+		return fib(n - 1) + fib(n - 2)
+	}
+	function jsHotPath() {
+		var acc = 0
+		var arr = []
+		var obj = {x: 1, y: 2, label: "pgo"}
+		for (var i = 0; i < 2000; i++) {
+			acc += (i * 3 + 7) %% 97
+			arr.push(i)
+			obj.x = obj.x + 1
+			obj.y = obj.x * 0.5
+			obj.label = "n" + i
+		}
+		arr.sort(function(a, b) { return b - a })
+		var s = arr.slice(0, 50).join(",")
+		var m = s.split(",").map(function(v) { return Number(v) + 1 })
+		for (var k = 0; k < m.length; k++)
+			acc += m[k]
+		acc += fib(16)
+		return acc
+	}
+	Component.onCompleted: {
+		for (var i = 0; i < 8; i++)
+			DeltaBlue.deltaBlue()
+		for (var j = 0; j < 20; j++)
+			jsHotPath()
+		Qt.quit()
+	}
+}
+EOF
+ln -s "$TOP/tests/benchmarks/qml/deltablue/deltablue.js" "$WORKDIR/deltablue.js"
+try timeout -k 2 60 "$QML" -a core "$WORKDIR/pgo-js.qml"
+
+# --- Qt Quick + Controls: create, bind, lay out, animate, destroy ---
+cat >"$WORKDIR/pgo-quick.qml" <<'EOF'
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import QtQml
+
+Window {
+	id: root
+	width: 800
+	height: 600
+	visible: true
+	title: "PGO"
+	property int ticks: 0
+	property real phase: 0
+	property string label: "init"
+
+	ListModel {
+		id: items
+		Component.onCompleted: {
+			for (var i = 0; i < 120; i++)
+				append({name: "Item " + i, value: i, on: (i %% 2) === 0})
+		}
+	}
+
+	ColumnLayout {
+		anchors.fill: parent
+		spacing: 6
+		RowLayout {
+			Repeater {
+				model: 8
+				Button {
+					text: "B" + index
+					highlighted: index === (root.ticks %% 8)
+					onClicked: root.ticks += 1
+				}
+			}
+		}
+		Slider { from: 0; to: 100; value: root.phase; Layout.fillWidth: true }
+		ProgressBar { value: (root.ticks %% 100) / 100; Layout.fillWidth: true }
+		TextField { text: "tick " + root.ticks + " " + root.label; Layout.fillWidth: true }
+		Switch { checked: (root.ticks %% 2) === 0 }
+		ComboBox { model: ["a", "b", "c", "d"]; currentIndex: root.ticks %% 4 }
+		BusyIndicator { running: root.ticks < 160 }
+		ListView {
+			Layout.fillWidth: true
+			Layout.fillHeight: true
+			clip: true
+			model: items
+			delegate: RowLayout {
+				required property string name
+				required property int value
+				required property bool on
+				width: ListView.view.width
+				Label { text: name; Layout.preferredWidth: 120 }
+				Slider { value: value %% 100; from: 0; to: 100; Layout.fillWidth: true }
+				Switch { checked: on }
+			}
+		}
+	}
+
+	Loader {
+		id: extra
+		sourceComponent: Rectangle {
+			width: 40; height: 40
+			color: Qt.hsla((root.phase %% 100) / 100, 0.6, 0.5, 1)
+			Text { anchors.centerIn: parent; text: root.ticks }
+		}
+	}
+
+	SequentialAnimation on phase {
+		running: true
+		loops: Animation.Infinite
+		NumberAnimation { to: 100; duration: 400 }
+		NumberAnimation { to: 0; duration: 400 }
+	}
+
+	Timer {
+		interval: 16
+		running: true
+		repeat: true
+		onTriggered: {
+			root.ticks++
+			root.label = "t" + root.ticks
+			if (items.count)
+				items.setProperty(root.ticks %% items.count, "value", root.ticks)
+			if ((root.ticks %% 15) === 0)
+				extra.active = !extra.active
+			if (root.ticks >= 160)
+				Qt.quit()
+		}
+	}
+}
+EOF
+try timeout -k 2 30 "$QML" --software "$WORKDIR/pgo-quick.qml"
+
+# --- qmltime: official item-creation / loader / layout microbenchmarks ---
+if [ -x "$QMLTIME" ]; then
+	find tools/qmltime -name '*.qml' ! -name 'Loaded.qml' | sort | while read -r f; do
+		try timeout -k 2 45 "$QMLTIME" -iterations 256 -parent "$f"
+	done
+fi
+
+# --- Tooling path (qmlcachegen/qmlformat/qmllint used by every QML build) ---
+CORPUS="$WORKDIR/corpus.txt"
+find examples tests/benchmarks tools/qmltime -name '*.qml' | sort | head -n 250 >"$CORPUS"
+if [ -x "$QMLFORMAT" ]; then
+	# First 80 files individually so the formatter stays hot
+	head -n 80 "$CORPUS" | while read -r f; do
+		try "$QMLFORMAT" "$f" >/dev/null
+	done
+fi
+if [ -x "$QMLLINT" ]; then
+	head -n 80 "$CORPUS" | while read -r f; do
+		try "$QMLLINT" -I "$B/qml" --silent "$f"
+	done
+fi
+if [ -x "$QMLCACHEGEN" ]; then
+	i=0
+	head -n 40 "$CORPUS" | while read -r f; do
+		i=$((i + 1))
+		try "$QMLCACHEGEN" --only-bytecode -I "$B/qml" -o "$WORKDIR/c$i.qmlc" "$f"
+	done
+fi
+if [ -x "$QMLDOM" ]; then
+	head -n 15 "$CORPUS" | while read -r f; do
+		try "$QMLDOM" --dump "$f" >/dev/null
+	done
+fi
+if [ -x "$QMLIMPORTSCANNER" ]; then
+	try "$QMLIMPORTSCANNER" -rootPath examples -importPath "$B/qml"
+fi
+
+# --- Compiled examples (already built; short offscreen run) ---
+find "$B/examples" -type f -executable ! -name '*.so*' ! -path '*/CMakeFiles/*' | sort | while read -r ex; do
+	try timeout -k 2 4 "$ex"
+done
+
+rm -rf "$WORKDIR"
+exit 0
 
 %install
-%ninja_install -C build
+%ninja_install -C _OMV_rpm_build
 %qt6_postinstall
 # Seems to be an accidentally installed object file
 rm -rf %{buildroot}%{_qtdir}/lib/objects-RelWithDebInfo
