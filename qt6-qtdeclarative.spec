@@ -2,7 +2,7 @@
 
 Name:		qt6-qtdeclarative
 Version:	6.11.2
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}2
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}3
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -49,6 +49,10 @@ qtdeclarative-disable-disk-cache.patch
 # Disable the wearable example, because it requires QtPositioning
 # (which in turn requires QtDeclarative first)
 qtdeclarative-bootstrap.patch
+# QML engine: Correctly compare composites when multiple engines are used
+# https://codereview.qt-project.org/c/qt/qtdeclarative/+/768697
+# Fixes: QTBUG-149607
+8b8c30429419a3b9f0bd74fd5fb0066c851ae623.patch
 
 %description
 Version %{qtmajor} of the Qt Quick framework
