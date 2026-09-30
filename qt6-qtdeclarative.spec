@@ -1,8 +1,8 @@
 #define beta rc
 
 Name:		qt6-qtdeclarative
-Version:	6.11.2
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}4
+Version:	6.12.0
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}1
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -49,10 +49,6 @@ qtdeclarative-disable-disk-cache.patch
 # Disable the wearable example, because it requires QtPositioning
 # (which in turn requires QtDeclarative first)
 qtdeclarative-bootstrap.patch
-# QML engine: Correctly compare composites when multiple engines are used
-# https://codereview.qt-project.org/c/qt/qtdeclarative/+/768697
-# Fixes: QTBUG-149607
-8b8c30429419a3b9f0bd74fd5fb0066c851ae623.patch
 
 %description
 Version %{qtmajor} of the Qt Quick framework
@@ -203,8 +199,14 @@ Provides: cmake(Qt6QmlLSPrivatePrivate) = %{EVRD}
 %define extra_devel_reqprov_Qmltc \
 Provides: cmake(Qt6QmltcPrivatePrivate) = %{EVRD}
 
-%qt6libs LabsAnimation LabsFolderListModel LabsPlatform LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlMeta QmlXmlListModel QmlCompiler QuickEffects QmlNetwork QuickControls2BasicStyleImpl QuickControls2FluentWinUI3StyleImpl QuickControls2FusionStyleImpl QuickControls2ImagineStyleImpl QuickControls2MaterialStyleImpl QuickControls2UniversalStyleImpl QuickControls2Basic QuickControls2Fusion QuickControls2Imagine QuickControls2Material QuickControls2Universal QuickVectorImage QuickVectorImageGenerator LabsSynchronizer QuickVectorImageHelpers QuickShapesDesignHelpers LabsStyleKit LabsStyleKitImpl
-%qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar QmlLS QmlToolingSettings QmlFormat Qmltc
+%define extra_devel_reqprov_QmlLint \
+Provides: cmake(Qt6QmlLintPrivatePrivate) = %{EVRD}
+
+%define extra_devel_reqprov_QmlPreview \
+Provides: cmake(Qt6QmlPreviewPrivatePrivate) = %{EVRD}
+
+%qt6libs LabsAnimation LabsFolderListModel LabsPlatform LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlMeta QmlXmlListModel QmlCompiler QuickEffects QmlNetwork QuickControls2BasicStyleImpl QuickControls2FluentWinUI3StyleImpl QuickControls2FusionStyleImpl QuickControls2ImagineStyleImpl QuickControls2MaterialStyleImpl QuickControls2UniversalStyleImpl QuickControls2Basic QuickControls2Fusion QuickControls2Imagine QuickControls2Material QuickControls2Universal QuickVectorImage QuickVectorImageGenerator LabsSynchronizer QuickVectorImageHelpers QuickShapesDesignHelpers LabsStyleKit LabsStyleKitImpl QmlDesignSupport QuickControls2Native
+%qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar QmlLS QmlToolingSettings QmlFormat Qmltc QmlLint QmlPreview
 
 %package examples
 Summary: Example applications for Qt Declarative %{qtmajor}
