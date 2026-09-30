@@ -228,6 +228,7 @@ Example applications for Qt Declarative %{qtmajor}
 %conf
 export CMAKE_BUILD_DIR=_OMV_rpm_build
 %cmake -G Ninja \
+	-DQT_BUILD_TESTS:BOOL=OFF \
 	-DQT_MKSPECS_DIR:FILEPATH=%{_qtdir}/mkspecs \
 	-DCMAKE_INSTALL_PREFIX=%{_qtdir} \
 	-DQT_BUILD_EXAMPLES:BOOL=ON \
