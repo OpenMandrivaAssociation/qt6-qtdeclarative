@@ -208,7 +208,9 @@ Provides: cmake(Qt6QmlPreviewPrivatePrivate) = %{EVRD}
 # QuickControls2Native is built with NO_PRIVATE_MODULE, but the generated
 # cmake config still requires Qt6QuickControls2NativePrivate, which is not
 # installed.
-%global __requires_exclude ^cmake\\([Qq]t6QuickControls2NativePrivate\\)
+# The generator emits one rich dependency, "(cmake(qt6...) or cmake(Qt6...))".
+# It does not start with "cmake(", so the filter must not be anchored.
+%global __requires_exclude cmake\\(qt6quickcontrols2nativeprivate\\)|cmake\\(Qt6QuickControls2NativePrivate\\)
 
 %qt6libs LabsAnimation LabsFolderListModel LabsPlatform LabsQmlModels LabsSettings LabsSharedImage LabsWavefrontMesh Quick QuickControls2 QuickControls2Impl QuickDialogs2 QuickDialogs2QuickImpl QuickDialogs2Utils QuickLayouts QuickParticles QuickShapes QuickTemplates2 QuickTest QuickWidgets QmlWorkerScript Qml QmlCore QmlModels QmlLocalStorage QmlMeta QmlXmlListModel QmlCompiler QuickEffects QmlNetwork QuickControls2BasicStyleImpl QuickControls2FluentWinUI3StyleImpl QuickControls2FluentWinUI3 QuickControls2FusionStyleImpl QuickControls2ImagineStyleImpl QuickControls2MaterialStyleImpl QuickControls2UniversalStyleImpl QuickControls2Basic QuickControls2Fusion QuickControls2Imagine QuickControls2Material QuickControls2Universal QuickVectorImage QuickVectorImageGenerator LabsSynchronizer QuickVectorImageHelpers QuickShapesDesignHelpers LabsStyleKit LabsStyleKitImpl QmlDesignSupport QuickControls2Native
 %qt6staticlibs QuickControlsTestUtils QuickTestUtils QmlDebug QmlDom PacketProtocol QmlTypeRegistrar QmlLS QmlToolingSettings QmlFormat Qmltc QmlLint QmlPreview
