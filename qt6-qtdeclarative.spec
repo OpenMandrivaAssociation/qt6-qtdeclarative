@@ -2,7 +2,7 @@
 
 Name:		qt6-qtdeclarative
 Version:	6.12.0
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}2
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}3
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -100,7 +100,6 @@ Version %{qtmajor} of the Qt Quick framework
 %{_qtdir}/sbom/*
 
 %define extra_reqprov_Qml \
-Requires:	rpm-provreq-qml \
 Requires:	%mklibname Qt%{qtmajor}QmlCore \
 Provides:	cmake(Qt%{qtmajor}QmlIntegrationPrivate) = %{EVRD}
 
@@ -122,6 +121,9 @@ Requires:	cmake(Qt%{qtmajor}Network) \
 
 %define extra_devel_files_QmlCore \
 %{_qtdir}/libexec/qmljsrootgen
+
+%define extra_devel_reqprov_QmlCore \
+Requires:	rpm-provreq-qml
 
 %define extra_files_QuickTest \
 %{_qtdir}/qml/Qt/test
