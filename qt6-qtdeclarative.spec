@@ -239,6 +239,9 @@ Example applications for Qt Declarative %{qtmajor}
 %autosetup -p1 -n qtdeclarative%{!?snapshot:-everywhere-src-%{version}%{?beta:-%{beta}}}
 
 # Out-of-tree so %%pgo can wipe only this dir between passes.
+# ninja -j32 with LTO was OOM-killed while linking during the
+# profile-generate pass. One link at a time, and fewer compile jobs.
+%global _smp_ncpus_max 16
 %conf
 export CMAKE_BUILD_DIR=_OMV_rpm_build
 %cmake -G Ninja \
@@ -251,7 +254,8 @@ export CMAKE_BUILD_DIR=_OMV_rpm_build
 	-DQT_FEATURE_use_lld_linker:BOOL=ON \
 	-DQT_FEATURE_xcb_native_painting:BOOL=ON \
 	-DQT_WILL_INSTALL:BOOL=ON \
-	-DBUILD_WITH_PCH:BOOL=OFF
+	-DBUILD_WITH_PCH:BOOL=OFF \
+	-DCMAKE_JOB_POOL_LINK:STRING=console
 
 %build
 export LD_LIBRARY_PATH="$(pwd)/_OMV_rpm_build/lib:${LD_LIBRARY_PATH}"
