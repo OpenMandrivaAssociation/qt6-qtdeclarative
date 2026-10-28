@@ -49,6 +49,10 @@ qtdeclarative-disable-disk-cache.patch
 # Disable the wearable example, because it requires QtPositioning
 # (which in turn requires QtDeclarative first)
 qtdeclarative-bootstrap.patch
+# QQuickPixmapReader::deleteLater never runs when the QQmlEngine is
+# destroyed as a child of QCoreApplication, so shutdown waits forever.
+# https://codereview.qt-project.org/c/qt/qtdeclarative/+/777121
+qtdeclarative-quickpixmapreader-teardown.patch
 
 %description
 Version %{qtmajor} of the Qt Quick framework
