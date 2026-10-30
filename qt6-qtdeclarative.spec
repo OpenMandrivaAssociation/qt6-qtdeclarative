@@ -2,7 +2,7 @@
 
 Name:		qt6-qtdeclarative
 Version:	6.12.0
-Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}3
+Release:	%{?beta:0.%{beta}.}%{?snapshot:0.%{snapshot}.}4
 %if 0%{?snapshot:1}
 # "git archive"-d from "dev" branch of git://code.qt.io/qt/qtdeclarative.git
 Source:		qtdeclarative-%{?snapshot:%{snapshot}}%{!?snapshot:%{version}}.tar.zst
@@ -107,10 +107,13 @@ Version %{qtmajor} of the Qt Quick framework
 Requires:	%mklibname Qt%{qtmajor}QmlCore \
 Provides:	cmake(Qt%{qtmajor}QmlIntegrationPrivate) = %{EVRD}
 
+# Note QmlCore requires Qml, not vice versa,
+# so this is the right place for the provreq dep
 %define extra_devel_reqprov_Qml \
 Requires:	%{name} = %{EVRD} \
 Requires:	cmake(Qt%{qtmajor}Core) \
 Requires:	cmake(Qt%{qtmajor}Network) \
+Requires:	rpm-provreq-qml
 
 %define extra_files_QmlCore \
 %dir %{_qtdir}/qml \
@@ -125,9 +128,6 @@ Requires:	cmake(Qt%{qtmajor}Network) \
 
 %define extra_devel_files_QmlCore \
 %{_qtdir}/libexec/qmljsrootgen
-
-%define extra_devel_reqprov_QmlCore \
-Requires:	rpm-provreq-qml
 
 %define extra_files_QuickTest \
 %{_qtdir}/qml/Qt/test
@@ -238,10 +238,6 @@ Example applications for Qt Declarative %{qtmajor}
 %prep
 %autosetup -p1 -n qtdeclarative%{!?snapshot:-everywhere-src-%{version}%{?beta:-%{beta}}}
 
-# Out-of-tree so %%pgo can wipe only this dir between passes.
-# ninja -j32 with LTO was OOM-killed while linking during the
-# profile-generate pass. One link at a time, and fewer compile jobs.
-%global _smp_ncpus_max 16
 %conf
 export CMAKE_BUILD_DIR=_OMV_rpm_build
 %cmake -G Ninja \
